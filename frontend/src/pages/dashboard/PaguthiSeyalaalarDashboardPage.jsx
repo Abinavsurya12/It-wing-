@@ -27,6 +27,9 @@ import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import LanguageSwitcher from '../../components/common/LanguageSwitcher';
+import coimbatoreCityBg from '../../assets/coimbatore-city-bg.png';
+import image1 from '../../assets/image1.png';
+import image2 from '../../assets/image2.png';
 import image3 from '../../assets/image3.png';
 
 export const PaguthiSeyalaalarDashboardPage = () => {
@@ -189,22 +192,108 @@ export const PaguthiSeyalaalarDashboardPage = () => {
         {/* ================= VIEW MODE 1: SINGLE PAGUTHI CARD VIEW (TASK 2) ================= */}
         {viewMode === 'card' && (
           <div className="space-y-5 sm:space-y-6">
-            {/* Page Header */}
-            <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 border border-[#E9E2DC] shadow-xs relative overflow-hidden">
-              <div className="relative z-10 max-w-2xl">
-                <div className="inline-flex items-center space-x-1.5 bg-red-50 text-[#850000] border border-red-200 px-2.5 py-0.5 rounded-full text-[10.5px] sm:text-xs font-bold uppercase tracking-wider mb-2.5">
-                  <span className="w-2 h-2 rounded-full bg-[#850000] animate-pulse"></span>
-                  <span>Paguthi Seyalaalar Jurisdiction</span>
-                </div>
-                <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-slate-900 tracking-tight leading-tight">
-                  Welcome, <span className="text-[#850000]">{user?.name || `${paguthi} Paguthi Seyalaalar`}</span>
-                </h1>
-                <p className="text-xs sm:text-sm text-slate-600 mt-2 leading-relaxed">
-                  You are authenticated to manage and monitor localized public grievances, cadre coordination, and municipal ward governance for <strong>{paguthi} Paguthi</strong>. Click your designated Paguthi card below to inspect live database counts, ward directories, and registered complaints.
-                </p>
+            {/* Page Header (Exact User Dashboard Header Design & Theme) */}
+            <div
+              className="w-full relative bg-[#850000] pt-6 sm:pt-8 md:pt-10 pb-0 px-3 sm:px-6 lg:px-8 text-white overflow-hidden shadow-md rounded-2xl sm:rounded-3xl border border-[#E9E2DC]"
+              style={{
+                backgroundImage: `url(${coimbatoreCityBg})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                backgroundRepeat: 'no-repeat',
+              }}
+            >
+              <div
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                  background:
+                    'linear-gradient(135deg, rgba(120, 0, 0, 0.95) 0%, rgba(133, 0, 0, 0.90) 50%, rgba(100, 0, 0, 0.96) 100%)',
+                }}
+              />
+
+              {/* Top-Right Corner Image (image3.png) */}
+              <div className="absolute top-2.5 sm:top-3.5 md:top-5 right-2.5 sm:right-4 md:right-6 lg:right-8 z-20 pointer-events-none">
+                <img
+                  src={image3}
+                  alt="TVK Official Emblem"
+                  className="w-10 h-10 min-[360px]:w-11 min-[360px]:h-11 min-[390px]:w-12 min-[390px]:h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 lg:w-24 lg:h-24 xl:w-28 xl:h-28 object-contain drop-shadow-xl filter brightness-105 select-none"
+                />
               </div>
 
-              <div className="absolute right-0 bottom-0 w-64 h-64 bg-gradient-to-br from-[#FFD32A]/10 to-[#850000]/10 rounded-full blur-2xl pointer-events-none"></div>
+              <div className="relative z-10 max-w-7xl mx-auto">
+                {/* MOBILE VIEW (< md): Text at Top, Both Leadership Images Neatly Positioned at Bottom */}
+                <div className="flex flex-col md:hidden items-center">
+                  {/* Center Content: Heading, Tagline, Description */}
+                  <div className="w-full text-center space-y-2 sm:space-y-2.5 pt-1 px-1">
+                    <div className="inline-flex items-center space-x-2 bg-black/40 backdrop-blur-md px-3.5 py-1 rounded-full border border-white/20 text-xs font-semibold shadow-xs">
+                      <span className="w-2 h-2 rounded-full bg-[#FFD32A] animate-pulse"></span>
+                      <span className="text-[#FFD32A] font-bold">Paguthi Seyalaalar Jurisdiction</span>
+                    </div>
+
+                    <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight drop-shadow-md text-white">
+                      Welcome, <span className="text-[#FFD32A]">{user?.name || `${paguthi} Paguthi Seyalaalar`}</span>
+                    </h1>
+
+                    <p className="text-xs sm:text-sm text-white/95 max-w-xl mx-auto font-medium leading-relaxed drop-shadow-xs">
+                      You are authenticated to manage and monitor localized public grievances, cadre coordination, and municipal ward governance for <strong className="text-white font-bold">{paguthi} Paguthi</strong>. Click your designated Paguthi card below to inspect live database counts, ward directories, and registered complaints.
+                    </p>
+                  </div>
+
+                  {/* Mobile Leadership Portraits: Both Visible, Consistent Bottom Alignment, No Overlap */}
+                  <div className="w-full flex items-end justify-center gap-4 min-[390px]:gap-6 sm:gap-10 mt-3 self-end">
+                    <div className="flex justify-center items-end self-end">
+                      <img
+                        src={image1}
+                        alt="TVK Leadership - Image 1"
+                        className="h-28 min-[375px]:h-32 min-[410px]:h-36 sm:h-44 w-auto max-w-full object-contain object-bottom block align-bottom drop-shadow-[0_8px_16px_rgba(0,0,0,0.6)] filter brightness-105"
+                      />
+                    </div>
+                    <div className="flex justify-center items-end self-end">
+                      <img
+                        src={image2}
+                        alt="TVK Leadership - Image 2"
+                        className="h-28 min-[375px]:h-32 min-[410px]:h-36 sm:h-44 w-auto max-w-full object-contain object-bottom block align-bottom drop-shadow-[0_8px_16px_rgba(0,0,0,0.6)] filter brightness-105"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* DESKTOP & TABLET VIEW (>= md): 3-Column Layout with Prominent Increased Sizing & Flush Bottom Alignment */}
+                <div className="hidden md:flex flex-row items-end justify-between gap-4 lg:gap-8">
+                  {/* Left Side: image1.png (Desktop / Tablet) - Prominent, Flush Bottom */}
+                  <div className="flex-1 flex justify-start items-end self-end">
+                    <img
+                      src={image1}
+                      alt="TVK Leadership - Image 1"
+                      className="h-56 md:h-64 lg:h-76 xl:h-88 w-auto max-w-full object-contain object-bottom block align-bottom drop-shadow-[0_12px_24px_rgba(0,0,0,0.6)] filter brightness-105 transition-transform duration-300 hover:scale-[1.02]"
+                    />
+                  </div>
+
+                  {/* Center Content: Heading, Tagline, Description */}
+                  <div className="w-full md:w-auto md:max-w-xl lg:max-w-2xl text-center space-y-2.5 sm:space-y-3.5 my-auto py-6 lg:py-8">
+                    <div className="inline-flex items-center space-x-2 bg-black/40 backdrop-blur-md px-3.5 py-1 rounded-full border border-white/20 text-xs font-semibold shadow-xs">
+                      <span className="w-2 h-2 rounded-full bg-[#FFD32A] animate-pulse"></span>
+                      <span className="text-[#FFD32A] font-bold">Paguthi Seyalaalar Jurisdiction</span>
+                    </div>
+
+                    <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-extrabold tracking-tight drop-shadow-md text-white">
+                      Welcome, <span className="text-[#FFD32A]">{user?.name || `${paguthi} Paguthi Seyalaalar`}</span>
+                    </h1>
+
+                    <p className="text-xs sm:text-sm lg:text-base text-white/95 max-w-2xl mx-auto font-medium leading-relaxed drop-shadow-xs">
+                      You are authenticated to manage and monitor localized public grievances, cadre coordination, and municipal ward governance for <strong className="text-white font-bold">{paguthi} Paguthi</strong>. Click your designated Paguthi card below to inspect live database counts, ward directories, and registered complaints.
+                    </p>
+                  </div>
+
+                  {/* Right Side: Image 2 (Desktop / Tablet) - Prominent, Flush Bottom */}
+                  <div className="flex-1 flex justify-end items-end self-end">
+                    <img
+                      src={image2}
+                      alt="TVK Leadership - Image 2"
+                      className="h-56 md:h-64 lg:h-76 xl:h-88 w-auto max-w-full object-contain object-bottom block align-bottom drop-shadow-[0_12px_24px_rgba(0,0,0,0.6)] filter brightness-105 transition-transform duration-300 hover:scale-[1.02]"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* SECTION: ONLY ONE PAGUTHI CARD DISPLAYED (TASK 2) */}

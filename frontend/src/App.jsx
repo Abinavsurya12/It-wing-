@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
@@ -6,6 +6,7 @@ import { NotificationProvider } from './context/NotificationContext';
 // Layout
 import AdminLayout from './components/layout/AdminLayout';
 import LoadingSpinner from './components/common/LoadingSpinner';
+import StartupLoadingScreen from './components/common/StartupLoadingScreen';
 
 // Auth Pages
 import LoginPage from './pages/auth/LoginPage';
@@ -48,7 +49,7 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user, loading } = useAuth();
 
   if (loading) {
-    return <LoadingSpinner text="Checking authorization..." fullScreen />;
+    return <StartupLoadingScreen />;
   }
 
   if (!user) {
@@ -80,36 +81,45 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
 // Root Redirect Component
 const RootRedirect = () => {
   const { user, loading } = useAuth();
-  if (loading) return <LoadingSpinner fullScreen />;
+  if (loading) return <StartupLoadingScreen />;
   if (!user) return <Navigate to="/login" replace />;
   if (user.role === 'paguthi_seyalaalar') return <Navigate to="/paguthi-seyalaalar/dashboard" replace />;
   if (user.role === 'subadmin') return <Navigate to="/subadmin/dashboard" replace />;
-  if (['ward_secretary', 'ward_officer'].includes(user.role)) return <Navigate to="/ward-secretary/dashboard" replace />;
+  if (['ward_secretary', 'ward', 'ward_officer'].includes(user.role)) return <Navigate to="/ward-secretary/dashboard" replace />;
   if (['citizen', 'user'].includes(user.role)) return <Navigate to="/citizen" replace />;
   return <Navigate to="/admin/dashboard" replace />;
 };
 
-function App() {
+// Main App Routing Content (renders full-screen white startup screen with real 0%-100% progress)
+const AppContent = () => {
+  const { user, loading } = useAuth();
+  const [startupComplete, setStartupComplete] = useState(false);
+
   return (
-    <BrowserRouter>
-      <NotificationProvider>
-        <AuthProvider>
-          <Routes>
-            {/* Root Route Redirect */}
-            <Route path="/" element={<RootRedirect />} />
+    <>
+      {!startupComplete && (
+        <StartupLoadingScreen
+          isReady={!loading}
+          onComplete={() => setStartupComplete(true)}
+        />
+      )}
+      {startupComplete && (
+        <Routes>
+          {/* Root Route Redirect */}
+          <Route path="/" element={<RootRedirect />} />
 
-            {/* Public Authentication Routes */}
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/signup" element={<SignupPage />} />
-            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-            <Route path="/reset-password" element={<ResetPasswordPage />} />
+          {/* Public Authentication Routes (redirect to correct dashboard if already logged in) */}
+          <Route path="/login" element={user ? <RootRedirect /> : <LoginPage />} />
+          <Route path="/signup" element={user ? <RootRedirect /> : <SignupPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-            {/* Citizen Service Portal Routes */}
-            <Route path="/citizen" element={<CitizenPortalPage />} />
-            <Route path="/citizen/register-complaint" element={<RegisterComplaintPage />} />
-            <Route path="/citizen/my-complaints" element={<MyComplaintsPage />} />
-            <Route path="/citizen/book-appointment" element={<BookAppointmentPage />} />
-            <Route path="/citizen/track-appointment" element={<TrackAppointmentPage />} />
+          {/* Citizen Service Portal Routes */}
+          <Route path="/citizen" element={<CitizenPortalPage />} />
+          <Route path="/citizen/register-complaint" element={<RegisterComplaintPage />} />
+          <Route path="/citizen/my-complaints" element={<MyComplaintsPage />} />
+          <Route path="/citizen/book-appointment" element={<BookAppointmentPage />} />
+          <Route path="/citizen/track-appointment" element={<TrackAppointmentPage />} />
 
             {/* Subadmin Dedicated Portal */}
             <Route
@@ -199,6 +209,17 @@ function App() {
             {/* Catch-all */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+        )}
+      </>
+    );
+  };
+
+function App() {
+  return (
+    <BrowserRouter>
+      <NotificationProvider>
+        <AuthProvider>
+          <AppContent />
         </AuthProvider>
       </NotificationProvider>
     </BrowserRouter>
