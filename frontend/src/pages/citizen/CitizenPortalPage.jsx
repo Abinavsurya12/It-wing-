@@ -61,6 +61,7 @@ export const CitizenPortalPage = () => {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [projects, setProjects] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState('All');
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -1003,36 +1004,35 @@ export const CitizenPortalPage = () => {
               )}
             </div>
 
-            {/* ================= 5. OUR ACHIEVEMENTS SECTION (EDITORIAL BENTO LAYOUT) ================= */}
-            <section className="bg-gradient-to-b from-white via-[#FCFAF7] to-[#F9F5F0] rounded-3xl sm:rounded-[2rem] border border-[#E7DFD7] shadow-lg p-5 sm:p-7 md:p-9 relative overflow-hidden space-y-7">
+            {/* ================= 5. OUR ACHIEVEMENTS & PROJECTS SECTION ================= */}
+            <section className="bg-white rounded-3xl sm:rounded-[2rem] border border-[#E7DFD7] shadow-sm p-5 sm:p-7 md:p-9 relative overflow-hidden space-y-6 sm:space-y-8">
               {/* Top decorative tricolor bar */}
               <div className="h-1.5 bg-gradient-to-r from-[#850000] via-[#FFD32A] to-[#850000] absolute top-0 left-0 right-0" />
 
               {/* Section Heading & Subtitle */}
-              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-slate-200/80 pb-6">
-                <div className="space-y-1.5">
-                  <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full text-[10.5px] font-extrabold uppercase tracking-widest bg-red-50 text-[#850000] border border-red-200/80">
+              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-slate-200 pb-5">
+                <div className="space-y-1.5 min-w-0">
+                  <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full text-[10.5px] font-extrabold uppercase tracking-widest bg-red-50 text-[#850000] border border-red-200">
                     <Sparkles className="w-3 h-3 text-[#FFD32A]" />
                     <span>{t('achievements.badge', 'TVK Coimbatore Initiatives')}</span>
                   </div>
-                  <h3 className="text-2xl sm:text-3xl md:text-4xl font-black text-[#252525] tracking-tight">
+                  <h3 className="text-2xl sm:text-3xl md:text-4xl font-black text-[#252525] tracking-tight break-words">
                     {t('achievements.sectionTitle', 'OUR ACHIEVEMENTS & PROJECTS')}
                   </h3>
                   <p className="text-xs sm:text-sm text-slate-600 font-medium max-w-2xl">
                     "{t('achievements.sectionSubtitle', 'Development Initiatives & Public Welfare Activities')}"
                   </p>
                 </div>
-                <div className="hidden sm:flex flex-col items-end">
-                  <span className="text-[11px] font-extrabold text-[#A00000] uppercase tracking-wider bg-white px-3.5 py-1.5 rounded-xl border border-red-200/90 shadow-2xs">
+                <div className="flex items-center space-x-2 shrink-0">
+                  <span className="text-[11px] font-extrabold text-[#A00000] uppercase tracking-wider bg-red-50/70 px-3.5 py-1.5 rounded-xl border border-red-200 shadow-2xs">
                     {projects.length > 0 ? `${String(projects.length).padStart(2, '0')} Active Projects` : '00 Projects'}
                   </span>
-                  <span className="text-[10px] text-slate-400 font-semibold mt-1">Field Tested & Community Driven</span>
                 </div>
               </div>
 
-              {/* Asymmetric Editorial Bento Grid */}
+              {/* Dynamic Projects Content */}
               {projects.length === 0 ? (
-                <div className="py-12 px-6 bg-white/70 backdrop-blur-sm rounded-3xl border border-dashed border-[#E5DDD5] text-center flex flex-col items-center justify-center space-y-3">
+                <div className="py-12 px-6 bg-slate-50/70 rounded-3xl border border-dashed border-[#E5DDD5] text-center flex flex-col items-center justify-center space-y-3">
                   <div className="w-14 h-14 rounded-2xl bg-red-50 text-[#850000] flex items-center justify-center border border-red-100 shadow-xs">
                     <Sparkles className="w-7 h-7 text-[#FFD32A]" />
                   </div>
@@ -1041,290 +1041,177 @@ export const CitizenPortalPage = () => {
                     Development initiatives and community milestones will appear here dynamically as they are published by the administration.
                   </p>
                 </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-5 sm:gap-6">
-                  {projects.map((proj, idx) => {
-                    const slot = idx % 6;
-                    const dateStr = proj.startDate
-                      ? new Date(proj.startDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
-                      : proj.createdAt
-                      ? new Date(proj.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
-                      : 'Initiative';
-                    const tagNumber = String(idx + 1).padStart(2, '0');
-                    const imgUrl = getSafeImageUrl(proj.imageUrl);
+              ) : (() => {
+                // Group projects by category
+                const grouped = projects.reduce((acc, p) => {
+                  const cat = (p.category && p.category.trim()) || 'Community Infrastructure';
+                  if (!acc[cat]) acc[cat] = [];
+                  acc[cat].push(p);
+                  return acc;
+                }, {});
 
-                    if (slot === 0) {
+                const categories = Object.keys(grouped);
+                const displayCategories = selectedCategory === 'All'
+                  ? categories
+                  : categories.filter((c) => c === selectedCategory);
+
+                return (
+                  <div className="space-y-8 sm:space-y-10">
+                    {/* Category Filter Pills (when multiple categories exist) */}
+                    {categories.length > 1 && (
+                      <div className="flex flex-wrap items-center gap-2 pt-1 pb-1">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedCategory('All')}
+                          className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all focus:outline-none focus:ring-2 focus:ring-[#850000] ${
+                            selectedCategory === 'All'
+                              ? 'bg-[#850000] text-white shadow-xs'
+                              : 'bg-slate-50 text-slate-700 border border-slate-200 hover:border-[#850000] hover:text-[#850000]'
+                          }`}
+                        >
+                          All Categories ({projects.length})
+                        </button>
+                        {categories.map((cat) => (
+                          <button
+                            key={cat}
+                            type="button"
+                            onClick={() => setSelectedCategory(cat)}
+                            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all focus:outline-none focus:ring-2 focus:ring-[#850000] ${
+                              selectedCategory === cat
+                                ? 'bg-[#850000] text-white shadow-xs'
+                                : 'bg-slate-50 text-slate-700 border border-slate-200 hover:border-[#850000] hover:text-[#850000]'
+                            }`}
+                          >
+                            {cat} ({grouped[cat].length})
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Category Groups with Explicit Headings */}
+                    {displayCategories.map((catName) => {
+                      const catProjects = grouped[catName] || [];
                       return (
-                        <article key={proj.id || idx} className="md:col-span-2 lg:col-span-8 bg-white rounded-3xl border border-[#E5DDD5] shadow-xs hover:shadow-2xl hover:border-[#A00000]/60 transition-all duration-300 flex flex-col justify-between overflow-hidden group">
-                          <div className="relative w-full aspect-[16/10] sm:aspect-[16/9] lg:aspect-[16/9] overflow-hidden bg-slate-100">
-                            <img
-                              src={imgUrl}
-                              alt={proj.title}
-                              loading="lazy"
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
-                            />
-                            <div className="absolute top-3.5 left-3.5 flex items-center space-x-2">
-                              <span className="bg-black/75 backdrop-blur-md text-[#FFD32A] text-xs font-black px-3 py-1 rounded-full border border-white/20 shadow-md">
-                                {tagNumber}
-                              </span>
-                              <span className="bg-[#850000]/90 backdrop-blur-md text-white text-[10.5px] font-extrabold uppercase tracking-wider px-3 py-1 rounded-full border border-white/20 shadow-md flex items-center space-x-1">
-                                <Sparkles className="w-2.5 h-2.5 text-[#FFD32A]" />
-                                <span>{proj.category || 'Featured Milestone'}</span>
-                              </span>
-                            </div>
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
-                          </div>
-
-                          <div className="p-5 sm:p-7 flex-1 flex flex-col justify-between space-y-3">
-                            <div>
-                              <div className="text-[11px] font-extrabold text-[#A00000] uppercase tracking-wider mb-1">
-                                {proj.location || 'Coimbatore District'}
-                              </div>
-                              <h4 className="text-lg sm:text-2xl font-black text-slate-900 group-hover:text-[#A00000] transition-colors leading-snug">
-                                {proj.title}
+                        <div key={catName} className="space-y-5">
+                          {/* CATEGORY HEADING BAR - 100% visible on all screen sizes */}
+                          <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b-2 border-[#850000]/20">
+                            <div className="flex items-center space-x-2.5 min-w-0">
+                              <span className="w-2.5 h-6 rounded-full bg-gradient-to-b from-[#850000] to-[#FFD32A] shrink-0" />
+                              <h4 className="text-lg sm:text-xl md:text-2xl font-black text-slate-900 tracking-tight break-words">
+                                {catName}
                               </h4>
-                              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed mt-2.5 font-normal line-clamp-3">
-                                "{proj.description}"
-                              </p>
                             </div>
-
-                            <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400 font-semibold">
-                              <span className="text-slate-500 font-medium">{dateStr}</span>
-                              <span className="inline-flex items-center space-x-1 text-[#A00000] font-bold">
-                                <span>{proj.status || 'Active'}</span>
-                                <span className="w-2 h-2 rounded-full bg-[#FFD32A]" />
-                              </span>
-                            </div>
-                          </div>
-                        </article>
-                      );
-                    }
-
-                    if (slot === 1) {
-                      return (
-                        <article key={proj.id || idx} className="md:col-span-1 lg:col-span-4 bg-white rounded-3xl border border-[#E5DDD5] shadow-xs hover:shadow-2xl hover:border-[#A00000]/60 transition-all duration-300 flex flex-col justify-between overflow-hidden group">
-                          <div className="relative w-full aspect-[4/3] sm:aspect-[16/11] overflow-hidden bg-slate-100">
-                            <img
-                              src={imgUrl}
-                              alt={proj.title}
-                              loading="lazy"
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
-                            />
-                            <div className="absolute top-3.5 left-3.5">
-                              <span className="bg-black/75 backdrop-blur-md text-[#FFD32A] text-xs font-black px-3 py-1 rounded-full border border-white/20 shadow-md">
-                                {tagNumber}
-                              </span>
-                            </div>
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
-                          </div>
-
-                          <div className="p-5 sm:p-6 flex-1 flex flex-col justify-between space-y-3">
-                            <div>
-                              <div className="text-[10.5px] font-extrabold text-[#A00000] uppercase tracking-wider mb-1">
-                                {proj.category || 'Development Initiative'}
-                              </div>
-                              <h4 className="text-base sm:text-lg font-extrabold text-slate-900 group-hover:text-[#A00000] transition-colors leading-snug">
-                                {proj.title}
-                              </h4>
-                              <p className="text-xs sm:text-[13px] text-slate-600 leading-relaxed mt-2 font-normal line-clamp-3">
-                                "{proj.description}"
-                              </p>
-                            </div>
-
-                            <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400 font-semibold">
-                              <span>{dateStr}</span>
-                              <span className="w-1.5 h-1.5 rounded-full bg-[#A00000]" />
-                            </div>
-                          </div>
-                        </article>
-                      );
-                    }
-
-                    if (slot === 2) {
-                      return (
-                        <article key={proj.id || idx} className="md:col-span-2 lg:col-span-12 bg-white rounded-3xl border border-[#E5DDD5] shadow-xs hover:shadow-2xl hover:border-[#A00000]/60 transition-all duration-300 overflow-hidden group">
-                          <div className="flex flex-col md:flex-row items-stretch">
-                            <div className="relative md:w-5/12 lg:w-1/2 aspect-[16/10] md:aspect-auto overflow-hidden bg-slate-100 min-h-[220px] md:min-h-[280px]">
-                              <img
-                                src={imgUrl}
-                                alt={proj.title}
-                                loading="lazy"
-                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
-                              />
-                              <div className="absolute top-3.5 left-3.5 flex items-center space-x-2">
-                                <span className="bg-black/75 backdrop-blur-md text-[#FFD32A] text-xs font-black px-3 py-1 rounded-full border border-white/20 shadow-md">
-                                  {tagNumber}
-                                </span>
-                                <span className="bg-slate-900/80 backdrop-blur-md text-white text-[10.5px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full border border-white/20">
-                                  {proj.category || 'Corridor Upgrade'}
-                                </span>
-                              </div>
-                              <div className="absolute inset-0 bg-gradient-to-t md:bg-gradient-to-r from-black/25 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
-                            </div>
-
-                            <div className="p-5 sm:p-7 md:w-7/12 lg:w-1/2 flex flex-col justify-between space-y-4">
-                              <div>
-                                <div className="inline-flex items-center space-x-1.5 text-[10.5px] font-extrabold text-[#A00000] uppercase tracking-wider mb-1.5">
-                                  <span>★</span>
-                                  <span>{proj.location || 'Coimbatore District'}</span>
-                                </div>
-                                <h4 className="text-lg sm:text-2xl font-black text-slate-900 group-hover:text-[#A00000] transition-colors leading-snug">
-                                  {proj.title}
-                                </h4>
-                                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed mt-2.5 font-normal line-clamp-3">
-                                  "{proj.description}"
-                                </p>
-                              </div>
-
-                              <div className="pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400 font-semibold">
-                                <span className="text-slate-500">{dateStr}</span>
-                                <div className="flex items-center space-x-2">
-                                  <span className="text-[11px] font-extrabold text-[#A00000] bg-red-50 px-2.5 py-0.5 rounded-lg border border-red-200">
-                                    {proj.status || 'Active'}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </article>
-                      );
-                    }
-
-                    if (slot === 3) {
-                      return (
-                        <article key={proj.id || idx} className="md:col-span-1 lg:col-span-4 bg-white rounded-3xl border border-[#E5DDD5] shadow-xs hover:shadow-2xl hover:border-[#A00000]/60 transition-all duration-300 flex flex-col justify-between overflow-hidden group">
-                          <div className="relative w-full aspect-[16/10] overflow-hidden bg-slate-100">
-                            <img
-                              src={imgUrl}
-                              alt={proj.title}
-                              loading="lazy"
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
-                            />
-                            <div className="absolute top-3.5 left-3.5">
-                              <span className="bg-black/75 backdrop-blur-md text-[#FFD32A] text-xs font-black px-3 py-1 rounded-full border border-white/20 shadow-md">
-                                {tagNumber}
-                              </span>
-                            </div>
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
-                          </div>
-
-                          <div className="p-5 sm:p-6 flex-1 flex flex-col justify-between space-y-3">
-                            <div>
-                              <div className="text-[10.5px] font-extrabold text-[#A00000] uppercase tracking-wider mb-1">
-                                {proj.category || 'Civic Infrastructure'}
-                              </div>
-                              <h4 className="text-base sm:text-lg font-extrabold text-slate-900 group-hover:text-[#A00000] transition-colors leading-snug">
-                                {proj.title}
-                              </h4>
-                              <p className="text-xs sm:text-[13px] text-slate-600 leading-relaxed mt-2 font-normal line-clamp-3">
-                                "{proj.description}"
-                              </p>
-                            </div>
-
-                            <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400 font-semibold">
-                              <span>{dateStr}</span>
-                              <span className="w-1.5 h-1.5 rounded-full bg-[#FFD32A]" />
-                            </div>
-                          </div>
-                        </article>
-                      );
-                    }
-
-                    if (slot === 4) {
-                      return (
-                        <article key={proj.id || idx} className="md:col-span-1 lg:col-span-5 bg-white rounded-3xl border border-[#E5DDD5] shadow-xs hover:shadow-2xl hover:border-[#A00000]/60 transition-all duration-300 flex flex-col justify-between overflow-hidden group">
-                          <div className="relative w-full aspect-[16/10] overflow-hidden bg-slate-100">
-                            <img
-                              src={imgUrl}
-                              alt={proj.title}
-                              loading="lazy"
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
-                            />
-                            <div className="absolute top-3.5 left-3.5 flex items-center space-x-2">
-                              <span className="bg-black/75 backdrop-blur-md text-[#FFD32A] text-xs font-black px-3 py-1 rounded-full border border-white/20 shadow-md">
-                                {tagNumber}
-                              </span>
-                              <span className="bg-blue-900/80 backdrop-blur-md text-white text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full border border-white/20">
-                                {proj.category || 'Water Security'}
-                              </span>
-                            </div>
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
-                          </div>
-
-                          <div className="p-5 sm:p-6 flex-1 flex flex-col justify-between space-y-3">
-                            <div>
-                              <div className="text-[10.5px] font-extrabold text-[#A00000] uppercase tracking-wider mb-1">
-                                {proj.location || 'Coimbatore'}
-                              </div>
-                              <h4 className="text-base sm:text-lg font-extrabold text-slate-900 group-hover:text-[#A00000] transition-colors leading-snug">
-                                {proj.title}
-                              </h4>
-                              <p className="text-xs sm:text-[13px] text-slate-600 leading-relaxed mt-2 font-normal line-clamp-3">
-                                "{proj.description}"
-                              </p>
-                            </div>
-
-                            <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400 font-semibold">
-                              <span>{dateStr}</span>
-                              <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                            </div>
-                          </div>
-                        </article>
-                      );
-                    }
-
-                    // slot === 5
-                    return (
-                      <article key={proj.id || idx} className="md:col-span-2 lg:col-span-3 bg-gradient-to-b from-[#FFFDF8] via-[#FFF9F0] to-[#FFF3E0] rounded-3xl border-2 border-[#FFD32A]/70 shadow-sm hover:shadow-2xl hover:border-[#A00000] transition-all duration-300 flex flex-col justify-between overflow-hidden group">
-                        <div className="relative w-full aspect-[4/3] sm:aspect-[16/11] overflow-hidden bg-amber-50">
-                          <img
-                            src={imgUrl}
-                            alt={proj.title}
-                            loading="lazy"
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
-                          />
-                          <div className="absolute top-3.5 left-3.5 flex items-center space-x-1.5">
-                            <span className="bg-[#850000] text-[#FFD32A] text-xs font-black px-3 py-1 rounded-full border border-[#FFD32A]/60 shadow-md">
-                              {tagNumber}
-                            </span>
-                            <span className="bg-amber-100/90 text-[#850000] text-[9.5px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border border-amber-300">
-                              {proj.category || 'Civic Park'}
+                            <span className="text-[11px] sm:text-xs font-bold text-[#850000] bg-red-50 border border-red-200 px-3 py-0.5 rounded-full shrink-0">
+                              {catProjects.length} {catProjects.length === 1 ? 'Project' : 'Projects'}
                             </span>
                           </div>
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
-                        </div>
 
-                        <div className="p-5 flex-1 flex flex-col justify-between space-y-3">
-                          <div>
-                            <div className="text-[10px] font-black text-[#A00000] uppercase tracking-wider mb-1">
-                              {proj.location || 'Coimbatore'}
-                            </div>
-                            <h4 className="text-base font-extrabold text-slate-900 group-hover:text-[#A00000] transition-colors leading-snug">
-                              {proj.title}
-                            </h4>
-                            <p className="text-xs text-slate-600 leading-relaxed mt-2 font-normal line-clamp-3">
-                              "{proj.description}"
-                            </p>
-                          </div>
+                          {/* Responsive Cards Grid: 1 col on mobile, 2 on tablet, 3 on desktop */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
+                            {catProjects.map((proj, pIdx) => {
+                              const dateStr = proj.startDate
+                                ? new Date(proj.startDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+                                : proj.createdAt
+                                ? new Date(proj.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+                                : 'Initiative';
+                              const imgUrl = getSafeImageUrl(proj.imageUrl);
 
-                          <div className="pt-3 border-t border-amber-200/60 flex items-center justify-between text-[11px] text-[#850000] font-bold">
-                            <span>{dateStr}</span>
-                            <Sparkles className="w-3.5 h-3.5 text-[#FFD32A]" />
+                              return (
+                                <article
+                                  key={proj.id || pIdx}
+                                  className="bg-white rounded-2xl sm:rounded-3xl border border-[#E5DDD5] hover:border-[#850000] shadow-xs hover:shadow-xl transition-all duration-300 flex flex-col justify-between overflow-hidden group min-w-0 w-full"
+                                >
+                                  {/* Card Image */}
+                                  <div className="relative w-full aspect-[16/10] overflow-hidden bg-slate-100 shrink-0">
+                                    <img
+                                      src={imgUrl}
+                                      alt={proj.title}
+                                      loading="lazy"
+                                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
+                                    />
+                                    <div className="absolute top-3 left-3 right-3 flex items-center justify-between gap-2 pointer-events-none">
+                                      <span className="bg-black/75 backdrop-blur-md text-[#FFD32A] text-[11px] font-black px-2.5 py-0.5 rounded-full border border-white/20 shadow-md shrink-0">
+                                        #{String(pIdx + 1).padStart(2, '0')}
+                                      </span>
+                                      <span className="bg-white/95 backdrop-blur-md text-[#850000] text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full border border-red-100 shadow-md truncate max-w-[150px]">
+                                        {proj.category || catName}
+                                      </span>
+                                    </div>
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                                  </div>
+
+                                  {/* Card Content */}
+                                  <div className="p-5 sm:p-6 flex-1 flex flex-col justify-between space-y-3">
+                                    <div>
+                                      <div className="flex items-center justify-between gap-2 mb-1.5 text-[11px]">
+                                        <span className="font-extrabold text-[#A00000] uppercase tracking-wider truncate">
+                                          {proj.location || 'Coimbatore District'}
+                                        </span>
+                                        <span
+                                          className={`px-2 py-0.5 rounded-full font-bold text-[10px] shrink-0 ${
+                                            proj.status === 'Completed'
+                                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                              : proj.status === 'Planned'
+                                              ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                                              : 'bg-amber-50 text-amber-800 border border-amber-200'
+                                          }`}
+                                        >
+                                          {proj.status || 'Ongoing'}
+                                        </span>
+                                      </div>
+
+                                      <h5 className="text-base sm:text-lg font-black text-slate-900 group-hover:text-[#850000] transition-colors leading-snug break-words">
+                                        {proj.title}
+                                      </h5>
+
+                                      <p className="text-xs sm:text-[13px] text-slate-600 leading-relaxed font-normal mt-2 break-words line-clamp-3">
+                                        "{proj.description}"
+                                      </p>
+                                    </div>
+
+                                    {/* Progress Bar (if available) */}
+                                    {proj.progressPercentage > 0 && (
+                                      <div className="space-y-1 pt-1">
+                                        <div className="flex items-center justify-between text-[10.5px] font-bold text-slate-500">
+                                          <span>Progress</span>
+                                          <span className="text-[#850000]">{proj.progressPercentage}%</span>
+                                        </div>
+                                        <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                          <div
+                                            className="h-full bg-gradient-to-r from-[#850000] to-[#FFD32A] rounded-full transition-all duration-500"
+                                            style={{ width: `${Math.min(100, Math.max(0, proj.progressPercentage))}%` }}
+                                          />
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* Card Footer */}
+                                    <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 font-medium">
+                                      <span>{dateStr}</span>
+                                      <span className="inline-flex items-center space-x-1 text-[#A00000] font-bold text-[11px]">
+                                        <span>TVK Project</span>
+                                        <span className="w-1.5 h-1.5 rounded-full bg-[#FFD32A]" />
+                                      </span>
+                                    </div>
+                                  </div>
+                                </article>
+                              );
+                            })}
                           </div>
                         </div>
-                      </article>
-                    );
-                  })}
-                </div>
-              )}
+                      );
+                    })}
+                  </div>
+                );
+              })()}
             </section>
 
-            {/* ================= 6. OFFICIAL QUICK LINKS SECTION ================= */}
-            <section className="bg-white rounded-3xl sm:rounded-[2rem] border border-[#E7DFD7] shadow-lg p-5 sm:p-7 md:p-8 relative overflow-hidden space-y-6">
+            {/* ================= 6. REDESIGNED OFFICIAL QUICK LINKS SECTION ================= */}
+            <section className="bg-white rounded-3xl sm:rounded-[2rem] border border-[#E7DFD7] shadow-sm p-5 sm:p-7 md:p-8 space-y-6">
               {/* Header */}
-              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 border-b border-slate-200/80 pb-5">
-                <div className="space-y-1">
-                  <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full text-[10.5px] font-extrabold uppercase tracking-widest bg-amber-50 text-[#850000] border border-amber-200/80">
+              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 pb-5 border-b border-slate-200">
+                <div className="space-y-1 min-w-0">
+                  <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full text-[10.5px] font-extrabold uppercase tracking-widest bg-amber-50 text-[#850000] border border-amber-200">
                     <Sparkles className="w-3 h-3 text-[#FFD32A]" />
                     <span>Official Citizen Services</span>
                   </div>
@@ -1335,44 +1222,44 @@ export const CitizenPortalPage = () => {
                     Direct access to essential government identity portals and TVK party initiatives.
                   </p>
                 </div>
-                <div className="hidden sm:flex items-center space-x-1.5 text-[11px] font-bold text-slate-400">
+                <div className="flex items-center space-x-1.5 text-[11px] font-semibold text-slate-400 shrink-0">
                   <ExternalLink className="w-3.5 h-3.5 text-[#850000]" />
                   <span>Opens in New Tab</span>
                 </div>
               </div>
 
               {/* 3 Grid Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6">
                 {/* Link 1: Aadhaar Card */}
                 <a
                   href="https://myaadhaar.uidai.gov.in/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="group bg-gradient-to-b from-[#FFFDF8] via-white to-[#FCFAF7] rounded-2xl sm:rounded-3xl border border-[#E7DFD7] hover:border-[#850000] hover:shadow-xl p-5 sm:p-6 transition-all duration-300 flex flex-col justify-between relative overflow-hidden"
+                  className="group bg-slate-50/70 hover:bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 hover:border-[#850000] p-5 sm:p-6 shadow-2xs hover:shadow-lg transition-all duration-200 flex flex-col justify-between h-full min-w-0 focus:outline-none focus:ring-2 focus:ring-[#850000] focus:ring-offset-2"
                 >
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                      <div className="w-12 h-12 rounded-2xl bg-red-50 text-[#850000] group-hover:bg-[#850000] group-hover:text-[#FFD32A] flex items-center justify-center border border-red-200 transition-colors duration-300 shadow-xs">
-                        <IdCard className="w-6 h-6" />
+                      <div className="w-11 h-11 rounded-xl bg-red-50 text-[#850000] group-hover:bg-[#850000] group-hover:text-white flex items-center justify-center border border-red-200 transition-colors duration-200 shadow-2xs">
+                        <IdCard className="w-5 h-5" />
                       </div>
-                      <span className="p-2 rounded-full bg-slate-100 text-slate-400 group-hover:bg-red-50 group-hover:text-[#850000] transition-colors">
-                        <ExternalLink className="w-4 h-4" />
+                      <span className="w-8 h-8 rounded-lg bg-white border border-slate-200/80 text-slate-400 group-hover:text-[#850000] group-hover:border-red-200 flex items-center justify-center transition-colors">
+                        <ExternalLink className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
                       </span>
                     </div>
                     <div>
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#850000] bg-red-50 px-2.5 py-0.5 rounded-full border border-red-200/80">
-                        Government Portal
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#850000] bg-red-50 px-2 py-0.5 rounded border border-red-200/60 inline-block mb-1.5">
+                        UIDAI Portal
                       </span>
-                      <h4 className="text-base sm:text-lg font-black text-slate-900 group-hover:text-[#850000] transition-colors mt-2">
+                      <h4 className="text-base sm:text-lg font-black text-slate-900 group-hover:text-[#850000] transition-colors leading-snug">
                         Aadhaar Card – Apply / Download
                       </h4>
-                      <p className="text-xs text-slate-500 mt-1 line-clamp-2">
+                      <p className="text-xs sm:text-[13px] text-slate-600 mt-2 leading-relaxed">
                         Access official UIDAI self-service portal to update, verify, or download your e-Aadhaar.
                       </p>
                     </div>
                   </div>
-                  <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-[#850000]">
-                    <span>Visit UIDAI Portal</span>
+                  <div className="pt-4 mt-5 border-t border-slate-200/80 flex items-center justify-between text-xs font-bold text-[#850000]">
+                    <span>Visit Official Portal</span>
                     <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
                   </div>
                 </a>
@@ -1382,31 +1269,31 @@ export const CitizenPortalPage = () => {
                   href="https://www.incometaxindia.gov.in/en/pan"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="group bg-gradient-to-b from-[#FFFDF8] via-white to-[#FCFAF7] rounded-2xl sm:rounded-3xl border border-[#E7DFD7] hover:border-[#850000] hover:shadow-xl p-5 sm:p-6 transition-all duration-300 flex flex-col justify-between relative overflow-hidden"
+                  className="group bg-slate-50/70 hover:bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 hover:border-[#850000] p-5 sm:p-6 shadow-2xs hover:shadow-lg transition-all duration-200 flex flex-col justify-between h-full min-w-0 focus:outline-none focus:ring-2 focus:ring-[#850000] focus:ring-offset-2"
                 >
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                      <div className="w-12 h-12 rounded-2xl bg-amber-50 text-[#A00000] group-hover:bg-[#850000] group-hover:text-[#FFD32A] flex items-center justify-center border border-amber-200 transition-colors duration-300 shadow-xs">
-                        <CreditCard className="w-6 h-6" />
+                      <div className="w-11 h-11 rounded-xl bg-amber-50 text-[#850000] group-hover:bg-[#850000] group-hover:text-white flex items-center justify-center border border-amber-200 transition-colors duration-200 shadow-2xs">
+                        <CreditCard className="w-5 h-5" />
                       </div>
-                      <span className="p-2 rounded-full bg-slate-100 text-slate-400 group-hover:bg-amber-50 group-hover:text-[#850000] transition-colors">
-                        <ExternalLink className="w-4 h-4" />
+                      <span className="w-8 h-8 rounded-lg bg-white border border-slate-200/80 text-slate-400 group-hover:text-[#850000] group-hover:border-red-200 flex items-center justify-center transition-colors">
+                        <ExternalLink className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
                       </span>
                     </div>
                     <div>
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#A00000] bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200/80">
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#A00000] bg-amber-50 px-2 py-0.5 rounded border border-amber-200/60 inline-block mb-1.5">
                         Income Tax Department
                       </span>
-                      <h4 className="text-base sm:text-lg font-black text-slate-900 group-hover:text-[#850000] transition-colors mt-2">
+                      <h4 className="text-base sm:text-lg font-black text-slate-900 group-hover:text-[#850000] transition-colors leading-snug">
                         PAN Card – Apply / Download
                       </h4>
-                      <p className="text-xs text-slate-500 mt-1 line-clamp-2">
-                        Official NSDL / UTIITSL services for new PAN application, reprint, corrections and instant e-PAN.
+                      <p className="text-xs sm:text-[13px] text-slate-600 mt-2 leading-relaxed">
+                        Official ITD services for new PAN application, reprint, corrections and instant e-PAN.
                       </p>
                     </div>
                   </div>
-                  <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-[#850000]">
-                    <span>Visit ITD Portal</span>
+                  <div className="pt-4 mt-5 border-t border-slate-200/80 flex items-center justify-between text-xs font-bold text-[#850000]">
+                    <span>Visit Official Portal</span>
                     <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
                   </div>
                 </a>
@@ -1416,30 +1303,30 @@ export const CitizenPortalPage = () => {
                   href="https://tvk.family/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="group bg-gradient-to-b from-[#FFFDF8] via-white to-[#FCFAF7] rounded-2xl sm:rounded-3xl border border-[#E7DFD7] hover:border-[#850000] hover:shadow-xl p-5 sm:p-6 transition-all duration-300 flex flex-col justify-between relative overflow-hidden"
+                  className="group bg-slate-50/70 hover:bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 hover:border-[#850000] p-5 sm:p-6 shadow-2xs hover:shadow-lg transition-all duration-200 flex flex-col justify-between h-full min-w-0 focus:outline-none focus:ring-2 focus:ring-[#850000] focus:ring-offset-2"
                 >
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                      <div className="w-12 h-12 rounded-2xl bg-red-50 text-[#850000] group-hover:bg-[#850000] group-hover:text-[#FFD32A] flex items-center justify-center border border-red-200 transition-colors duration-300 shadow-xs">
-                        <Users className="w-6 h-6" />
+                      <div className="w-11 h-11 rounded-xl bg-red-50 text-[#850000] group-hover:bg-[#850000] group-hover:text-white flex items-center justify-center border border-red-200 transition-colors duration-200 shadow-2xs">
+                        <Users className="w-5 h-5" />
                       </div>
-                      <span className="p-2 rounded-full bg-slate-100 text-slate-400 group-hover:bg-red-50 group-hover:text-[#850000] transition-colors">
-                        <ExternalLink className="w-4 h-4" />
+                      <span className="w-8 h-8 rounded-lg bg-white border border-slate-200/80 text-slate-400 group-hover:text-[#850000] group-hover:border-red-200 flex items-center justify-center transition-colors">
+                        <ExternalLink className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
                       </span>
                     </div>
                     <div>
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#850000] bg-red-50 px-2.5 py-0.5 rounded-full border border-red-200/80">
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#850000] bg-red-50 px-2 py-0.5 rounded border border-red-200/60 inline-block mb-1.5">
                         TVK Party Initiative
                       </span>
-                      <h4 className="text-base sm:text-lg font-black text-slate-900 group-hover:text-[#850000] transition-colors mt-2">
+                      <h4 className="text-base sm:text-lg font-black text-slate-900 group-hover:text-[#850000] transition-colors leading-snug">
                         Membership Drive
                       </h4>
-                      <p className="text-xs text-slate-500 mt-1 line-clamp-2">
+                      <p className="text-xs sm:text-[13px] text-slate-600 mt-2 leading-relaxed">
                         Join the Tamilaga Vettri Kazhagam official family, register membership, and download your card.
                       </p>
                     </div>
                   </div>
-                  <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-[#850000]">
+                  <div className="pt-4 mt-5 border-t border-slate-200/80 flex items-center justify-between text-xs font-bold text-[#850000]">
                     <span>Join tvk.family</span>
                     <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
                   </div>
@@ -1447,77 +1334,75 @@ export const CitizenPortalPage = () => {
               </div>
             </section>
 
-            {/* ================= 6. CONNECT WITH K. VIGNESH SECTION ================= */}
-            <section className="bg-gradient-to-r from-[#200303] via-[#450808] to-[#250404] rounded-3xl sm:rounded-[2rem] p-6 sm:p-8 md:p-10 border-2 border-[#FFD32A]/50 shadow-2xl text-white relative overflow-hidden">
-              {/* Ambient background lighting */}
-              <div className="absolute top-0 right-0 w-80 h-80 bg-[#FFD32A]/10 rounded-full blur-3xl pointer-events-none" />
-              <div className="absolute bottom-0 left-0 w-80 h-80 bg-[#850000]/40 rounded-full blur-3xl pointer-events-none" />
-              <div className="h-1 bg-gradient-to-r from-transparent via-[#FFD32A] to-transparent absolute top-0 left-0 right-0" />
+            {/* ================= 7. PROFESSIONAL LEADERSHIP CONNECT & SOCIAL LINKS ================= */}
+            <section className="bg-white rounded-3xl sm:rounded-[2rem] border border-[#E7DFD7] shadow-sm p-5 sm:p-7 md:p-8 relative overflow-hidden space-y-6">
+              {/* Top decorative tricolor bar */}
+              <div className="h-1 bg-gradient-to-r from-[#850000] via-[#FFD32A] to-[#850000] absolute top-0 left-0 right-0" />
 
-              <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6 md:gap-8">
-                {/* Left Column: Designation & Public Connect Information */}
-                <div className="space-y-3 max-w-2xl">
-                  <div className="inline-flex items-center space-x-2 px-3.5 py-1 rounded-full bg-white/10 backdrop-blur-md border border-[#FFD32A]/50 text-[#FFD32A] text-[11px] font-extrabold tracking-wider uppercase">
-                    <Sparkles className="w-3.5 h-3.5 text-[#FFD32A]" />
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pt-1">
+                {/* Designation & Public Connect Information */}
+                <div className="space-y-2 max-w-xl">
+                  <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-red-50 text-[#850000] border border-red-200/80 text-[10.5px] font-extrabold uppercase tracking-widest">
+                    <Sparkles className="w-3 h-3 text-[#FFD32A]" />
                     <span>{t('achievements.connectBadge', 'Official Public Channel')}</span>
                   </div>
 
                   <div>
-                    <h3 className="text-2xl sm:text-3xl md:text-4xl font-black text-white tracking-tight drop-shadow-md">
+                    <h3 className="text-xl sm:text-2xl md:text-3xl font-black text-slate-900 tracking-tight">
                       {t('achievements.connectTitle', 'Connect with K. Vignesh')}
                     </h3>
-                    <p className="text-sm sm:text-base font-bold text-[#FFD32A] mt-1 flex items-center space-x-1.5">
-                      <span>{t('achievements.connectDesignation', 'Minister for Prohibition and Excise Department')}</span>
+                    <p className="text-xs sm:text-sm font-bold text-[#850000] mt-1">
+                      {t('achievements.connectDesignation', 'Minister for Prohibition and Excise Department')}
                     </p>
                   </div>
 
-                  <p className="text-xs sm:text-sm text-white/85 font-normal leading-relaxed">
+                  <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-normal">
                     "{t('achievements.connectSubtitle', 'Public Grievance Redressal & Civic Welfare Communications')}"
                   </p>
                 </div>
 
-                {/* Right Column: Social Media Interactive Buttons */}
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3.5 sm:gap-4 shrink-0">
-                  {/* Twitter / X Button */}
+                {/* Social Media Interactive Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4 shrink-0 w-full lg:w-auto">
+                  {/* Twitter / X */}
                   <a
                     href="https://share.google/nPAyQVqIMEpBaDacb"
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label="Connect with K. Vignesh on Twitter / X"
-                    className="flex items-center space-x-3.5 px-6 py-3.5 rounded-2xl bg-black/60 hover:bg-black/90 border border-white/20 hover:border-[#FFD32A] text-white shadow-lg hover:shadow-2xl hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer group min-w-[190px]"
+                    className="group flex items-center space-x-3.5 p-4 rounded-2xl bg-slate-50 hover:bg-slate-900 text-slate-800 hover:text-white border border-slate-200/90 hover:border-slate-900 transition-all duration-200 shadow-2xs hover:shadow-md min-w-[210px] focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2"
                   >
-                    <div className="w-11 h-11 rounded-xl bg-white/10 group-hover:bg-[#FFD32A] flex items-center justify-center transition-colors">
-                      <Twitter className="w-5 h-5 text-white group-hover:text-black transition-colors" />
+                    <div className="w-11 h-11 rounded-xl bg-white group-hover:bg-white/20 border border-slate-200/80 group-hover:border-white/20 text-slate-900 group-hover:text-white flex items-center justify-center shrink-0 transition-colors">
+                      <Twitter className="w-5 h-5" />
                     </div>
-                    <div className="text-left flex-1">
-                      <span className="text-[10px] uppercase font-bold text-white/60 block tracking-wider">
+                    <div className="text-left flex-1 min-w-0">
+                      <span className="text-[10px] uppercase font-bold text-slate-400 group-hover:text-white/70 block tracking-wider truncate">
                         {t('achievements.twitter', 'Twitter / X')}
                       </span>
-                      <span className="text-xs sm:text-sm font-extrabold text-white group-hover:text-[#FFD32A] transition-colors flex items-center justify-between">
-                        <span>@kvignesh</span>
-                        <ExternalLink className="w-3.5 h-3.5 text-white/50 group-hover:text-[#FFD32A] ml-2" />
+                      <span className="text-sm font-extrabold text-slate-900 group-hover:text-white flex items-center justify-between">
+                        <span className="truncate">@kvignesh</span>
+                        <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-white ml-2 shrink-0 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                       </span>
                     </div>
                   </a>
 
-                  {/* Instagram Button */}
+                  {/* Instagram */}
                   <a
                     href="https://share.google/RPYFcif2qdXqyEqlP"
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label="Connect with K. Vignesh on Instagram"
-                    className="flex items-center space-x-3.5 px-6 py-3.5 rounded-2xl bg-gradient-to-r from-[#833ab4]/30 via-[#fd1d1d]/30 to-[#fcb045]/30 hover:from-[#833ab4]/50 hover:via-[#fd1d1d]/50 hover:to-[#fcb045]/50 border border-white/20 hover:border-[#FFD32A] text-white shadow-lg hover:shadow-2xl hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer group min-w-[190px]"
+                    className="group flex items-center space-x-3.5 p-4 rounded-2xl bg-slate-50 hover:bg-gradient-to-r hover:from-[#833ab4] hover:via-[#fd1d1d] hover:to-[#fcb045] hover:text-white border border-slate-200/90 hover:border-transparent transition-all duration-200 shadow-2xs hover:shadow-md min-w-[210px] focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2"
                   >
-                    <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-[#f09433] via-[#dc2743] to-[#bc1888] flex items-center justify-center shadow-sm">
-                      <Instagram className="w-5 h-5 text-white" />
+                    <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-[#f09433] via-[#dc2743] to-[#bc1888] text-white flex items-center justify-center shadow-2xs shrink-0 group-hover:scale-105 transition-transform">
+                      <Instagram className="w-5 h-5" />
                     </div>
-                    <div className="text-left flex-1">
-                      <span className="text-[10px] uppercase font-bold text-white/60 block tracking-wider">
+                    <div className="text-left flex-1 min-w-0">
+                      <span className="text-[10px] uppercase font-bold text-slate-400 group-hover:text-white/80 block tracking-wider truncate">
                         {t('achievements.instagram', 'Instagram')}
                       </span>
-                      <span className="text-xs sm:text-sm font-extrabold text-white group-hover:text-[#FFD32A] transition-colors flex items-center justify-between">
-                        <span>@kvignesh</span>
-                        <ExternalLink className="w-3.5 h-3.5 text-white/50 group-hover:text-[#FFD32A] ml-2" />
+                      <span className="text-sm font-extrabold text-slate-900 group-hover:text-white flex items-center justify-between">
+                        <span className="truncate">@kvignesh</span>
+                        <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-white ml-2 shrink-0 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                       </span>
                     </div>
                   </a>
