@@ -85,7 +85,7 @@ const startServer = async () => {
   try {
     await connectDB();
     await seedDatabase();
-    app.listen(PORT, () => {
+    app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 TVK Digital Governance CRM Server running on port ${PORT}`);
       console.log(`🔗 API Base: http://localhost:${PORT}/api`);
     });

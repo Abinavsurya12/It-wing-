@@ -30,6 +30,9 @@ import {
   Instagram,
   ExternalLink,
   Sparkles,
+  IdCard,
+  CreditCard,
+  Users,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
@@ -45,12 +48,6 @@ import coimbatoreCityBg from '../../assets/coimbatore-city-bg.png';
 import image1 from '../../assets/image1.png';
 import image2 from '../../assets/image2.png';
 import image3 from '../../assets/image3.png';
-import streetlightImg from '../../assets/achievements/streetlight.jpg';
-import bridgeImg from '../../assets/achievements/bridge.jpg';
-import roadImg from '../../assets/achievements/road.jpg';
-import drainageImg from '../../assets/achievements/drainage.jpg';
-import waterImg from '../../assets/achievements/water.jpg';
-import communityImg from '../../assets/achievements/community.jpg';
 
 export const CitizenPortalPage = () => {
   const navigate = useNavigate();
@@ -63,6 +60,7 @@ export const CitizenPortalPage = () => {
   const [appointments, setAppointments] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [projects, setProjects] = useState([]);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -91,10 +89,11 @@ export const CitizenPortalPage = () => {
   const fetchCitizenData = async () => {
     try {
       setLoading(true);
-      const [issuesRes, apptRes, notifRes] = await Promise.all([
+      const [issuesRes, apptRes, notifRes, projectsRes] = await Promise.all([
         api.get('/issues?limit=50'),
         api.get('/appointments/my').catch(() => ({ data: { success: false, data: [] } })),
         api.get('/notifications').catch(() => ({ data: { success: false, data: [], unreadCount: 0 } })),
+        api.get('/projects').catch(() => ({ data: { success: false, data: [] } })),
       ]);
 
       if (issuesRes.data.success) {
@@ -106,6 +105,9 @@ export const CitizenPortalPage = () => {
       if (notifRes.data.success) {
         setNotifications(notifRes.data.data || []);
         setUnreadCount(notifRes.data.unreadCount || 0);
+      }
+      if (projectsRes.data?.success) {
+        setProjects(projectsRes.data.data || []);
       }
     } catch (err) {
       console.error('Error loading citizen portal data:', err);
@@ -314,75 +316,6 @@ export const CitizenPortalPage = () => {
       icon: Search,
       action: () => setActiveSection('my-appointments'),
       badge: t('citizen.historyStatusBadge', 'History & Status'),
-    },
-  ];
-
-  const achievements = [
-    {
-      id: 'streetlight',
-      title: t('achievements.card1Title', 'Streetlight Development'),
-      description: t(
-        'achievements.card1Desc',
-        'Addressing streetlight-related issues in residential areas. Supporting better road visibility and safer public spaces for local residents.'
-      ),
-      image: streetlightImg,
-      alt: 'Streetlight Development',
-      tag: '01',
-    },
-    {
-      id: 'bridge',
-      title: t('achievements.card2Title', 'Sundarapuram Bridge Development'),
-      description: t(
-        'achievements.card2Desc',
-        'Highlighting bridge development initiatives in Sundarapuram. Supporting improved connectivity and convenient transportation for the public.'
-      ),
-      image: bridgeImg,
-      alt: 'Sundarapuram Bridge Development',
-      tag: '02',
-    },
-    {
-      id: 'road',
-      title: t('achievements.card3Title', 'Road Infrastructure Improvement'),
-      description: t(
-        'achievements.card3Desc',
-        'Highlighting road infrastructure improvement initiatives. Supporting smoother transportation and better connectivity across local communities.'
-      ),
-      image: roadImg,
-      alt: 'Road Infrastructure Improvement',
-      tag: '03',
-    },
-    {
-      id: 'drainage',
-      title: t('achievements.card4Title', 'Drainage Infrastructure'),
-      description: t(
-        'achievements.card4Desc',
-        'Highlighting drainage-related public infrastructure initiatives. Supporting improved water flow and better local environmental conditions.'
-      ),
-      image: drainageImg,
-      alt: 'Drainage Infrastructure',
-      tag: '04',
-    },
-    {
-      id: 'water',
-      title: t('achievements.card5Title', 'Drinking Water Development'),
-      description: t(
-        'achievements.card5Desc',
-        'Showcasing public drinking water infrastructure initiatives. Supporting accessible and convenient water facilities for local communities.'
-      ),
-      image: waterImg,
-      alt: 'Drinking Water Development',
-      tag: '05',
-    },
-    {
-      id: 'community',
-      title: t('achievements.card6Title', 'Community Development Initiatives'),
-      description: t(
-        'achievements.card6Desc',
-        'Highlighting infrastructure initiatives that support local communities. Focusing on improved public facilities and neighbourhood development.'
-      ),
-      image: communityImg,
-      alt: 'Community Development Initiatives',
-      tag: '06',
     },
   ];
 
@@ -1083,7 +1016,7 @@ export const CitizenPortalPage = () => {
                     <span>{t('achievements.badge', 'TVK Coimbatore Initiatives')}</span>
                   </div>
                   <h3 className="text-2xl sm:text-3xl md:text-4xl font-black text-[#252525] tracking-tight">
-                    {t('achievements.sectionTitle', 'OUR ACHIEVEMENTS')}
+                    {t('achievements.sectionTitle', 'OUR ACHIEVEMENTS & PROJECTS')}
                   </h3>
                   <p className="text-xs sm:text-sm text-slate-600 font-medium max-w-2xl">
                     "{t('achievements.sectionSubtitle', 'Development Initiatives & Public Welfare Activities')}"
@@ -1091,271 +1024,426 @@ export const CitizenPortalPage = () => {
                 </div>
                 <div className="hidden sm:flex flex-col items-end">
                   <span className="text-[11px] font-extrabold text-[#A00000] uppercase tracking-wider bg-white px-3.5 py-1.5 rounded-xl border border-red-200/90 shadow-2xs">
-                    06 Signature Milestones
+                    {projects.length > 0 ? `${String(projects.length).padStart(2, '0')} Active Projects` : '00 Projects'}
                   </span>
                   <span className="text-[10px] text-slate-400 font-semibold mt-1">Field Tested & Community Driven</span>
                 </div>
               </div>
 
               {/* Asymmetric Editorial Bento Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-5 sm:gap-6">
-                {/* CARD 1: Large Featured Image Card (Desktop: 8 cols, Tablet: 2 cols, Mobile: 1 col) */}
-                <article className="md:col-span-2 lg:col-span-8 bg-white rounded-3xl border border-[#E5DDD5] shadow-xs hover:shadow-2xl hover:border-[#A00000]/60 transition-all duration-300 flex flex-col justify-between overflow-hidden group">
-                  {/* Featured Large Image */}
-                  <div className="relative w-full aspect-[16/10] sm:aspect-[16/9] lg:aspect-[16/9] overflow-hidden bg-slate-100">
-                    <img
-                      src={achievements[0].image}
-                      alt={achievements[0].alt}
-                      loading="lazy"
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
-                    />
-                    {/* Number & Spotlight Badges */}
-                    <div className="absolute top-3.5 left-3.5 flex items-center space-x-2">
-                      <span className="bg-black/75 backdrop-blur-md text-[#FFD32A] text-xs font-black px-3 py-1 rounded-full border border-white/20 shadow-md">
-                        01
-                      </span>
-                      <span className="bg-[#850000]/90 backdrop-blur-md text-white text-[10.5px] font-extrabold uppercase tracking-wider px-3 py-1 rounded-full border border-white/20 shadow-md flex items-center space-x-1">
-                        <Sparkles className="w-2.5 h-2.5 text-[#FFD32A]" />
-                        <span>Featured Milestone</span>
-                      </span>
-                    </div>
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+              {projects.length === 0 ? (
+                <div className="py-12 px-6 bg-white/70 backdrop-blur-sm rounded-3xl border border-dashed border-[#E5DDD5] text-center flex flex-col items-center justify-center space-y-3">
+                  <div className="w-14 h-14 rounded-2xl bg-red-50 text-[#850000] flex items-center justify-center border border-red-100 shadow-xs">
+                    <Sparkles className="w-7 h-7 text-[#FFD32A]" />
                   </div>
+                  <h4 className="text-base font-bold text-slate-800">No Projects or Achievements Published Yet</h4>
+                  <p className="text-xs sm:text-sm text-slate-500 max-w-md">
+                    Development initiatives and community milestones will appear here dynamically as they are published by the administration.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-5 sm:gap-6">
+                  {projects.map((proj, idx) => {
+                    const slot = idx % 6;
+                    const dateStr = proj.startDate
+                      ? new Date(proj.startDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+                      : proj.createdAt
+                      ? new Date(proj.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+                      : 'Initiative';
+                    const tagNumber = String(idx + 1).padStart(2, '0');
+                    const imgUrl = getSafeImageUrl(proj.imageUrl);
 
-                  {/* Description & Content visibly below image */}
-                  <div className="p-5 sm:p-7 flex-1 flex flex-col justify-between space-y-3">
-                    <div>
-                      <div className="text-[11px] font-extrabold text-[#A00000] uppercase tracking-wider mb-1">
-                        Residential Zone Electrification
-                      </div>
-                      <h4 className="text-lg sm:text-2xl font-black text-slate-900 group-hover:text-[#A00000] transition-colors leading-snug">
-                        {achievements[0].title}
-                      </h4>
-                      <p className="text-xs sm:text-sm text-slate-600 leading-relaxed mt-2.5 font-normal line-clamp-3">
-                        "{achievements[0].description}"
-                      </p>
-                    </div>
+                    if (slot === 0) {
+                      return (
+                        <article key={proj.id || idx} className="md:col-span-2 lg:col-span-8 bg-white rounded-3xl border border-[#E5DDD5] shadow-xs hover:shadow-2xl hover:border-[#A00000]/60 transition-all duration-300 flex flex-col justify-between overflow-hidden group">
+                          <div className="relative w-full aspect-[16/10] sm:aspect-[16/9] lg:aspect-[16/9] overflow-hidden bg-slate-100">
+                            <img
+                              src={imgUrl}
+                              alt={proj.title}
+                              loading="lazy"
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
+                            />
+                            <div className="absolute top-3.5 left-3.5 flex items-center space-x-2">
+                              <span className="bg-black/75 backdrop-blur-md text-[#FFD32A] text-xs font-black px-3 py-1 rounded-full border border-white/20 shadow-md">
+                                {tagNumber}
+                              </span>
+                              <span className="bg-[#850000]/90 backdrop-blur-md text-white text-[10.5px] font-extrabold uppercase tracking-wider px-3 py-1 rounded-full border border-white/20 shadow-md flex items-center space-x-1">
+                                <Sparkles className="w-2.5 h-2.5 text-[#FFD32A]" />
+                                <span>{proj.category || 'Featured Milestone'}</span>
+                              </span>
+                            </div>
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                          </div>
 
-                    <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400 font-semibold">
-                      <span className="text-slate-500 font-medium">Public Safety & 24/7 Illumination</span>
-                      <span className="inline-flex items-center space-x-1 text-[#A00000] font-bold">
-                        <span>Verified Resolution</span>
-                        <span className="w-2 h-2 rounded-full bg-[#FFD32A]" />
-                      </span>
-                    </div>
-                  </div>
-                </article>
+                          <div className="p-5 sm:p-7 flex-1 flex flex-col justify-between space-y-3">
+                            <div>
+                              <div className="text-[11px] font-extrabold text-[#A00000] uppercase tracking-wider mb-1">
+                                {proj.location || 'Coimbatore District'}
+                              </div>
+                              <h4 className="text-lg sm:text-2xl font-black text-slate-900 group-hover:text-[#A00000] transition-colors leading-snug">
+                                {proj.title}
+                              </h4>
+                              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed mt-2.5 font-normal line-clamp-3">
+                                "{proj.description}"
+                              </p>
+                            </div>
 
-                {/* CARD 2: Medium Image Card (Desktop: 4 cols, Tablet: 1 col, Mobile: 1 col) */}
-                <article className="md:col-span-1 lg:col-span-4 bg-white rounded-3xl border border-[#E5DDD5] shadow-xs hover:shadow-2xl hover:border-[#A00000]/60 transition-all duration-300 flex flex-col justify-between overflow-hidden group">
-                  {/* Medium Image */}
-                  <div className="relative w-full aspect-[4/3] sm:aspect-[16/11] overflow-hidden bg-slate-100">
-                    <img
-                      src={achievements[1].image}
-                      alt={achievements[1].alt}
-                      loading="lazy"
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
-                    />
-                    <div className="absolute top-3.5 left-3.5">
-                      <span className="bg-black/75 backdrop-blur-md text-[#FFD32A] text-xs font-black px-3 py-1 rounded-full border border-white/20 shadow-md">
-                        02
-                      </span>
-                    </div>
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
-                  </div>
+                            <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400 font-semibold">
+                              <span className="text-slate-500 font-medium">{dateStr}</span>
+                              <span className="inline-flex items-center space-x-1 text-[#A00000] font-bold">
+                                <span>{proj.status || 'Active'}</span>
+                                <span className="w-2 h-2 rounded-full bg-[#FFD32A]" />
+                              </span>
+                            </div>
+                          </div>
+                        </article>
+                      );
+                    }
 
-                  {/* Description & Content visibly below image */}
-                  <div className="p-5 sm:p-6 flex-1 flex flex-col justify-between space-y-3">
-                    <div>
-                      <div className="text-[10.5px] font-extrabold text-[#A00000] uppercase tracking-wider mb-1">
-                        Connectivity & Flyover
-                      </div>
-                      <h4 className="text-base sm:text-lg font-extrabold text-slate-900 group-hover:text-[#A00000] transition-colors leading-snug">
-                        {achievements[1].title}
-                      </h4>
-                      <p className="text-xs sm:text-[13px] text-slate-600 leading-relaxed mt-2 font-normal line-clamp-3">
-                        "{achievements[1].description}"
-                      </p>
-                    </div>
+                    if (slot === 1) {
+                      return (
+                        <article key={proj.id || idx} className="md:col-span-1 lg:col-span-4 bg-white rounded-3xl border border-[#E5DDD5] shadow-xs hover:shadow-2xl hover:border-[#A00000]/60 transition-all duration-300 flex flex-col justify-between overflow-hidden group">
+                          <div className="relative w-full aspect-[4/3] sm:aspect-[16/11] overflow-hidden bg-slate-100">
+                            <img
+                              src={imgUrl}
+                              alt={proj.title}
+                              loading="lazy"
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
+                            />
+                            <div className="absolute top-3.5 left-3.5">
+                              <span className="bg-black/75 backdrop-blur-md text-[#FFD32A] text-xs font-black px-3 py-1 rounded-full border border-white/20 shadow-md">
+                                {tagNumber}
+                              </span>
+                            </div>
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                          </div>
 
-                    <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400 font-semibold">
-                      <span>Sundarapuram Route</span>
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#A00000]" />
-                    </div>
-                  </div>
-                </article>
+                          <div className="p-5 sm:p-6 flex-1 flex flex-col justify-between space-y-3">
+                            <div>
+                              <div className="text-[10.5px] font-extrabold text-[#A00000] uppercase tracking-wider mb-1">
+                                {proj.category || 'Development Initiative'}
+                              </div>
+                              <h4 className="text-base sm:text-lg font-extrabold text-slate-900 group-hover:text-[#A00000] transition-colors leading-snug">
+                                {proj.title}
+                              </h4>
+                              <p className="text-xs sm:text-[13px] text-slate-600 leading-relaxed mt-2 font-normal line-clamp-3">
+                                "{proj.description}"
+                              </p>
+                            </div>
 
-                {/* CARD 3: Wide Horizontal Achievement Card (Desktop: 12 cols, Tablet: 2 cols, Mobile: 1 col) */}
-                <article className="md:col-span-2 lg:col-span-12 bg-white rounded-3xl border border-[#E5DDD5] shadow-xs hover:shadow-2xl hover:border-[#A00000]/60 transition-all duration-300 overflow-hidden group">
-                  <div className="flex flex-col md:flex-row items-stretch">
-                    {/* Left Side: Wide Landscape Image */}
-                    <div className="relative md:w-5/12 lg:w-1/2 aspect-[16/10] md:aspect-auto overflow-hidden bg-slate-100 min-h-[220px] md:min-h-[280px]">
-                      <img
-                        src={achievements[2].image}
-                        alt={achievements[2].alt}
-                        loading="lazy"
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
-                      />
-                      <div className="absolute top-3.5 left-3.5 flex items-center space-x-2">
-                        <span className="bg-black/75 backdrop-blur-md text-[#FFD32A] text-xs font-black px-3 py-1 rounded-full border border-white/20 shadow-md">
-                          03
-                        </span>
-                        <span className="bg-slate-900/80 backdrop-blur-md text-white text-[10.5px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full border border-white/20">
-                          Corridor Upgrade
-                        </span>
-                      </div>
-                      <div className="absolute inset-0 bg-gradient-to-t md:bg-gradient-to-r from-black/25 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
-                    </div>
+                            <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400 font-semibold">
+                              <span>{dateStr}</span>
+                              <span className="w-1.5 h-1.5 rounded-full bg-[#A00000]" />
+                            </div>
+                          </div>
+                        </article>
+                      );
+                    }
 
-                    {/* Right Side: Editorial Content visible beside/below image */}
-                    <div className="p-5 sm:p-7 md:w-7/12 lg:w-1/2 flex flex-col justify-between space-y-4">
-                      <div>
-                        <div className="inline-flex items-center space-x-1.5 text-[10.5px] font-extrabold text-[#A00000] uppercase tracking-wider mb-1.5">
-                          <span>★</span>
-                          <span>Local Community Connectivity</span>
+                    if (slot === 2) {
+                      return (
+                        <article key={proj.id || idx} className="md:col-span-2 lg:col-span-12 bg-white rounded-3xl border border-[#E5DDD5] shadow-xs hover:shadow-2xl hover:border-[#A00000]/60 transition-all duration-300 overflow-hidden group">
+                          <div className="flex flex-col md:flex-row items-stretch">
+                            <div className="relative md:w-5/12 lg:w-1/2 aspect-[16/10] md:aspect-auto overflow-hidden bg-slate-100 min-h-[220px] md:min-h-[280px]">
+                              <img
+                                src={imgUrl}
+                                alt={proj.title}
+                                loading="lazy"
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
+                              />
+                              <div className="absolute top-3.5 left-3.5 flex items-center space-x-2">
+                                <span className="bg-black/75 backdrop-blur-md text-[#FFD32A] text-xs font-black px-3 py-1 rounded-full border border-white/20 shadow-md">
+                                  {tagNumber}
+                                </span>
+                                <span className="bg-slate-900/80 backdrop-blur-md text-white text-[10.5px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full border border-white/20">
+                                  {proj.category || 'Corridor Upgrade'}
+                                </span>
+                              </div>
+                              <div className="absolute inset-0 bg-gradient-to-t md:bg-gradient-to-r from-black/25 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                            </div>
+
+                            <div className="p-5 sm:p-7 md:w-7/12 lg:w-1/2 flex flex-col justify-between space-y-4">
+                              <div>
+                                <div className="inline-flex items-center space-x-1.5 text-[10.5px] font-extrabold text-[#A00000] uppercase tracking-wider mb-1.5">
+                                  <span>★</span>
+                                  <span>{proj.location || 'Coimbatore District'}</span>
+                                </div>
+                                <h4 className="text-lg sm:text-2xl font-black text-slate-900 group-hover:text-[#A00000] transition-colors leading-snug">
+                                  {proj.title}
+                                </h4>
+                                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed mt-2.5 font-normal line-clamp-3">
+                                  "{proj.description}"
+                                </p>
+                              </div>
+
+                              <div className="pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400 font-semibold">
+                                <span className="text-slate-500">{dateStr}</span>
+                                <div className="flex items-center space-x-2">
+                                  <span className="text-[11px] font-extrabold text-[#A00000] bg-red-50 px-2.5 py-0.5 rounded-lg border border-red-200">
+                                    {proj.status || 'Active'}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </article>
+                      );
+                    }
+
+                    if (slot === 3) {
+                      return (
+                        <article key={proj.id || idx} className="md:col-span-1 lg:col-span-4 bg-white rounded-3xl border border-[#E5DDD5] shadow-xs hover:shadow-2xl hover:border-[#A00000]/60 transition-all duration-300 flex flex-col justify-between overflow-hidden group">
+                          <div className="relative w-full aspect-[16/10] overflow-hidden bg-slate-100">
+                            <img
+                              src={imgUrl}
+                              alt={proj.title}
+                              loading="lazy"
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
+                            />
+                            <div className="absolute top-3.5 left-3.5">
+                              <span className="bg-black/75 backdrop-blur-md text-[#FFD32A] text-xs font-black px-3 py-1 rounded-full border border-white/20 shadow-md">
+                                {tagNumber}
+                              </span>
+                            </div>
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                          </div>
+
+                          <div className="p-5 sm:p-6 flex-1 flex flex-col justify-between space-y-3">
+                            <div>
+                              <div className="text-[10.5px] font-extrabold text-[#A00000] uppercase tracking-wider mb-1">
+                                {proj.category || 'Civic Infrastructure'}
+                              </div>
+                              <h4 className="text-base sm:text-lg font-extrabold text-slate-900 group-hover:text-[#A00000] transition-colors leading-snug">
+                                {proj.title}
+                              </h4>
+                              <p className="text-xs sm:text-[13px] text-slate-600 leading-relaxed mt-2 font-normal line-clamp-3">
+                                "{proj.description}"
+                              </p>
+                            </div>
+
+                            <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400 font-semibold">
+                              <span>{dateStr}</span>
+                              <span className="w-1.5 h-1.5 rounded-full bg-[#FFD32A]" />
+                            </div>
+                          </div>
+                        </article>
+                      );
+                    }
+
+                    if (slot === 4) {
+                      return (
+                        <article key={proj.id || idx} className="md:col-span-1 lg:col-span-5 bg-white rounded-3xl border border-[#E5DDD5] shadow-xs hover:shadow-2xl hover:border-[#A00000]/60 transition-all duration-300 flex flex-col justify-between overflow-hidden group">
+                          <div className="relative w-full aspect-[16/10] overflow-hidden bg-slate-100">
+                            <img
+                              src={imgUrl}
+                              alt={proj.title}
+                              loading="lazy"
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
+                            />
+                            <div className="absolute top-3.5 left-3.5 flex items-center space-x-2">
+                              <span className="bg-black/75 backdrop-blur-md text-[#FFD32A] text-xs font-black px-3 py-1 rounded-full border border-white/20 shadow-md">
+                                {tagNumber}
+                              </span>
+                              <span className="bg-blue-900/80 backdrop-blur-md text-white text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full border border-white/20">
+                                {proj.category || 'Water Security'}
+                              </span>
+                            </div>
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                          </div>
+
+                          <div className="p-5 sm:p-6 flex-1 flex flex-col justify-between space-y-3">
+                            <div>
+                              <div className="text-[10.5px] font-extrabold text-[#A00000] uppercase tracking-wider mb-1">
+                                {proj.location || 'Coimbatore'}
+                              </div>
+                              <h4 className="text-base sm:text-lg font-extrabold text-slate-900 group-hover:text-[#A00000] transition-colors leading-snug">
+                                {proj.title}
+                              </h4>
+                              <p className="text-xs sm:text-[13px] text-slate-600 leading-relaxed mt-2 font-normal line-clamp-3">
+                                "{proj.description}"
+                              </p>
+                            </div>
+
+                            <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400 font-semibold">
+                              <span>{dateStr}</span>
+                              <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                            </div>
+                          </div>
+                        </article>
+                      );
+                    }
+
+                    // slot === 5
+                    return (
+                      <article key={proj.id || idx} className="md:col-span-2 lg:col-span-3 bg-gradient-to-b from-[#FFFDF8] via-[#FFF9F0] to-[#FFF3E0] rounded-3xl border-2 border-[#FFD32A]/70 shadow-sm hover:shadow-2xl hover:border-[#A00000] transition-all duration-300 flex flex-col justify-between overflow-hidden group">
+                        <div className="relative w-full aspect-[4/3] sm:aspect-[16/11] overflow-hidden bg-amber-50">
+                          <img
+                            src={imgUrl}
+                            alt={proj.title}
+                            loading="lazy"
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
+                          />
+                          <div className="absolute top-3.5 left-3.5 flex items-center space-x-1.5">
+                            <span className="bg-[#850000] text-[#FFD32A] text-xs font-black px-3 py-1 rounded-full border border-[#FFD32A]/60 shadow-md">
+                              {tagNumber}
+                            </span>
+                            <span className="bg-amber-100/90 text-[#850000] text-[9.5px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border border-amber-300">
+                              {proj.category || 'Civic Park'}
+                            </span>
+                          </div>
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
                         </div>
-                        <h4 className="text-lg sm:text-2xl font-black text-slate-900 group-hover:text-[#A00000] transition-colors leading-snug">
-                          {achievements[2].title}
-                        </h4>
-                        <p className="text-xs sm:text-sm text-slate-600 leading-relaxed mt-2.5 font-normal line-clamp-3">
-                          "{achievements[2].description}"
-                        </p>
-                      </div>
 
-                      <div className="pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400 font-semibold">
-                        <span className="text-slate-500">Pothole Free & Asphalt Relaying Drive</span>
-                        <div className="flex items-center space-x-2">
-                          <span className="text-[11px] font-extrabold text-[#A00000] bg-red-50 px-2.5 py-0.5 rounded-lg border border-red-200">
-                            Smooth Transit
-                          </span>
+                        <div className="p-5 flex-1 flex flex-col justify-between space-y-3">
+                          <div>
+                            <div className="text-[10px] font-black text-[#A00000] uppercase tracking-wider mb-1">
+                              {proj.location || 'Coimbatore'}
+                            </div>
+                            <h4 className="text-base font-extrabold text-slate-900 group-hover:text-[#A00000] transition-colors leading-snug">
+                              {proj.title}
+                            </h4>
+                            <p className="text-xs text-slate-600 leading-relaxed mt-2 font-normal line-clamp-3">
+                              "{proj.description}"
+                            </p>
+                          </div>
+
+                          <div className="pt-3 border-t border-amber-200/60 flex items-center justify-between text-[11px] text-[#850000] font-bold">
+                            <span>{dateStr}</span>
+                            <Sparkles className="w-3.5 h-3.5 text-[#FFD32A]" />
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                  </div>
-                </article>
+                      </article>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
 
-                {/* CARD 4: Medium Image Card (Desktop: 4 cols, Tablet: 1 col, Mobile: 1 col) */}
-                <article className="md:col-span-1 lg:col-span-4 bg-white rounded-3xl border border-[#E5DDD5] shadow-xs hover:shadow-2xl hover:border-[#A00000]/60 transition-all duration-300 flex flex-col justify-between overflow-hidden group">
-                  {/* Medium Image */}
-                  <div className="relative w-full aspect-[16/10] overflow-hidden bg-slate-100">
-                    <img
-                      src={achievements[3].image}
-                      alt={achievements[3].alt}
-                      loading="lazy"
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
-                    />
-                    <div className="absolute top-3.5 left-3.5">
-                      <span className="bg-black/75 backdrop-blur-md text-[#FFD32A] text-xs font-black px-3 py-1 rounded-full border border-white/20 shadow-md">
-                        04
+            {/* ================= 6. OFFICIAL QUICK LINKS SECTION ================= */}
+            <section className="bg-white rounded-3xl sm:rounded-[2rem] border border-[#E7DFD7] shadow-lg p-5 sm:p-7 md:p-8 relative overflow-hidden space-y-6">
+              {/* Header */}
+              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 border-b border-slate-200/80 pb-5">
+                <div className="space-y-1">
+                  <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full text-[10.5px] font-extrabold uppercase tracking-widest bg-amber-50 text-[#850000] border border-amber-200/80">
+                    <Sparkles className="w-3 h-3 text-[#FFD32A]" />
+                    <span>Official Citizen Services</span>
+                  </div>
+                  <h3 className="text-xl sm:text-2xl md:text-3xl font-black text-[#252525] tracking-tight">
+                    IMPORTANT LINKS
+                  </h3>
+                  <p className="text-xs sm:text-sm text-slate-600 font-medium max-w-2xl">
+                    Direct access to essential government identity portals and TVK party initiatives.
+                  </p>
+                </div>
+                <div className="hidden sm:flex items-center space-x-1.5 text-[11px] font-bold text-slate-400">
+                  <ExternalLink className="w-3.5 h-3.5 text-[#850000]" />
+                  <span>Opens in New Tab</span>
+                </div>
+              </div>
+
+              {/* 3 Grid Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+                {/* Link 1: Aadhaar Card */}
+                <a
+                  href="https://myaadhaar.uidai.gov.in/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group bg-gradient-to-b from-[#FFFDF8] via-white to-[#FCFAF7] rounded-2xl sm:rounded-3xl border border-[#E7DFD7] hover:border-[#850000] hover:shadow-xl p-5 sm:p-6 transition-all duration-300 flex flex-col justify-between relative overflow-hidden"
+                >
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="w-12 h-12 rounded-2xl bg-red-50 text-[#850000] group-hover:bg-[#850000] group-hover:text-[#FFD32A] flex items-center justify-center border border-red-200 transition-colors duration-300 shadow-xs">
+                        <IdCard className="w-6 h-6" />
+                      </div>
+                      <span className="p-2 rounded-full bg-slate-100 text-slate-400 group-hover:bg-red-50 group-hover:text-[#850000] transition-colors">
+                        <ExternalLink className="w-4 h-4" />
                       </span>
                     </div>
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
-                  </div>
-
-                  {/* Description & Content visibly below image */}
-                  <div className="p-5 sm:p-6 flex-1 flex flex-col justify-between space-y-3">
                     <div>
-                      <div className="text-[10.5px] font-extrabold text-[#A00000] uppercase tracking-wider mb-1">
-                        Stormwater & Environmental Flow
-                      </div>
-                      <h4 className="text-base sm:text-lg font-extrabold text-slate-900 group-hover:text-[#A00000] transition-colors leading-snug">
-                        {achievements[3].title}
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#850000] bg-red-50 px-2.5 py-0.5 rounded-full border border-red-200/80">
+                        Government Portal
+                      </span>
+                      <h4 className="text-base sm:text-lg font-black text-slate-900 group-hover:text-[#850000] transition-colors mt-2">
+                        Aadhaar Card – Apply / Download
                       </h4>
-                      <p className="text-xs sm:text-[13px] text-slate-600 leading-relaxed mt-2 font-normal line-clamp-3">
-                        "{achievements[3].description}"
+                      <p className="text-xs text-slate-500 mt-1 line-clamp-2">
+                        Access official UIDAI self-service portal to update, verify, or download your e-Aadhaar.
                       </p>
                     </div>
-
-                    <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400 font-semibold">
-                      <span>Eco-Friendly Drainage</span>
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#FFD32A]" />
-                    </div>
                   </div>
-                </article>
-
-                {/* CARD 5: Wide Image-Focused Card (Desktop: 5 cols, Tablet: 1 col, Mobile: 1 col) */}
-                <article className="md:col-span-1 lg:col-span-5 bg-white rounded-3xl border border-[#E5DDD5] shadow-xs hover:shadow-2xl hover:border-[#A00000]/60 transition-all duration-300 flex flex-col justify-between overflow-hidden group">
-                  {/* Wide Image */}
-                  <div className="relative w-full aspect-[16/10] overflow-hidden bg-slate-100">
-                    <img
-                      src={achievements[4].image}
-                      alt={achievements[4].alt}
-                      loading="lazy"
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
-                    />
-                    <div className="absolute top-3.5 left-3.5 flex items-center space-x-2">
-                      <span className="bg-black/75 backdrop-blur-md text-[#FFD32A] text-xs font-black px-3 py-1 rounded-full border border-white/20 shadow-md">
-                        05
-                      </span>
-                      <span className="bg-blue-900/80 backdrop-blur-md text-white text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full border border-white/20">
-                        Water Security
-                      </span>
-                    </div>
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                  <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-[#850000]">
+                    <span>Visit UIDAI Portal</span>
+                    <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
                   </div>
+                </a>
 
-                  {/* Description & Content visibly below image */}
-                  <div className="p-5 sm:p-6 flex-1 flex flex-col justify-between space-y-3">
-                    <div>
-                      <div className="text-[10.5px] font-extrabold text-[#A00000] uppercase tracking-wider mb-1">
-                        Clean Public Supply
+                {/* Link 2: PAN Card */}
+                <a
+                  href="https://www.incometaxindia.gov.in/en/pan"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group bg-gradient-to-b from-[#FFFDF8] via-white to-[#FCFAF7] rounded-2xl sm:rounded-3xl border border-[#E7DFD7] hover:border-[#850000] hover:shadow-xl p-5 sm:p-6 transition-all duration-300 flex flex-col justify-between relative overflow-hidden"
+                >
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="w-12 h-12 rounded-2xl bg-amber-50 text-[#A00000] group-hover:bg-[#850000] group-hover:text-[#FFD32A] flex items-center justify-center border border-amber-200 transition-colors duration-300 shadow-xs">
+                        <CreditCard className="w-6 h-6" />
                       </div>
-                      <h4 className="text-base sm:text-lg font-extrabold text-slate-900 group-hover:text-[#A00000] transition-colors leading-snug">
-                        {achievements[4].title}
+                      <span className="p-2 rounded-full bg-slate-100 text-slate-400 group-hover:bg-amber-50 group-hover:text-[#850000] transition-colors">
+                        <ExternalLink className="w-4 h-4" />
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#A00000] bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200/80">
+                        Income Tax Department
+                      </span>
+                      <h4 className="text-base sm:text-lg font-black text-slate-900 group-hover:text-[#850000] transition-colors mt-2">
+                        PAN Card – Apply / Download
                       </h4>
-                      <p className="text-xs sm:text-[13px] text-slate-600 leading-relaxed mt-2 font-normal line-clamp-3">
-                        "{achievements[4].description}"
+                      <p className="text-xs text-slate-500 mt-1 line-clamp-2">
+                        Official NSDL / UTIITSL services for new PAN application, reprint, corrections and instant e-PAN.
                       </p>
                     </div>
-
-                    <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400 font-semibold">
-                      <span>Purified RO Stations</span>
-                      <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                    </div>
                   </div>
-                </article>
-
-                {/* CARD 6: Compact But Visually Prominent Card (Desktop: 3 cols, Tablet: 2 cols, Mobile: 1 col) */}
-                <article className="md:col-span-2 lg:col-span-3 bg-gradient-to-b from-[#FFFDF8] via-[#FFF9F0] to-[#FFF3E0] rounded-3xl border-2 border-[#FFD32A]/70 shadow-sm hover:shadow-2xl hover:border-[#A00000] transition-all duration-300 flex flex-col justify-between overflow-hidden group">
-                  {/* Distinctive Image */}
-                  <div className="relative w-full aspect-[4/3] sm:aspect-[16/11] overflow-hidden bg-amber-50">
-                    <img
-                      src={achievements[5].image}
-                      alt={achievements[5].alt}
-                      loading="lazy"
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
-                    />
-                    <div className="absolute top-3.5 left-3.5 flex items-center space-x-1.5">
-                      <span className="bg-[#850000] text-[#FFD32A] text-xs font-black px-3 py-1 rounded-full border border-[#FFD32A]/60 shadow-md">
-                        06
-                      </span>
-                      <span className="bg-amber-100/90 text-[#850000] text-[9.5px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border border-amber-300">
-                        Civic Park
-                      </span>
-                    </div>
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                  <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-[#850000]">
+                    <span>Visit ITD Portal</span>
+                    <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
                   </div>
+                </a>
 
-                  {/* Description & Content visibly below image */}
-                  <div className="p-5 flex-1 flex flex-col justify-between space-y-3">
-                    <div>
-                      <div className="text-[10px] font-black text-[#A00000] uppercase tracking-wider mb-1">
-                        Public Spaces & Parks
+                {/* Link 3: Membership Drive */}
+                <a
+                  href="https://tvk.family/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group bg-gradient-to-b from-[#FFFDF8] via-white to-[#FCFAF7] rounded-2xl sm:rounded-3xl border border-[#E7DFD7] hover:border-[#850000] hover:shadow-xl p-5 sm:p-6 transition-all duration-300 flex flex-col justify-between relative overflow-hidden"
+                >
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="w-12 h-12 rounded-2xl bg-red-50 text-[#850000] group-hover:bg-[#850000] group-hover:text-[#FFD32A] flex items-center justify-center border border-red-200 transition-colors duration-300 shadow-xs">
+                        <Users className="w-6 h-6" />
                       </div>
-                      <h4 className="text-base font-extrabold text-slate-900 group-hover:text-[#A00000] transition-colors leading-snug">
-                        {achievements[5].title}
+                      <span className="p-2 rounded-full bg-slate-100 text-slate-400 group-hover:bg-red-50 group-hover:text-[#850000] transition-colors">
+                        <ExternalLink className="w-4 h-4" />
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#850000] bg-red-50 px-2.5 py-0.5 rounded-full border border-red-200/80">
+                        TVK Party Initiative
+                      </span>
+                      <h4 className="text-base sm:text-lg font-black text-slate-900 group-hover:text-[#850000] transition-colors mt-2">
+                        Membership Drive
                       </h4>
-                      <p className="text-xs text-slate-600 leading-relaxed mt-2 font-normal line-clamp-3">
-                        "{achievements[5].description}"
+                      <p className="text-xs text-slate-500 mt-1 line-clamp-2">
+                        Join the Tamilaga Vettri Kazhagam official family, register membership, and download your card.
                       </p>
                     </div>
-
-                    <div className="pt-3 border-t border-amber-200/60 flex items-center justify-between text-[11px] text-[#850000] font-bold">
-                      <span>Neighborhood Upliftment</span>
-                      <Sparkles className="w-3.5 h-3.5 text-[#FFD32A]" />
-                    </div>
                   </div>
-                </article>
+                  <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-[#850000]">
+                    <span>Join tvk.family</span>
+                    <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                  </div>
+                </a>
               </div>
             </section>
 

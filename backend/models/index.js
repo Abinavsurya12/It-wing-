@@ -92,7 +92,7 @@ ChatbotConversation.hasMany(ChatbotMessage, { foreignKey: 'conversationId', as: 
 ChatbotMessage.belongsTo(ChatbotConversation, { foreignKey: 'conversationId', as: 'conversation' });
 
 // Synchronize database schema
-export const syncDatabase = async (options = { alter: true }) => {
+export const syncDatabase = async (options = {}) => {
   try {
     await sequelize.sync(options);
     console.log('✅ MySQL schema synchronized successfully with relational tables, foreign keys, and indexes.');

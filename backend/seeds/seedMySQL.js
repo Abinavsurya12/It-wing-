@@ -629,73 +629,8 @@ export const seedMySQLDatabase = async () => {
     }
     console.log('📝 Seeded Grievance Records, Before/After Images, and Actions in MySQL');
 
-    // 8. Projects & Achievements
-    const projectsData = [
-      {
-        projectCode: 'PRJ-CBE-01',
-        title: 'Siruvani Drinking Water Feeder Line Augmentation',
-        description: 'Laying 450mm ductile iron pipe to augment daily municipal water delivery to R.S. Puram, Ramanathapuram, and Town Hall zones.',
-        category: 'Water Infrastructure',
-        location: 'Coimbatore South & Central Zones',
-        wardId: wardDocs[0].id,
-        constituencyId: southConst.id,
-        department: 'TWAD Board & CCMC',
-        budget: 45000000,
-        status: 'Ongoing',
-        progressPercentage: 75,
-        highlights: ['18 km underground pipeline laid', 'New pressure regulator station at Sungam', 'Expected benefit: 120,000 citizens'],
-      },
-      {
-        projectCode: 'PRJ-CBE-02',
-        title: 'Solar LED Modernization across Commercial Hubs',
-        description: 'Complete transition of 1,200 high-power sodium streetlights to energy-efficient smart solar LED units with automatic dusk-to-dawn sensors.',
-        category: 'Energy & Sustainability',
-        location: 'Gandhipuram, Cross Cut Rd, 100 Feet Rd',
-        wardId: wardDocs[8].id,
-        constituencyId: northConst.id,
-        department: 'TANGEDCO & CCMC Electrical Wing',
-        budget: 18000000,
-        status: 'Completed',
-        progressPercentage: 100,
-        highlights: ['1,200 LED luminaires commissioned', '40% energy conservation achieved', 'Zero downtime monitoring'],
-      },
-      {
-        projectCode: 'PRJ-CBE-03',
-        title: 'Smart Stormwater Drainage Desilting & Channelization',
-        description: 'Comprehensive mechanical desilting and concrete side-wall strengthening of the Karumbukadai-Valankulam channel.',
-        category: 'Flood Prevention & Drainage',
-        location: 'Ukkadam & Selvapuram Wards 80-84',
-        wardId: wardDocs[2].id,
-        constituencyId: southConst.id,
-        department: 'CCMC Engineering Wing',
-        budget: 22000000,
-        status: 'Completed',
-        progressPercentage: 100,
-        highlights: ['5.2 km drainage network desilted', 'Prevents monsoon waterlogging in 6 low-lying areas'],
-      },
-      {
-        projectCode: 'PRJ-CBE-04',
-        title: 'Model Citizen Health & Maternity Redressal Centre',
-        description: 'Upgradation of existing urban primary health center with modernized maternity ward, ultrasound unit, and 24x7 ambulance standby.',
-        category: 'Public Health',
-        location: 'Kuniamuthur Palakkad Main Road',
-        wardId: wardDocs[5].id,
-        constituencyId: southConst.id,
-        department: 'Public Health Department',
-        budget: 31000000,
-        status: 'Ongoing',
-        progressPercentage: 60,
-        highlights: ['Civil structure 90% completed', 'Medical equipment procurement in progress'],
-      },
-    ];
-
-    for (const p of projectsData) {
-      let existing = await Project.findOne({ where: { projectCode: p.projectCode } });
-      if (!existing) {
-        await Project.create(p);
-      }
-    }
-    console.log('🚀 Seeded Achievements & Projects in MySQL');
+    // 8. Achievements & Projects - Only dynamically created records by Admin are stored. Static dummy seeds removed.
+    console.log('🚀 Achievements & Projects: Using dynamic database records only');
 
     // 9. Appointments & Notifications Workflow Seeding
     let appt1 = await Appointment.findOne({ where: { tokenNumber: 'APT-2026-0101' } });

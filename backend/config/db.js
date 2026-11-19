@@ -16,7 +16,7 @@ export const connectDB = async () => {
     const dbHost = process.env.MYSQL_HOST || 'localhost';
     const dbPort = process.env.MYSQL_PORT || '3306';
     console.log(`🐬 MySQL Connected successfully: ${dbHost}:${dbPort}/${dbName}`);
-    await syncDatabase({ alter: true });
+    await syncDatabase();
     return sequelize;
   } catch (error) {
     console.error(`❌ MySQL Database Connection Error: ${error.message}`);

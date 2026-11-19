@@ -37,6 +37,7 @@ Project.init(
     location: {
       type: DataTypes.STRING(255),
       allowNull: false,
+      defaultValue: 'Coimbatore District',
     },
     wardId: {
       type: DataTypes.INTEGER,
@@ -63,7 +64,7 @@ Project.init(
       allowNull: true,
     },
     status: {
-      type: DataTypes.ENUM('Planned', 'Ongoing', 'Completed'),
+      type: DataTypes.STRING(50),
       defaultValue: 'Ongoing',
     },
     progressPercentage: {
@@ -77,6 +78,10 @@ Project.init(
     highlights: {
       type: DataTypes.JSON,
       defaultValue: [],
+    },
+    createdBy: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
     },
   },
   {

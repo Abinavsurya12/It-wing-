@@ -6,6 +6,7 @@ import api from '../../services/api';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import StatusBadge from '../../components/common/StatusBadge';
 import AdminPageHeader from '../../components/common/AdminPageHeader';
+import { getSafeImageUrl } from '../../utils/imageUtils';
 
 export const ProjectDetailPage = () => {
   const { t } = useTranslation();
@@ -76,6 +77,17 @@ export const ProjectDetailPage = () => {
           <h1 className="text-2xl font-extrabold text-slate-900">{project.title}</h1>
           <p className="text-xs font-semibold text-amber-700 mt-1">{project.category}</p>
         </div>
+
+        {/* Project Image */}
+        {project.imageUrl && (
+          <div className="w-full aspect-[16/9] rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 shadow-sm">
+            <img
+              src={getSafeImageUrl(project.imageUrl)}
+              alt={project.title}
+              className="w-full h-full object-cover"
+            />
+          </div>
+        )}
 
         {/* Progress Bar Large */}
         <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 space-y-2">
