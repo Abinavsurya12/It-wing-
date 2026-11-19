@@ -46,6 +46,21 @@ export const getDistrictOverview = async (req, res) => {
   }
 };
 
+const KINATHUKADAVU_LOCAL_BODIES = [
+  'Pothanur',
+  'Kurichi',
+  'Sundarapuram',
+  'Malumichampatti',
+  'Thondamuthur Therkku Ondriyam',
+  'Thondamuthur Merkku Ondriyam',
+  'Madukkarai Therkku Ondriyam',
+  'Madukkarai Merkku Ondriyam',
+  'Madukkarai Nagaram',
+  'Vellalur Nagaram',
+  'Othakkalmandapam Peruratchi',
+  'Chettipalayam Peruratchi',
+];
+
 // @desc    Get all constituencies
 // @route   GET /api/constituencies
 // @access  Private
@@ -60,10 +75,10 @@ export const getConstituencies = async (req, res) => {
         const issueCount = await Issue.count({ where: { constituencyId: cId } });
         const memberCount = await Member.count({ where: { constituencyId: cId } });
 
-        // Calculate dynamic paguthi list from constituency record and active wards
-        let paguthiList = [];
+        // Count distinct paguthis or default for Kinathukadavu
+        let paguthiList = c.paguthis || [];
         if (c.name && c.name.toLowerCase().includes('kinathu')) {
-          paguthiList = ['Pothanur', 'Kurichi', 'Sundarapuram'];
+          paguthiList = KINATHUKADAVU_LOCAL_BODIES;
         } else if (c.paguthis && c.paguthis.length > 0) {
           paguthiList = typeof c.paguthis === 'string' ? JSON.parse(c.paguthis) : [...c.paguthis];
         }
@@ -82,7 +97,7 @@ export const getConstituencies = async (req, res) => {
           });
         }
 
-        const paguthiCount = paguthiList.length;
+        const paguthiCount = paguthiList.length || (c.name && c.name.toLowerCase().includes('kinathu') ? 12 : 0);
 
         return {
           ...c.toObject(),
@@ -125,8 +140,7 @@ export const getConstituencyById = async (req, res) => {
     const isKinathukadavu = constituency.name && constituency.name.toLowerCase().includes('kinathu');
     let paguthiNames = [];
     if (isKinathukadavu) {
-      // Kinathukadavu has exactly three fixed Paguthi cards
-      paguthiNames = ['Pothanur', 'Kurichi', 'Sundarapuram'];
+      paguthiNames = KINATHUKADAVU_LOCAL_BODIES;
     } else {
       if (constituency.paguthis && constituency.paguthis.length > 0) {
         paguthiNames = typeof constituency.paguthis === 'string'

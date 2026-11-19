@@ -495,38 +495,7 @@ export const SettingsPage = () => {
                     </div>
                   )}
 
-                  {/* 1. Jurisdiction: District & Constituency */}
-                  <div className="grid grid-cols-2 gap-2.5">
-                    <div>
-                      <label className="block font-bold text-slate-700 mb-1">
-                        District *
-                      </label>
-                      <select
-                        disabled
-                        value="Coimbatore"
-                        className="w-full bg-slate-100 border border-slate-200 rounded-xl px-2.5 py-2 text-xs font-semibold text-slate-700 cursor-not-allowed"
-                      >
-                        <option value="Coimbatore">Coimbatore</option>
-                      </select>
-                      <span className="text-[9.5px] text-slate-400 mt-0.5 block">Coimbatore District</span>
-                    </div>
-
-                    <div>
-                      <label className="block font-bold text-slate-700 mb-1">
-                        Constituency *
-                      </label>
-                      <select
-                        disabled
-                        value="Kinathukadavu"
-                        className="w-full bg-slate-100 border border-slate-200 rounded-xl px-2.5 py-2 text-xs font-semibold text-slate-700 cursor-not-allowed"
-                      >
-                        <option value="Kinathukadavu">Kinathukadavu</option>
-                      </select>
-                      <span className="text-[9.5px] text-slate-400 mt-0.5 block">Kinathukadavu Assembly</span>
-                    </div>
-                  </div>
-
-                  {/* 2. Full Name */}
+                  {/* 1. Full Name */}
                   <div>
                     <label className="block font-bold text-slate-700 mb-1">
                       Full Name *
@@ -541,7 +510,7 @@ export const SettingsPage = () => {
                     />
                   </div>
 
-                  {/* 3. Mobile Number */}
+                  {/* 2. Mobile Number */}
                   <div>
                     <label className="block font-bold text-slate-700 mb-1">
                       Mobile Number *
@@ -557,7 +526,7 @@ export const SettingsPage = () => {
                     <span className="text-[10px] text-slate-400 mt-0.5 block">10-digit Indian mobile number</span>
                   </div>
 
-                  {/* 4. Paguthi */}
+                  {/* 3. Paguthi */}
                   <div>
                     <label className="block font-bold text-slate-700 mb-1">
                       {PAGUTHI_LABEL} *
@@ -588,7 +557,7 @@ export const SettingsPage = () => {
                     <span className="text-[10px] text-slate-400 mt-0.5 block">Select administrative jurisdiction under Kinathukadavu</span>
                   </div>
 
-                  {/* 5. Ward Number - DYNAMIC BASED ON PAGUTHI */}
+                  {/* 4. Ward Number - DYNAMIC BASED ON PAGUTHI */}
                   <div>
                     <label className="block font-bold text-slate-700 mb-1">
                       Ward Number *
@@ -600,10 +569,7 @@ export const SettingsPage = () => {
                       onChange={(e) => {
                         const selectedWardNum = e.target.value;
                         const matchingWard = wards.find(
-                          (w) =>
-                            (w.paguthi === secForm.paguthi ||
-                              (secForm.paguthi === 'Pothanur' && w.paguthi === 'Podanur')) &&
-                            String(w.wardNumber) === String(selectedWardNum)
+                          (w) => w.paguthi === secForm.paguthi && String(w.wardNumber) === String(selectedWardNum)
                         );
                         setSecForm((prev) => ({
                           ...prev,
@@ -618,24 +584,11 @@ export const SettingsPage = () => {
                       <option value="">
                         {!secForm.paguthi ? '-- Select Paguthi First --' : '-- Select Ward --'}
                       </option>
-                      {Array.from(
-                        new Set([
-                          ...getWardsForPaguthi(secForm.paguthi),
-                          ...wards
-                            .filter(
-                              (w) =>
-                                w.paguthi === secForm.paguthi ||
-                                (secForm.paguthi === 'Pothanur' && w.paguthi === 'Podanur')
-                            )
-                            .map((w) => Number(w.wardNumber)),
-                        ])
-                      )
-                        .sort((a, b) => a - b)
-                        .map((wNum) => (
-                          <option key={wNum} value={String(wNum)}>
-                            Ward {wNum}
-                          </option>
-                        ))}
+                      {getWardsForPaguthi(secForm.paguthi).map((wNum) => (
+                        <option key={wNum} value={String(wNum)}>
+                          Ward {wNum}
+                        </option>
+                      ))}
                     </select>
                     {secForm.paguthi && (
                       <span className="text-[10px] text-emerald-600 mt-0.5 block font-medium">

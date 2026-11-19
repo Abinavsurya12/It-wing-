@@ -9,6 +9,16 @@ export const PAGUTHI_OPTIONS = [
   'Pothanur',
   'Kurichi',
   'Sundarapuram',
+  'Malumichampatti',
+  'Kinathukadavu Ondriyam',
+  'Thondamuthur Therkku Ondriyam',
+  'Thondamuthur Merkku Ondriyam',
+  'Madukkarai Therkku Ondriyam',
+  'Madukkarai Merkku Ondriyam',
+  'Madukkarai Nagaram',
+  'Vellalur Nagaram',
+  'Othakkalmandapam Peruratchi',
+  'Chettipalayam Peruratchi',
 ];
 
 const EXCLUDED_WARDS_FOR_REMAINING = new Set([85, 94, 95, 96, 97, 98, 99, 100]);

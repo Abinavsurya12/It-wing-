@@ -138,7 +138,7 @@ export const DistrictPage = () => {
                 </div>
 
                 <p className="text-xs text-slate-600 mt-2.5 max-w-xl leading-relaxed font-medium">
-                  {t('district.cardSubtitle', 'Select a Paguthi to Continue. Administrative hierarchy covers 3 Paguthis (Pothanur, Kurichi, Sundarapuram) and all affiliated Municipal Wards.')}
+                  {t('district.cardSubtitle', 'Select a Paguthi to Continue. Administrative hierarchy covers 4 Paguthis (Pothanur, Kurichi, Sundarapuram, Malumichampatti) and all affiliated Municipal Wards.')}
                 </p>
 
                 {/* Key Statistics Counts from Database */}
