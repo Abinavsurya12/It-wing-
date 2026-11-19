@@ -94,45 +94,37 @@ export const seedMySQLDatabase = async () => {
       });
     }
 
-    // Role 4: Ward Secretary (Username: ward & wardsec72)
-    let wardUser = await User.findOne({ where: { username: 'ward' } });
-    if (!wardUser) {
-      wardUser = await User.create({
-        name: 'K. R. Vijayakumar (Ward Secretary)',
-        username: 'ward',
-        email: 'ward@tvkcbe.org',
-        password: 'ward123',
-        role: 'ward_secretary',
-        phone: '9842100072',
-        assignedDistrict: 'Coimbatore',
-        constituency: 'Coimbatore South',
-        assignedWard: 'Ward 72',
-        isActive: true,
-      });
-      console.log('👤 Created ward secretary: ward / ward123');
-    } else {
-      wardUser.password = 'ward123';
-      await wardUser.save();
-    }
 
-    let wardSecretary = await User.findOne({ where: { username: 'wardsec72' } });
-    if (!wardSecretary) {
-      wardSecretary = await User.create({
-        name: 'K. R. Vijayakumar (Ward 72 Secretary)',
-        username: 'wardsec72',
-        email: 'secretary.ward72@tvkcbe.org',
-        password: 'ward123',
-        role: 'ward_secretary',
-        phone: '9842100072',
-        assignedDistrict: 'Coimbatore',
-        constituency: 'Coimbatore South',
-        assignedWard: 'Ward 72',
-        isActive: true,
-      });
-    } else {
-      wardSecretary.password = 'ward123';
-      await wardSecretary.save();
+    const wardUser = null;
+
+    // Role 5: Paguthi Seyalaalar Accounts (Pothanur, Kurichi, Sundarapuram)
+    const paguthiSeyalaalarAccounts = [
+      { username: 'pothanur', password: 'pothanur@2026', paguthi: 'Pothanur', name: 'Pothanur Paguthi Seyalaalar', phone: '9842100101' },
+      { username: 'kurichi', password: 'kurichi@2024', paguthi: 'Kurichi', name: 'Kurichi Paguthi Seyalaalar', phone: '9842100102' },
+      { username: 'sundarapuram', password: 'sundarapurum@26', paguthi: 'Sundarapuram', name: 'Sundarapuram Paguthi Seyalaalar', phone: '9842100103' },
+    ];
+    for (const pa of paguthiSeyalaalarAccounts) {
+      let pUser = await User.findOne({ where: { username: pa.username } });
+      if (!pUser) {
+        await User.create({
+          name: pa.name,
+          username: pa.username,
+          password: pa.password,
+          role: 'paguthi_seyalaalar',
+          paguthi: pa.paguthi,
+          phone: pa.phone,
+          assignedDistrict: 'Coimbatore',
+          constituency: 'Kinathukadavu',
+          isActive: true,
+        });
+      } else {
+        pUser.password = pa.password;
+        pUser.role = 'paguthi_seyalaalar';
+        pUser.paguthi = pa.paguthi;
+        await pUser.save();
+      }
     }
+    console.log('👤 Seeded 3 Paguthi Seyalaalar accounts (Pothanur, Kurichi, Sundarapuram)');
 
     // 2. District
     let district = await District.findOne({ where: { code: 'CBE' } });
@@ -156,7 +148,7 @@ export const seedMySQLDatabase = async () => {
       { name: 'Singanallur', tamilName: 'சிங்காநல்லூர்', code: 'SGL', zone: 'East Zone', totalWards: 10, totalPaguthi: 2, paguthis: ['Singanallur', 'Peelamedu'] },
       { name: 'Kavundampalayam', tamilName: 'கவுண்டம்பாளையம்', code: 'KVP', zone: 'West Zone', totalWards: 10, totalPaguthi: 2, paguthis: ['Kavundampalayam', 'Thudiyalur'] },
       { name: 'Thondamuthur', tamilName: 'தொண்டாமுத்தூர்', code: 'TDM', zone: 'West Zone', totalWards: 9, totalPaguthi: 2, paguthis: ['Thondamuthur', 'Vadavalli'] },
-      { name: 'Kinathukadavu', tamilName: 'கிணத்துக்கடவு', code: 'KKD', zone: 'South Zone', totalWards: 8, totalPaguthi: 4, paguthis: ['Podanur', 'Kurichi', 'Sundarapuram', 'Malumichampatti'] },
+      { name: 'Kinathukadavu', tamilName: 'கிணத்துக்கடவு', code: 'KKD', zone: 'South Zone', totalWards: 8, totalPaguthi: 3, paguthis: ['Pothanur', 'Kurichi', 'Sundarapuram'] },
       { name: 'Pollachi', tamilName: 'பொள்ளாச்சி', code: 'POL', zone: 'South Zone', totalWards: 10, totalPaguthi: 3, paguthis: ['Pollachi Town', 'Mahalingapuram', 'Achipatti'] },
       { name: 'Valparai', tamilName: 'வால்பாறை', code: 'VLP', zone: 'South Zone', totalWards: 7, totalPaguthi: 2, paguthis: ['Valparai Town', 'Stanmore'] },
       { name: 'Sulur', tamilName: 'சூலூர்', code: 'SLR', zone: 'East Zone', totalWards: 9, totalPaguthi: 2, paguthis: ['Sulur', 'Kangeyampalayam'] },
@@ -195,49 +187,36 @@ export const seedMySQLDatabase = async () => {
       { constituencyId: northConst.id, paguthi: 'Gandhipuram', wardNumber: 65, wardName: 'Gandhipuram', tamilName: 'காந்திபுரம்', zone: 'Central Zone', officeBearer: 'D. Selvaraj', wardSecretary: 'D. Selvaraj', contactNumber: '9842100065', population: 29000, areaCoverage: 'Cross Cut Road, 100 Feet Road, 7th Street' },
       { constituencyId: singaConst.id, paguthi: 'Singanallur', wardNumber: 61, wardName: 'Singanallur', tamilName: 'சிங்காநல்லூர்', zone: 'East Zone', officeBearer: 'T. Ravindran', wardSecretary: 'T. Ravindran', contactNumber: '9842100061', population: 45000, areaCoverage: 'Kamarajar Road, Neelikonampalayam, Ondipudur' },
       { constituencyId: singaConst.id, paguthi: 'Peelamedu', wardNumber: 66, wardName: 'Peelamedu', tamilName: 'பீளமேடு', zone: 'East Zone', officeBearer: 'G. Suresh', wardSecretary: 'G. Suresh', contactNumber: '9842100066', population: 49000, areaCoverage: 'Avinashi Road, PSG College, Hopes College' },
-      { constituencyId: kinathuConst.id, paguthi: 'Podanur', wardNumber: 98, wardName: 'Podanur Town', tamilName: 'போத்தனூர் நகரம்', zone: 'South Zone', officeBearer: 'K. M. Shanmugam', wardSecretary: 'K. M. Shanmugam', contactNumber: '9842100098', population: 36000, areaCoverage: 'Chettipalayam Road, Station Road, Anna Nagar' },
-      { constituencyId: kinathuConst.id, paguthi: 'Podanur', wardNumber: 99, wardName: 'Podanur Junction', tamilName: 'போத்தனூர் சந்திப்பு', zone: 'South Zone', officeBearer: 'R. Velusamy', wardSecretary: 'R. Velusamy', contactNumber: '9842100099', population: 34000, areaCoverage: 'Railway Colony, Pillaiyar Kovil St, Subbiah Layout' },
-      { constituencyId: kinathuConst.id, paguthi: 'Kurichi', wardNumber: 88, wardName: 'Kurichi Housing Unit', tamilName: 'குறிச்சி ஹவுசிங் யூனிட்', zone: 'South Zone', officeBearer: 'M. Senthilkumar', wardSecretary: 'M. Senthilkumar', contactNumber: '9842100088', population: 44000, areaCoverage: 'SIDCO Industrial Estate, Eachanari Temple Road' },
-      { constituencyId: kinathuConst.id, paguthi: 'Kurichi', wardNumber: 89, wardName: 'Kurichi Industrial Estate', tamilName: 'குறிச்சி தொழிற்பேட்டை', zone: 'South Zone', officeBearer: 'P. Balan', wardSecretary: 'P. Balan', contactNumber: '9842100089', population: 39000, areaCoverage: 'Pollachi Main Road, Gandhi Nagar, Anna Nagar' },
-      { constituencyId: kinathuConst.id, paguthi: 'Sundarapuram', wardNumber: 86, wardName: 'Sundarapuram East', tamilName: 'சுந்தராபுரம் கிழக்கு', zone: 'South Zone', officeBearer: 'A. Muruganantham', wardSecretary: 'A. Muruganantham', contactNumber: '9842100086', population: 37500, areaCoverage: 'Madukkarai Market, LIC Colony, Teachers Colony' },
-      { constituencyId: kinathuConst.id, paguthi: 'Sundarapuram', wardNumber: 87, wardName: 'Sundarapuram West', tamilName: 'சுந்தராபுரம் மேற்கு', zone: 'South Zone', officeBearer: 'T. Ganesan', wardSecretary: 'T. Ganesan', contactNumber: '9842100087', population: 41000, areaCoverage: 'Machampalayam, Kamaraj Nagar, Nehru Street' },
-      { constituencyId: kinathuConst.id, paguthi: 'Malumichampatti', wardNumber: 94, wardName: 'Malumichampatti North', tamilName: 'மலுமிச்சம்பட்டி வடக்கு', zone: 'South Zone', officeBearer: 'S. Thirumoorthy', wardSecretary: 'S. Thirumoorthy', contactNumber: '9842100094', population: 32000, areaCoverage: 'Chettipalayam Pirivu, Othakkalmandapam Link' },
-      { constituencyId: kinathuConst.id, paguthi: 'Malumichampatti', wardNumber: 95, wardName: 'Malumichampatti South', tamilName: 'மலுமிச்சம்பட்டி தெற்கு', zone: 'South Zone', officeBearer: 'N. Arumugam', wardSecretary: 'N. Arumugam', contactNumber: '9842100095', population: 29000, areaCoverage: 'Bodipalayam, Arasur Link, Bharathi Nagar' },
+      // Kinathukadavu: Exactly 3 Paguthis with exact initial Ward assignments
+      // Pothanur: Ward 95, Ward 99, Ward 100
+      { constituencyId: kinathuConst.id, paguthi: 'Pothanur', wardNumber: 95, wardName: 'Pothanur Ward 95', tamilName: 'போத்தனூர் வார்டு 95', zone: 'South Zone', population: 36000, areaCoverage: 'Chettipalayam Road, Station Road' },
+      { constituencyId: kinathuConst.id, paguthi: 'Pothanur', wardNumber: 99, wardName: 'Pothanur Junction', tamilName: 'போத்தனூர் சந்திப்பு', zone: 'South Zone', population: 34000, areaCoverage: 'Railway Colony, Subbiah Layout' },
+      { constituencyId: kinathuConst.id, paguthi: 'Pothanur', wardNumber: 100, wardName: 'Pothanur Ward 100', tamilName: 'போத்தனூர் வார்டு 100', zone: 'South Zone', population: 35000, areaCoverage: 'Pillaiyar Kovil St, Market Area' },
+      // Kurichi: Ward 85, Ward 96, Ward 98
+      { constituencyId: kinathuConst.id, paguthi: 'Kurichi', wardNumber: 85, wardName: 'Kurichi Ward 85', tamilName: 'குறிச்சி வார்டு 85', zone: 'South Zone', population: 44000, areaCoverage: 'SIDCO Industrial Estate, Housing Unit' },
+      { constituencyId: kinathuConst.id, paguthi: 'Kurichi', wardNumber: 96, wardName: 'Kurichi Ward 96', tamilName: 'குறிச்சி வார்டு 96', zone: 'South Zone', population: 39000, areaCoverage: 'Pollachi Main Road, Gandhi Nagar' },
+      { constituencyId: kinathuConst.id, paguthi: 'Kurichi', wardNumber: 98, wardName: 'Kurichi Ward 98', tamilName: 'குறிச்சி வார்டு 98', zone: 'South Zone', population: 41000, areaCoverage: 'Eachanari Temple Road, Anna Nagar' },
+      // Sundarapuram: Ward 94, Ward 96
+      { constituencyId: kinathuConst.id, paguthi: 'Sundarapuram', wardNumber: 94, wardName: 'Sundarapuram Ward 94', tamilName: 'சுந்தராபுரம் வார்டு 94', zone: 'South Zone', population: 37500, areaCoverage: 'Madukkarai Market, LIC Colony' },
+      { constituencyId: kinathuConst.id, paguthi: 'Sundarapuram', wardNumber: 96, wardName: 'Sundarapuram Ward 96', tamilName: 'சுந்தராபுரம் வார்டு 96', zone: 'South Zone', population: 41000, areaCoverage: 'Machampalayam, Kamaraj Nagar' },
     ];
 
     const wardDocs = [];
     for (const w of wardsData) {
-      // Ensure each municipal ward has an active Ward Secretary User account
-      let secUsername = w.wardNumber === 72 ? 'ward' : `ward${w.wardNumber}`;
-      let wardSecUser = await User.findOne({ where: { username: secUsername } });
-      if (!wardSecUser && w.contactNumber) {
-        wardSecUser = await User.findOne({ where: { phone: w.contactNumber } });
-      }
-      if (!wardSecUser) {
-        const cObj = Object.values(constituencyMap).find((c) => c.id === w.constituencyId);
-        wardSecUser = await User.create({
-          name: `${w.wardSecretary} (Ward ${w.wardNumber} Secretary)`,
-          username: secUsername,
-          email: `ward${w.wardNumber}@tvkcbe.org`,
-          password: 'ward123',
-          role: 'ward_secretary',
-          phone: w.contactNumber,
-          assignedDistrict: 'Coimbatore',
-          constituency: cObj ? cObj.name : 'Coimbatore South',
-          assignedWard: `Ward ${w.wardNumber}`,
-          isActive: true,
-        });
-      }
-
-      let existing = await Ward.findOne({ where: { wardNumber: w.wardNumber } });
+      let existing = await Ward.findOne({
+        where: {
+          constituencyId: w.constituencyId,
+          wardNumber: w.wardNumber,
+          paguthi: w.paguthi,
+        },
+      });
       if (!existing) {
-        w.wardSecretaryId = wardSecUser ? wardSecUser.id : (w.wardNumber === 72 && wardUser ? wardUser.id : null);
         existing = await Ward.create(w);
       } else {
         existing.paguthi = w.paguthi;
-        existing.wardSecretary = w.wardSecretary;
-        existing.constituencyId = w.constituencyId;
-        existing.wardSecretaryId = wardSecUser ? wardSecUser.id : (w.wardNumber === 72 && wardUser ? wardUser.id : existing.wardSecretaryId);
+        existing.wardName = w.wardName;
+        existing.tamilName = w.tamilName;
+        existing.zone = w.zone;
         await existing.save();
       }
       wardDocs.push(existing);

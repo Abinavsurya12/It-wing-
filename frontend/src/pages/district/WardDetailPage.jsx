@@ -56,7 +56,7 @@ export const WardDetailPage = () => {
   const { ward, membersKpi, issuesKpi, members = [], issues = [] } = wardData;
 
   const constituencyName = ward.constituencyId?.name || 'Kinathukadavu';
-  const paguthiName = ward.paguthi || 'Podanur';
+  const paguthiName = ward.paguthi || 'Pothanur';
 
   const downloadWardReportExcel = () => {
     const rows = issues.map((i) => ({

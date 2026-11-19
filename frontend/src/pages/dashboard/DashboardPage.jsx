@@ -383,7 +383,7 @@ export const DashboardPage = () => {
       },
       {
         'KPI Name': 'Total Municipal Wards',
-        'Current Count': kpis.totalWards || 12,
+        'Current Count': kpis.totalWards || 0,
         'Details': `Across ${kpis.totalConstituencies || 10} Assembly Constituencies`,
         'Pending Count': '0',
         'Resolution Rate': '100% Ward Coverage',

@@ -221,7 +221,7 @@ async function runCleanup() {
   const remainingWards = await Ward.count();
   console.log(`Total Wards in DB: ${remainingWards} (Expected: 17)`);
 
-  const paguthis = ['Podanur', 'Kurichi', 'Sundarapuram', 'Malumichampatti'];
+  const paguthis = ['Pothanur', 'Kurichi', 'Sundarapuram', 'Malumichampatti'];
   for (const p of paguthis) {
     const count = await Ward.count({ where: { paguthi: p } });
     console.log(`  - Wards in Paguthi [${p}]: ${count}`);

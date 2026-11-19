@@ -24,6 +24,7 @@ import TrackAppointmentPage from './pages/citizen/TrackAppointmentPage';
 import DashboardPage from './pages/dashboard/DashboardPage';
 import SubadminDashboardPage from './pages/dashboard/SubadminDashboardPage';
 import WardSecretaryPortalPage from './pages/dashboard/WardSecretaryPortalPage';
+import PaguthiSeyalaalarDashboardPage from './pages/dashboard/PaguthiSeyalaalarDashboardPage';
 import DistrictPage from './pages/district/DistrictPage';
 import ConstituencyDetailPage from './pages/district/ConstituencyDetailPage';
 import PaguthiDetailPage from './pages/district/PaguthiDetailPage';
@@ -57,6 +58,9 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
   if (allowedRoles && allowedRoles.length > 0) {
     if (!allowedRoles.includes(user.role)) {
       // Prevent citizens, ordinary users, and other roles from accessing unauthorized routes by changing URLs manually
+      if (user.role === 'paguthi_seyalaalar') {
+        return <Navigate to="/paguthi-seyalaalar/dashboard" replace />;
+      }
       if (['citizen', 'user'].includes(user.role)) {
         return <Navigate to="/citizen" replace />;
       }
@@ -78,6 +82,7 @@ const RootRedirect = () => {
   const { user, loading } = useAuth();
   if (loading) return <LoadingSpinner fullScreen />;
   if (!user) return <Navigate to="/login" replace />;
+  if (user.role === 'paguthi_seyalaalar') return <Navigate to="/paguthi-seyalaalar/dashboard" replace />;
   if (user.role === 'subadmin') return <Navigate to="/subadmin/dashboard" replace />;
   if (['ward_secretary', 'ward_officer'].includes(user.role)) return <Navigate to="/ward-secretary/dashboard" replace />;
   if (['citizen', 'user'].includes(user.role)) return <Navigate to="/citizen" replace />;
@@ -126,6 +131,17 @@ function App() {
               }
             />
             <Route path="/ward-member" element={<Navigate to="/ward-secretary/dashboard" replace />} />
+
+            {/* Paguthi Seyalaalar Portal */}
+            <Route
+              path="/paguthi-seyalaalar/dashboard"
+              element={
+                <ProtectedRoute allowedRoles={['paguthi_seyalaalar', 'superadmin', 'district_admin']}>
+                  <PaguthiSeyalaalarDashboardPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/paguthi-dashboard" element={<Navigate to="/paguthi-seyalaalar/dashboard" replace />} />
 
             {/* Reference URL Aliases */}
             <Route path="/home" element={<Navigate to="/admin/dashboard" replace />} />

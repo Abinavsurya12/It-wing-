@@ -6,19 +6,9 @@
 export const PAGUTHI_LABEL = 'Paguthi / Ondriyam / Nagaram / Peruratchi';
 
 export const PAGUTHI_OPTIONS = [
-  'Podanur',
+  'Pothanur',
   'Kurichi',
   'Sundarapuram',
-  'Malumichampatti',
-  'Kinathukadavu Ondriyam',
-  'Thondamuthur Therkku Ondriyam',
-  'Thondamuthur Merkku Ondriyam',
-  'Madukkarai Therkku Ondriyam',
-  'Madukkarai Merkku Ondriyam',
-  'Madukkarai Nagaram',
-  'Vellalur Nagaram',
-  'Othakkalmandapam Peruratchi',
-  'Chettipalayam Peruratchi',
 ];
 
 const EXCLUDED_WARDS_FOR_REMAINING = new Set([85, 94, 95, 96, 97, 98, 99, 100]);
@@ -35,7 +25,7 @@ for (let i = 1; i <= 100; i++) {
  * Returns the exact allowed ward numbers for a selected Paguthi / Local Body.
  * 
  * Special Mappings:
- * - Podanur: ONLY Ward 95, Ward 99, Ward 100 (Count: 3)
+ * - Pothanur: ONLY Ward 95, Ward 99, Ward 100 (Count: 3)
  * - Sundarapuram: ONLY Ward 94, Ward 96 (Count: 2)
  * - Kurichi: ONLY Ward 85, Ward 96, Ward 98 (Count: 3)
  * 
@@ -44,7 +34,7 @@ for (let i = 1; i <= 100; i++) {
  */
 export const getWardsForPaguthi = (paguthi) => {
   if (!paguthi) return [];
-  if (paguthi === 'Podanur') {
+  if (paguthi === 'Pothanur' || paguthi === 'Podanur') {
     return [95, 99, 100];
   }
   if (paguthi === 'Sundarapuram') {

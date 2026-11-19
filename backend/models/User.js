@@ -41,7 +41,7 @@ User.init(
       allowNull: false,
     },
     role: {
-      type: DataTypes.ENUM('superadmin', 'district_admin', 'subadmin', 'ward_secretary', 'ward_officer', 'citizen', 'user', 'staff'),
+      type: DataTypes.ENUM('superadmin', 'district_admin', 'subadmin', 'ward_secretary', 'ward_officer', 'citizen', 'user', 'staff', 'paguthi_seyalaalar'),
       defaultValue: 'citizen',
     },
     constituency: {

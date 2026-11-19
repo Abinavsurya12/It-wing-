@@ -45,35 +45,7 @@ export const ConstituencyDetailPage = () => {
 
   const { constituency, paguthis = [], wards = [], issues = [], members = [] } = data;
 
-  // Fallback 12 local bodies for Kinathukadavu if not in array
-  const KINATHUKADAVU_LOCAL_BODIES = [
-    'Podanur',
-    'Kurichi',
-    'Sundarapuram',
-    'Malumichampatti',
-    'Thondamuthur Therkku Ondriyam',
-    'Thondamuthur Merkku Ondriyam',
-    'Madukkarai Therkku Ondriyam',
-    'Madukkarai Merkku Ondriyam',
-    'Madukkarai Nagaram',
-    'Vellalur Nagaram',
-    'Othakkalmandapam Peruratchi',
-    'Chettipalayam Peruratchi',
-  ];
-
-  const displayPaguthis =
-    paguthis.length > 0
-      ? paguthis
-      : KINATHUKADAVU_LOCAL_BODIES.map((name) => ({
-          name,
-          totalWards: 0,
-          registeredSecretaries: 0,
-          totalComplaints: 0,
-          pendingComplaints: 0,
-          inProgressComplaints: 0,
-          completedComplaints: 0,
-          resolvedComplaints: 0,
-        }));
+  const displayPaguthis = Array.isArray(paguthis) ? paguthis : [];
 
   const constituencyDisplayName = isTa && constituency.tamilName ? constituency.tamilName : constituency.name;
 
@@ -161,75 +133,81 @@ export const ConstituencyDetailPage = () => {
           </span>
         </div>
 
-        {/* 4 Cards: Desktop (4 per row), Tablet (2 per row), Mobile (1 per row) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {displayPaguthis.map((p, idx) => (
-            <div
-              key={p.name || idx}
-              className="bg-white rounded-2xl border border-[#E9E2DC] shadow-xs hover:shadow-lg hover:-translate-y-1 hover:border-[#A00000] transition-all duration-200 flex flex-col justify-between overflow-hidden relative group"
-            >
-              {/* Red Top Accent Border with Golden-Yellow Highlight */}
-              <div className="h-1.5 bg-gradient-to-r from-[#A00000] via-[#FFD32A] to-[#850000]"></div>
+        {displayPaguthis.length === 0 ? (
+          <div className="bg-white rounded-2xl border border-[#E9E2DC] p-8 text-center text-slate-500">
+            <FolderTree className="w-10 h-10 mx-auto text-slate-300 mb-2" />
+            <p className="font-semibold text-sm">{t('constituency.noPaguthis', 'No Paguthis found for this constituency.')}</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {displayPaguthis.map((p, idx) => (
+              <div
+                key={p.name || idx}
+                className="bg-white rounded-2xl border border-[#E9E2DC] shadow-xs hover:shadow-lg hover:-translate-y-1 hover:border-[#A00000] transition-all duration-200 flex flex-col justify-between overflow-hidden relative group"
+              >
+                {/* Red Top Accent Border with Golden-Yellow Highlight */}
+                <div className="h-1.5 bg-gradient-to-r from-[#A00000] via-[#FFD32A] to-[#850000]"></div>
 
-              <div className="p-5">
-                <div className="flex items-start justify-between">
-                  <div className="w-10 h-10 rounded-xl bg-[#FFF8F0] border border-[#FFE5A3] flex items-center justify-center text-[#A00000] shadow-xs group-hover:scale-105 transition">
-                    <MapPin className="w-5 h-5" />
+                <div className="p-5">
+                  <div className="flex items-start justify-between">
+                    <div className="w-10 h-10 rounded-xl bg-[#FFF8F0] border border-[#FFE5A3] flex items-center justify-center text-[#A00000] shadow-xs group-hover:scale-105 transition">
+                      <MapPin className="w-5 h-5" />
+                    </div>
+                    <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded bg-red-50 text-[#A00000] border border-red-200">
+                      {t('constituency.paguthiNumber', { number: idx + 1, defaultValue: `Paguthi ${idx + 1}` })}
+                    </span>
                   </div>
-                  <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded bg-red-50 text-[#A00000] border border-red-200">
-                    {t('constituency.paguthiNumber', { number: idx + 1, defaultValue: `Paguthi ${idx + 1}` })}
-                  </span>
+
+                  <h3 className="text-base font-extrabold text-slate-900 mt-3 group-hover:text-[#A00000] transition">
+                    {p.name}
+                  </h3>
+                  <p className="text-xs text-[#850000] font-semibold mt-0.5">
+                    {t('constituency.paguthiAdminTitle', 'Paguthi Administration')}
+                  </p>
+
+                  {/* Key Statistics Counts */}
+                  <div className="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-slate-100 text-xs">
+                    <div className="bg-[#FFF8F0] p-2 rounded-xl border border-[#FFE5A3]/40">
+                      <span className="text-[10.5px] text-slate-500 block">{t('constituency.totalWards', 'Total Wards')}</span>
+                      <strong className="text-slate-900 font-bold text-sm">{p.totalWards || 0}</strong>
+                    </div>
+                    <div className="bg-emerald-50 p-2 rounded-xl border border-emerald-200/50">
+                      <span className="text-[10.5px] text-emerald-700 block">Registered Secs</span>
+                      <strong className="text-emerald-900 font-bold text-sm">{p.registeredSecretaries || 0}</strong>
+                    </div>
+                    <div className="col-span-2 bg-slate-50 p-2 rounded-xl border border-slate-200 space-y-1 text-[11px]">
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-600 font-semibold">{t('common.category', 'Total Complaints')}:</span>
+                        <span className="font-bold text-[#A00000]">{p.totalComplaints || 0}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-[10px] text-slate-500 pt-0.5 border-t border-slate-200">
+                        <span>Pending: <strong className="text-amber-700">{p.pendingComplaints || 0}</strong></span>
+                        <span>In Prog: <strong className="text-sky-700">{p.inProgressComplaints || 0}</strong></span>
+                        <span>Done: <strong className="text-emerald-700">{p.completedComplaints || p.resolvedComplaints || 0}</strong></span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
-                <h3 className="text-base font-extrabold text-slate-900 mt-3 group-hover:text-[#A00000] transition">
-                  {p.name}
-                </h3>
-                <p className="text-xs text-[#850000] font-semibold mt-0.5">
-                  {t('constituency.paguthiAdminTitle', 'Paguthi Administration')}
-                </p>
-
-                {/* Key Statistics Counts */}
-                <div className="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-slate-100 text-xs">
-                  <div className="bg-[#FFF8F0] p-2 rounded-xl border border-[#FFE5A3]/40">
-                    <span className="text-[10.5px] text-slate-500 block">{t('constituency.totalWards', 'Total Wards')}</span>
-                    <strong className="text-slate-900 font-bold text-sm">{p.totalWards || 0}</strong>
-                  </div>
-                  <div className="bg-emerald-50 p-2 rounded-xl border border-emerald-200/50">
-                    <span className="text-[10.5px] text-emerald-700 block">Registered Secs</span>
-                    <strong className="text-emerald-900 font-bold text-sm">{p.registeredSecretaries || 0}</strong>
-                  </div>
-                  <div className="col-span-2 bg-slate-50 p-2 rounded-xl border border-slate-200 space-y-1 text-[11px]">
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-600 font-semibold">{t('common.category', 'Total Complaints')}:</span>
-                      <span className="font-bold text-[#A00000]">{p.totalComplaints || 0}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-[10px] text-slate-500 pt-0.5 border-t border-slate-200">
-                      <span>Pending: <strong className="text-amber-700">{p.pendingComplaints || 0}</strong></span>
-                      <span>In Prog: <strong className="text-sky-700">{p.inProgressComplaints || 0}</strong></span>
-                      <span>Done: <strong className="text-emerald-700">{p.completedComplaints || p.resolvedComplaints || 0}</strong></span>
-                    </div>
-                  </div>
+                {/* Open Paguthi Button */}
+                <div className="p-4 pt-0">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      navigate(
+                        `/admin/district/constituencies/${constituency._id}/paguthi/${encodeURIComponent(p.name)}`
+                      )
+                    }
+                    className="w-full py-2 px-3 bg-[#A00000] hover:bg-[#850000] text-white text-xs font-bold rounded-xl transition shadow-xs flex items-center justify-center space-x-1.5 cursor-pointer"
+                  >
+                    <span>{t('constituency.openPaguthi', 'Open Paguthi')}</span>
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
-
-              {/* Open Paguthi Button */}
-              <div className="p-4 pt-0">
-                <button
-                  type="button"
-                  onClick={() =>
-                    navigate(
-                      `/admin/district/constituencies/${constituency._id}/paguthi/${encodeURIComponent(p.name)}`
-                    )
-                  }
-                  className="w-full py-2 px-3 bg-[#A00000] hover:bg-[#850000] text-white text-xs font-bold rounded-xl transition shadow-xs flex items-center justify-center space-x-1.5 cursor-pointer"
-                >
-                  <span>{t('constituency.openPaguthi', 'Open Paguthi')}</span>
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -22,6 +22,7 @@ import settingsRoutes from './routes/settingsRoutes.js';
 import appointmentRoutes from './routes/appointmentRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 import uploadRoutes from './routes/uploadRoutes.js';
+import paguthiSeyalaalarRoutes from './routes/paguthiSeyalaalarRoutes.js';
 
 import { notFound, errorHandler } from './middleware/errorMiddleware.js';
 
@@ -73,6 +74,7 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/paguthi-seyalaalar', paguthiSeyalaalarRoutes);
 
 // Error Handling Middleware
 app.use(notFound);

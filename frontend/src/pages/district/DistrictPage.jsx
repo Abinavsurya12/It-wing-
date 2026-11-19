@@ -77,7 +77,7 @@ export const DistrictPage = () => {
           },
           {
             label: t('district.statTotalPaguthi', 'Total Paguthi'),
-            value: `${kinathukadavu.totalPaguthi || 12} ${t('common.paguthi', 'Paguthi')}`,
+            value: `${kinathukadavu.totalPaguthi || 0} ${t('common.paguthi', 'Paguthi')}`,
             highlight: true,
           },
           { label: t('district.statTotalWards', 'Total Wards'), value: wards.length },
@@ -116,7 +116,7 @@ export const DistrictPage = () => {
                     {kinathukadavu.code || 'KKD'}
                   </span>
                   <span className="text-[11px] font-bold text-[#FFD32A] bg-black/85 px-2.5 py-1 rounded-md shadow-xs">
-                    {kinathukadavu.totalPaguthi || 12} {t('common.paguthi', 'Paguthi')}
+                    {kinathukadavu.totalPaguthi || 0} {t('common.paguthi', 'Paguthi')}
                   </span>
                   <span className="text-[11px] font-semibold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-md">
                     {kinathukadavu.zone || 'South Zone'}
@@ -138,7 +138,7 @@ export const DistrictPage = () => {
                 </div>
 
                 <p className="text-xs text-slate-600 mt-2.5 max-w-xl leading-relaxed font-medium">
-                  {t('district.cardSubtitle', 'Select a Paguthi to Continue. Administrative hierarchy covers 4 Paguthis (Podanur, Kurichi, Sundarapuram, Malumichampatti) and all affiliated Municipal Wards.')}
+                  {t('district.cardSubtitle', 'Select a Paguthi to Continue. Administrative hierarchy covers 3 Paguthis (Pothanur, Kurichi, Sundarapuram) and all affiliated Municipal Wards.')}
                 </p>
 
                 {/* Key Statistics Counts from Database */}
@@ -146,13 +146,13 @@ export const DistrictPage = () => {
                   <div className="bg-[#FFF8F0] p-3 rounded-2xl border border-[#FFE5A3]/70">
                     <span className="text-slate-500 block text-[10px] uppercase font-bold tracking-wider">{t('district.statTotalPaguthi', 'Total Paguthi')}</span>
                     <strong className="text-slate-900 font-extrabold text-base sm:text-lg text-[#A00000]">
-                      {kinathukadavu.totalPaguthi || 12}
+                      {kinathukadavu.totalPaguthi || 0}
                     </strong>
                   </div>
                   <div className="bg-[#FFF8F0] p-3 rounded-2xl border border-[#FFE5A3]/70">
                     <span className="text-slate-500 block text-[10px] uppercase font-bold tracking-wider">{t('district.statTotalWards', 'Total Wards')}</span>
                     <strong className="text-slate-900 font-extrabold text-base sm:text-lg">
-                      {kinathukadavu.wardCount || kinathukadavu.totalWards || 8}
+                      {kinathukadavu.wardCount || kinathukadavu.totalWards || 0}
                     </strong>
                   </div>
                   <div className="bg-[#FFF8F0] p-3 rounded-2xl border border-[#FFE5A3]/70">

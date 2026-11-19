@@ -455,7 +455,7 @@ export const PaguthiDetailPage = () => {
                   required
                   value={wardForm.wardName}
                   onChange={(e) => setWardForm({ ...wardForm, wardName: e.target.value })}
-                  placeholder="e.g. Podanur West"
+                  placeholder="e.g. Pothanur West"
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-[#A00000]/20 focus:border-[#A00000]"
                 />
               </div>

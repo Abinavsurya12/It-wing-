@@ -3,6 +3,7 @@ import User from '../models/User.js';
 import AuditLog from '../models/AuditLog.js';
 import District from '../models/District.js';
 import Ward from '../models/Ward.js';
+import Constituency from '../models/Constituency.js';
 
 // @desc    Get All System Settings & Organization Info
 // @route   GET /api/settings
@@ -282,28 +283,35 @@ export const registerWardSecretary = async (req, res) => {
     let wardDoc = null;
     const rawWard = assignedWard || req.body.wardNumber || wardId;
     const parsedWardNum = rawWard ? parseInt(String(rawWard).replace(/\D+/g, ''), 10) : null;
+    const canonicalPaguthi = (cleanPaguthi === 'Podanur') ? 'Pothanur' : cleanPaguthi;
+    const paguthiFilter = (canonicalPaguthi === 'Pothanur') ? ['Pothanur', 'Podanur'] : [canonicalPaguthi];
 
-    if (cleanPaguthi && parsedWardNum && !isNaN(parsedWardNum)) {
-      wardDoc = await Ward.findOne({ where: { wardNumber: parsedWardNum, paguthi: cleanPaguthi } });
+    if (canonicalPaguthi && parsedWardNum && !isNaN(parsedWardNum)) {
+      wardDoc = await Ward.findOne({
+        where: {
+          wardNumber: parsedWardNum,
+          paguthi: { [Op.in]: paguthiFilter },
+        },
+      });
     }
     if (!wardDoc && wardId) {
       const numWId = Number(wardId);
       if (!isNaN(numWId) && numWId > 0) {
         const candidate = await Ward.findByPk(numWId);
-        if (candidate && (!cleanPaguthi || candidate.paguthi === cleanPaguthi)) {
+        if (candidate) {
           wardDoc = candidate;
         }
       }
     }
 
     // If ward doesn't exist yet for this paguthi, create it dynamically
-    if (!wardDoc && cleanPaguthi && parsedWardNum && !isNaN(parsedWardNum)) {
+    if (!wardDoc && canonicalPaguthi && parsedWardNum && !isNaN(parsedWardNum)) {
       const kinathu = await Constituency.findOne({ where: { name: 'Kinathukadavu' } });
       wardDoc = await Ward.create({
         wardNumber: parsedWardNum,
-        wardName: `${cleanPaguthi} Ward ${parsedWardNum}`,
-        tamilName: `${cleanPaguthi} வார்டு ${parsedWardNum}`,
-        paguthi: cleanPaguthi,
+        wardName: `${canonicalPaguthi} Ward ${parsedWardNum}`,
+        tamilName: `${canonicalPaguthi} வார்டு ${parsedWardNum}`,
+        paguthi: canonicalPaguthi,
         constituencyId: kinathu?.id || 6,
         zone: 'South Zone',
       });

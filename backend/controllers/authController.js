@@ -52,6 +52,9 @@ export const login = async (req, res) => {
       if ((selectedRole === 'ward_secretary' || selectedRole === 'ward') && !['ward_secretary', 'ward_officer'].includes(user.role)) {
         return res.status(403).json({ success: false, message: 'Access denied. Account is not a registered Ward Secretary.' });
       }
+      if ((selectedRole === 'paguthi_seyalaalar' || selectedRole === 'paguthi') && user.role !== 'paguthi_seyalaalar') {
+        return res.status(403).json({ success: false, message: 'Access denied. Account is not a registered Paguthi Seyalaalar.' });
+      }
       if ((selectedRole === 'citizen' || selectedRole === 'user') && !['citizen', 'user'].includes(user.role)) {
         return res.status(403).json({ success: false, message: 'Access denied. Please use the appropriate administrative role.' });
       }

@@ -11,6 +11,7 @@ import {
   Building,
   AlertCircle,
   LogIn,
+  MapPin,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
@@ -87,6 +88,18 @@ export const LoginPage = () => {
       icon: Building,
       redirect: '/ward-secretary/dashboard',
     },
+    paguthi_seyalaalar: {
+      key: 'paguthi_seyalaalar',
+      title: t('auth.paguthiSeyalaalarLogin', 'Paguthi Seyalaalar'),
+      badge: t('auth.paguthiBadge', 'Paguthi Seyalaalar'),
+      subtitle: t('auth.paguthiSub', 'Paguthi Governance & Ward Oversight'),
+      userLabel: t('auth.username', 'Username'),
+      userPlaceholder: 'pothanur / kurichi / sundarapuram',
+      defaultUser: '',
+      defaultPass: '',
+      icon: MapPin,
+      redirect: '/paguthi-seyalaalar/dashboard',
+    },
   };
 
   const currentRole = rolesConfig[selectedRole] || rolesConfig.admin;
@@ -121,7 +134,9 @@ export const LoginPage = () => {
 
       // Role-based smart redirection
       const userRole = res.data?.role;
-      if (userRole === 'citizen' || userRole === 'user' || selectedRole === 'citizen') {
+      if (userRole === 'paguthi_seyalaalar' || selectedRole === 'paguthi_seyalaalar') {
+        navigate('/paguthi-seyalaalar/dashboard');
+      } else if (userRole === 'citizen' || userRole === 'user' || selectedRole === 'citizen') {
         navigate('/citizen');
       } else if (userRole === 'ward_secretary' || userRole === 'ward_officer' || selectedRole === 'ward_secretary') {
         navigate('/ward-secretary/dashboard');
