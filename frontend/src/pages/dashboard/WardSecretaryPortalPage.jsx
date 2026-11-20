@@ -617,20 +617,20 @@ export const WardSecretaryPortalPage = () => {
     }
   };
 
-  if (loading && !wardData) {
+  if (loading && complaints.length === 0 && members.length === 0) {
     return <LoadingSpinner fullScreen text="Loading Ward Secretary Portal..." />;
   }
 
   return (
     <div className="min-h-screen bg-[#FFF8F0] flex flex-col font-sans w-full max-w-full overflow-x-hidden">
       {/* ================= HEADER ================= */}
-      <header className="w-full bg-gradient-to-r from-[#850000] via-[#A00000] to-[#850000] border-b-[3px] border-[#FFD32A] px-3 sm:px-6 md:px-8 py-2.5 sm:py-3.5 shadow-md flex items-center justify-between text-white sticky top-0 z-50">
-        <div className="flex items-center space-x-2.5 sm:space-x-3 min-w-0 flex-1 sm:flex-initial">
-          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#FFD32A] text-[#850000] font-black text-sm sm:text-base flex items-center justify-center shadow-md flex-shrink-0">
+      <header className="w-full bg-gradient-to-r from-[#850000] via-[#A00000] to-[#850000] border-b-[3px] border-[#FFD32A] px-2.5 sm:px-6 md:px-8 py-2 sm:py-3.5 shadow-md flex items-center justify-between text-white sticky top-0 z-50">
+        <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1 sm:flex-initial">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-[#FFD32A] text-[#850000] font-black text-xs sm:text-base flex items-center justify-center shadow-md flex-shrink-0">
             TVK
           </div>
           <div className="min-w-0">
-            <h1 className="text-xs sm:text-base font-extrabold tracking-tight truncate max-w-[130px] min-[400px]:max-w-[180px] sm:max-w-none">
+            <h1 className="text-xs sm:text-base font-extrabold tracking-tight truncate max-w-[140px] min-[400px]:max-w-[200px] sm:max-w-none">
               {t('wardSecretary.portalTitle', 'TVK Ward Secretary Portal')}
             </h1>
             <p className="text-[10px] sm:text-[10.5px] text-[#FFD32A] font-semibold truncate hidden sm:block">
@@ -639,73 +639,73 @@ export const WardSecretaryPortalPage = () => {
           </div>
         </div>
 
-        <div className="flex items-center space-x-2 sm:space-x-3 text-xs flex-shrink-0">
-          {/* Ward Badge */}
-          <div className="flex items-center space-x-2 bg-black/30 px-3 py-1.5 rounded-full border border-white/20">
+        <div className="flex items-center space-x-1.5 sm:space-x-3 text-xs flex-shrink-0">
+          {/* Ward Badge - visible on larger screens to prevent mobile overflow */}
+          <div className="hidden md:flex items-center space-x-2 bg-black/30 px-3 py-1.5 rounded-full border border-white/20">
             <span className="w-2 h-2 rounded-full bg-[#FFD32A] animate-pulse"></span>
-            <span className="font-bold text-[11px] sm:text-xs">{paguthi} • {assignedWard}</span>
+            <span className="font-bold text-[11px] sm:text-xs truncate max-w-[200px]">{paguthi} • {assignedWard}</span>
           </div>
 
           <LanguageSwitcher variant="dark" />
 
           <button
             onClick={logout}
-            className="flex items-center space-x-1 sm:space-x-1.5 bg-black/20 hover:bg-black/40 px-2.5 sm:px-3.5 py-1.5 rounded-full border border-white/20 transition text-[10.5px] sm:text-[11px] font-bold cursor-pointer"
+            className="flex items-center space-x-1 sm:space-x-1.5 bg-black/20 hover:bg-black/40 px-2 sm:px-3.5 py-1.5 rounded-full border border-white/20 transition text-[10px] sm:text-[11px] font-bold cursor-pointer"
           >
             <LogOut className="w-3.5 h-3.5 text-[#FFD32A]" />
-            <span className="hidden min-[400px]:inline">{t('common.logout', 'Logout')}</span>
+            <span className="hidden min-[480px]:inline">{t('common.logout', 'Logout')}</span>
           </button>
         </div>
       </header>
 
       {/* Main Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 md:p-8 space-y-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 md:p-8 space-y-4 sm:space-y-6">
         {/* Ward Secretary Banner */}
-        <div className="bg-white rounded-3xl p-6 border border-[#E9E2DC] shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center space-x-4">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#850000] to-[#A00000] text-white flex items-center justify-center font-extrabold text-xl shadow-md border-2 border-[#FFD32A]">
-              <Building className="w-7 h-7 text-[#FFD32A]" />
+        <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-[#E9E2DC] shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center space-x-3 sm:space-x-4">
+            <div className="w-11 h-11 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-[#850000] to-[#A00000] text-white flex items-center justify-center font-extrabold text-lg sm:text-xl shadow-md border-2 border-[#FFD32A] flex-shrink-0">
+              <Building className="w-5 h-5 sm:w-7 sm:h-7 text-[#FFD32A]" />
             </div>
-            <div>
-              <div className="flex items-center space-x-2">
-                <h2 className="text-lg font-extrabold text-slate-900">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                <h2 className="text-base sm:text-lg font-extrabold text-slate-900 truncate">
                   {user?.name || 'K. R. Vijayakumar (Ward Secretary)'}
                 </h2>
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-red-50 text-[#A00000] border border-red-200">
+                <span className="px-2 py-0.5 rounded-full text-[9.5px] sm:text-[10px] font-extrabold bg-red-50 text-[#A00000] border border-red-200">
                   {t('wardSecretary.badge', 'Ward Secretary')}
                 </span>
               </div>
-              <p className="text-xs text-slate-500 mt-0.5 font-medium">
+              <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5 font-medium truncate">
                 {t('wardSecretary.jurisdiction', 'Jurisdiction')}: <strong>{assignedWard}</strong> • {paguthi} Paguthi • {constituency}
               </p>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs border-t md:border-t-0 md:border-l border-slate-100 pt-3 md:pt-0 md:pl-6">
-            <div className="bg-[#FFF8F0] p-2.5 rounded-xl border border-[#FFE5A3]/50 text-center">
-              <span className="text-[10px] text-slate-500 block">{t('wardSecretary.totalAssigned', 'Total Assigned Complaints')}</span>
-              <strong className="text-slate-900 font-black text-base">{totalComplaints}</strong>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs border-t md:border-t-0 md:border-l border-slate-100 pt-3 md:pt-0 md:pl-6">
+            <div className="bg-[#FFF8F0] p-2 sm:p-2.5 rounded-xl border border-[#FFE5A3]/50 text-center">
+              <span className="text-[9.5px] sm:text-[10px] text-slate-500 block truncate">{t('wardSecretary.totalAssigned', 'Total Assigned')}</span>
+              <strong className="text-slate-900 font-black text-sm sm:text-base">{totalComplaints}</strong>
             </div>
-            <div className="bg-amber-50 p-2.5 rounded-xl border border-amber-200/60 text-center">
-              <span className="text-[10px] text-amber-700 block">{t('wardSecretary.pendingFieldAction', 'Pending Complaints')}</span>
-              <strong className="text-amber-800 font-black text-base">{pendingComplaints}</strong>
+            <div className="bg-amber-50 p-2 sm:p-2.5 rounded-xl border border-amber-200/60 text-center">
+              <span className="text-[9.5px] sm:text-[10px] text-amber-700 block truncate">{t('wardSecretary.pendingFieldAction', 'Pending')}</span>
+              <strong className="text-amber-800 font-black text-sm sm:text-base">{pendingComplaints}</strong>
             </div>
-            <div className="bg-blue-50 p-2.5 rounded-xl border border-blue-200/60 text-center">
-              <span className="text-[10px] text-blue-700 block">{t('wardSecretary.workInProgress', 'In Progress Complaints')}</span>
-              <strong className="text-blue-800 font-black text-base">{inProgressComplaints}</strong>
+            <div className="bg-blue-50 p-2 sm:p-2.5 rounded-xl border border-blue-200/60 text-center">
+              <span className="text-[9.5px] sm:text-[10px] text-blue-700 block truncate">{t('wardSecretary.workInProgress', 'In Progress')}</span>
+              <strong className="text-blue-800 font-black text-sm sm:text-base">{inProgressComplaints}</strong>
             </div>
-            <div className="bg-emerald-50 p-2.5 rounded-xl border border-emerald-200/60 text-center">
-              <span className="text-[10px] text-emerald-700 block">{t('wardSecretary.actionCompleted', 'Completed Complaints')}</span>
-              <strong className="text-emerald-800 font-black text-base">{resolvedComplaints}</strong>
+            <div className="bg-emerald-50 p-2 sm:p-2.5 rounded-xl border border-emerald-200/60 text-center">
+              <span className="text-[9.5px] sm:text-[10px] text-emerald-700 block truncate">{t('wardSecretary.actionCompleted', 'Completed')}</span>
+              <strong className="text-emerald-800 font-black text-sm sm:text-base">{resolvedComplaints}</strong>
             </div>
           </div>
         </div>
 
         {/* ================= MODULE TABS ================= */}
-        <div className="bg-white p-2 rounded-2xl border border-slate-200 shadow-xs flex flex-wrap gap-2 text-xs font-bold">
+        <div className="bg-white p-1.5 sm:p-2 rounded-2xl border border-slate-200 shadow-xs flex items-center gap-1.5 sm:gap-2 text-xs font-bold overflow-x-auto no-scrollbar scroll-smooth">
           <button
             onClick={() => setActiveTab('overview')}
-            className={`px-4 py-2.5 rounded-xl transition cursor-pointer flex items-center space-x-1.5 ${
+            className={`flex-shrink-0 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl transition cursor-pointer flex items-center space-x-1.5 whitespace-nowrap ${
               activeTab === 'overview'
                 ? 'bg-[#A00000] text-white shadow-xs'
                 : 'text-slate-600 hover:bg-slate-100'
@@ -717,7 +717,7 @@ export const WardSecretaryPortalPage = () => {
 
           <button
             onClick={() => setActiveTab('register-complaint')}
-            className={`px-4 py-2.5 rounded-xl transition cursor-pointer flex items-center space-x-1.5 ${
+            className={`flex-shrink-0 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl transition cursor-pointer flex items-center space-x-1.5 whitespace-nowrap ${
               activeTab === 'register-complaint'
                 ? 'bg-[#A00000] text-white shadow-xs'
                 : 'text-slate-600 hover:bg-slate-100'
@@ -730,7 +730,7 @@ export const WardSecretaryPortalPage = () => {
 
           <button
             onClick={() => setActiveTab('complaints')}
-            className={`px-4 py-2.5 rounded-xl transition cursor-pointer flex items-center space-x-1.5 ${
+            className={`flex-shrink-0 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl transition cursor-pointer flex items-center space-x-1.5 whitespace-nowrap ${
               activeTab === 'complaints'
                 ? 'bg-[#A00000] text-white shadow-xs'
                 : 'text-slate-600 hover:bg-slate-100'
@@ -742,7 +742,7 @@ export const WardSecretaryPortalPage = () => {
 
           <button
             onClick={() => setActiveTab('ward-info')}
-            className={`px-4 py-2.5 rounded-xl transition cursor-pointer flex items-center space-x-1.5 ${
+            className={`flex-shrink-0 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl transition cursor-pointer flex items-center space-x-1.5 whitespace-nowrap ${
               activeTab === 'ward-info'
                 ? 'bg-[#A00000] text-white shadow-xs'
                 : 'text-slate-600 hover:bg-slate-100'
@@ -754,7 +754,7 @@ export const WardSecretaryPortalPage = () => {
 
           <button
             onClick={() => setActiveTab('members')}
-            className={`px-4 py-2.5 rounded-xl transition cursor-pointer flex items-center space-x-1.5 ${
+            className={`flex-shrink-0 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl transition cursor-pointer flex items-center space-x-1.5 whitespace-nowrap ${
               activeTab === 'members'
                 ? 'bg-[#A00000] text-white shadow-xs'
                 : 'text-slate-600 hover:bg-slate-100'
@@ -766,7 +766,7 @@ export const WardSecretaryPortalPage = () => {
 
           <button
             onClick={() => setActiveTab('profile')}
-            className={`px-4 py-2.5 rounded-xl transition cursor-pointer flex items-center space-x-1.5 ${
+            className={`flex-shrink-0 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl transition cursor-pointer flex items-center space-x-1.5 whitespace-nowrap ${
               activeTab === 'profile'
                 ? 'bg-[#A00000] text-white shadow-xs'
                 : 'text-slate-600 hover:bg-slate-100'
@@ -779,15 +779,15 @@ export const WardSecretaryPortalPage = () => {
 
         {/* ================= TAB 1: DASHBOARD OVERVIEW ================= */}
         {activeTab === 'overview' && (
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             {/* Jurisdiction Banner */}
-            <div className="bg-gradient-to-r from-[#850000] via-[#A00000] to-[#850000] text-white p-5 sm:p-6 rounded-3xl shadow-sm border border-red-900 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="bg-gradient-to-r from-[#850000] via-[#A00000] to-[#850000] text-white p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm border border-red-900 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
               <div>
                 <div className="flex items-center space-x-2 text-[#FFD32A] text-xs font-bold uppercase tracking-wider mb-1">
                   <MapPin className="w-4 h-4" />
                   <span>{constituency} Assembly Constituency</span>
                 </div>
-                <h2 className="text-xl sm:text-2xl font-black">
+                <h2 className="text-lg sm:text-2xl font-black">
                   {paguthi} Paguthi • {assignedWard}
                 </h2>
                 <p className="text-xs text-red-100 mt-1">
@@ -795,54 +795,54 @@ export const WardSecretaryPortalPage = () => {
                 </p>
               </div>
               <div className="flex items-center space-x-2 text-xs">
-                <span className="bg-[#FFD32A] text-red-950 px-3.5 py-1.5 rounded-xl font-extrabold shadow-xs">
+                <span className="bg-[#FFD32A] text-red-950 px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-xl font-extrabold shadow-xs text-[11px] sm:text-xs">
                   Active Ward Secretary Jurisdiction
                 </span>
               </div>
             </div>
 
             {/* Quick KPI Cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-              <div className="bg-white p-4 rounded-2xl border border-[#E9E2DC] shadow-xs text-center">
-                <span className="text-[10.5px] text-slate-500 block font-semibold">Total Assigned</span>
-                <p className="text-xl sm:text-2xl font-black text-[#850000] mt-1">{totalComplaints}</p>
+            <div className="grid grid-cols-2 min-[480px]:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-3">
+              <div className="bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-[#E9E2DC] shadow-xs text-center">
+                <span className="text-[10px] sm:text-[10.5px] text-slate-500 block font-semibold truncate">Total Assigned</span>
+                <p className="text-lg sm:text-2xl font-black text-[#850000] mt-1">{totalComplaints}</p>
               </div>
-              <div className="bg-white p-4 rounded-2xl border border-amber-200 shadow-xs text-center bg-amber-50/20">
-                <span className="text-[10.5px] text-amber-800 block font-semibold">Pending Complaints</span>
-                <p className="text-xl sm:text-2xl font-black text-amber-700 mt-1">{pendingComplaints}</p>
+              <div className="bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-amber-200 shadow-xs text-center bg-amber-50/20">
+                <span className="text-[10px] sm:text-[10.5px] text-amber-800 block font-semibold truncate">Pending Actions</span>
+                <p className="text-lg sm:text-2xl font-black text-amber-700 mt-1">{pendingComplaints}</p>
               </div>
-              <div className="bg-white p-4 rounded-2xl border border-blue-200 shadow-xs text-center bg-blue-50/20">
-                <span className="text-[10.5px] text-blue-800 block font-semibold">In Progress Complaints</span>
-                <p className="text-xl sm:text-2xl font-black text-blue-700 mt-1">{inProgressComplaints}</p>
+              <div className="bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-blue-200 shadow-xs text-center bg-blue-50/20">
+                <span className="text-[10px] sm:text-[10.5px] text-blue-800 block font-semibold truncate">In Progress</span>
+                <p className="text-lg sm:text-2xl font-black text-blue-700 mt-1">{inProgressComplaints}</p>
               </div>
-              <div className="bg-white p-4 rounded-2xl border border-emerald-200 shadow-xs text-center bg-emerald-50/20">
-                <span className="text-[10.5px] text-emerald-800 block font-semibold">Completed Complaints</span>
-                <p className="text-xl sm:text-2xl font-black text-emerald-700 mt-1">{resolvedComplaints}</p>
+              <div className="bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-emerald-200 shadow-xs text-center bg-emerald-50/20">
+                <span className="text-[10px] sm:text-[10.5px] text-emerald-800 block font-semibold truncate">Completed</span>
+                <p className="text-lg sm:text-2xl font-black text-emerald-700 mt-1">{resolvedComplaints}</p>
               </div>
-              <div className="bg-white p-4 rounded-2xl border border-[#FFE5A3] shadow-xs text-center bg-[#FFF8F0]">
-                <span className="text-[10.5px] text-slate-600 block font-semibold">Assigned Cadres</span>
-                <p className="text-xl sm:text-2xl font-black text-[#A00000] mt-1">{members.length}</p>
+              <div className="bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-[#FFE5A3] shadow-xs text-center bg-[#FFF8F0]">
+                <span className="text-[10px] sm:text-[10.5px] text-slate-600 block font-semibold truncate">Assigned Cadres</span>
+                <p className="text-lg sm:text-2xl font-black text-[#A00000] mt-1">{members.length}</p>
               </div>
-              <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs text-center">
-                <span className="text-[10.5px] text-slate-500 block font-semibold">Ward Population</span>
-                <p className="text-xl sm:text-2xl font-black text-slate-800 mt-1">~45,000</p>
+              <div className="bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-slate-200 shadow-xs text-center">
+                <span className="text-[10px] sm:text-[10.5px] text-slate-500 block font-semibold truncate">Ward Population</span>
+                <p className="text-lg sm:text-2xl font-black text-slate-800 mt-1">~45,000</p>
               </div>
             </div>
 
             {/* Quick Action & Highlights Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
               {/* Left 2 Cols: Priority Complaints Requiring Field Action */}
-              <div className="lg:col-span-2 bg-white rounded-3xl p-6 border border-[#E9E2DC] shadow-xs space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="lg:col-span-2 bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-[#E9E2DC] shadow-xs space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
-                    <h3 className="text-base font-extrabold text-[#252525]">
+                    <h3 className="text-sm sm:text-base font-extrabold text-[#252525]">
                       Field Complaints Management
                     </h3>
-                    <div className="flex items-center space-x-2 mt-1.5">
+                    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mt-1.5">
                       <button
                         type="button"
                         onClick={() => setOverviewComplaintTab('pending')}
-                        className={`px-3 py-1 rounded-lg text-xs font-bold transition flex items-center space-x-1 cursor-pointer ${
+                        className={`px-2.5 sm:px-3 py-1 rounded-lg text-[11px] sm:text-xs font-bold transition flex items-center space-x-1 cursor-pointer ${
                           overviewComplaintTab === 'pending'
                             ? 'bg-amber-600 text-white shadow-2xs'
                             : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -854,7 +854,7 @@ export const WardSecretaryPortalPage = () => {
                       <button
                         type="button"
                         onClick={() => setOverviewComplaintTab('completed')}
-                        className={`px-3 py-1 rounded-lg text-xs font-bold transition flex items-center space-x-1 cursor-pointer ${
+                        className={`px-2.5 sm:px-3 py-1 rounded-lg text-[11px] sm:text-xs font-bold transition flex items-center space-x-1 cursor-pointer ${
                           overviewComplaintTab === 'completed'
                             ? 'bg-emerald-700 text-white shadow-2xs'
                             : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -865,11 +865,11 @@ export const WardSecretaryPortalPage = () => {
                       </button>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-2 self-start sm:self-auto">
                     <button
                       type="button"
                       onClick={() => setActiveTab('register-complaint')}
-                      className="px-3.5 py-1.5 bg-[#850000] hover:bg-[#A00000] text-white rounded-xl text-xs font-bold transition flex items-center space-x-1 cursor-pointer shadow-xs"
+                      className="px-3 sm:px-3.5 py-1.5 bg-[#850000] hover:bg-[#A00000] text-white rounded-xl text-xs font-bold transition flex items-center space-x-1 cursor-pointer shadow-xs"
                     >
                       <PlusCircle className="w-3.5 h-3.5 text-[#FFD32A]" />
                       <span>Register Complaint</span>
@@ -889,7 +889,7 @@ export const WardSecretaryPortalPage = () => {
                 <div className="space-y-3">
                   {overviewComplaintTab === 'pending' ? (
                     complaints.filter((c) => !['Completed', 'Resolved', 'Closed'].includes(c.status)).slice(0, 4).length === 0 ? (
-                      <div className="p-8 text-center bg-slate-50 rounded-2xl border border-slate-100">
+                      <div className="p-6 sm:p-8 text-center bg-slate-50 rounded-2xl border border-slate-100">
                         <CheckCircle2 className="w-10 h-10 text-emerald-600 mx-auto mb-2" />
                         <p className="text-xs font-bold text-slate-700">All assigned grievances resolved!</p>
                         <p className="text-[11px] text-slate-500">No pending field work currently in {assignedWard}.</p>
@@ -901,10 +901,10 @@ export const WardSecretaryPortalPage = () => {
                         .map((c) => (
                           <div
                             key={c._id}
-                            className="p-4 rounded-2xl border border-slate-200 hover:border-[#A00000] transition bg-[#FFF8F0]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
+                            className="p-3.5 sm:p-4 rounded-xl sm:rounded-2xl border border-slate-200 hover:border-[#A00000] transition bg-[#FFF8F0]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
                           >
                             <div className="space-y-1">
-                              <div className="flex items-center space-x-2">
+                              <div className="flex flex-wrap items-center gap-1.5">
                                 <span className="font-mono font-bold text-[#A00000] bg-red-50 border border-red-200 px-2 py-0.5 rounded text-[10px]">
                                   {c.issueCode}
                                 </span>
@@ -917,7 +917,7 @@ export const WardSecretaryPortalPage = () => {
                               </p>
                             </div>
 
-                            <div className="flex items-center space-x-2 self-end sm:self-center">
+                            <div className="flex items-center space-x-2 self-start sm:self-center flex-wrap gap-y-1.5">
                               <button
                                 type="button"
                                 onClick={() => {
@@ -957,7 +957,7 @@ export const WardSecretaryPortalPage = () => {
                     )
                   ) : (
                     complaints.filter((c) => ['Completed', 'Resolved', 'Closed'].includes(c.status)).slice(0, 4).length === 0 ? (
-                      <div className="p-8 text-center bg-slate-50 rounded-2xl border border-slate-100">
+                      <div className="p-6 sm:p-8 text-center bg-slate-50 rounded-2xl border border-slate-100">
                         <Clock className="w-10 h-10 text-amber-500 mx-auto mb-2" />
                         <p className="text-xs font-bold text-slate-700">No completed actions yet</p>
                         <p className="text-[11px] text-slate-500">Take action on pending complaints to see completed records here.</p>
@@ -969,11 +969,11 @@ export const WardSecretaryPortalPage = () => {
                         .map((c) => (
                           <div
                             key={c._id}
-                            className="p-4 rounded-2xl border border-emerald-200 hover:border-emerald-400 transition bg-emerald-50/20 flex flex-col justify-between gap-3 text-xs"
+                            className="p-3.5 sm:p-4 rounded-xl sm:rounded-2xl border border-emerald-200 hover:border-emerald-400 transition bg-emerald-50/20 flex flex-col justify-between gap-3 text-xs"
                           >
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                               <div className="space-y-1">
-                                <div className="flex items-center space-x-2">
+                                <div className="flex flex-wrap items-center gap-1.5">
                                   <span className="font-mono font-bold text-emerald-800 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded text-[10px]">
                                     {c.issueCode}
                                   </span>
@@ -991,7 +991,7 @@ export const WardSecretaryPortalPage = () => {
                                 </p>
                               </div>
 
-                              <div className="flex items-center space-x-2 self-end sm:self-center">
+                              <div className="flex items-center space-x-2 self-start sm:self-center">
                                 <button
                                   type="button"
                                   onClick={() => {
@@ -1019,7 +1019,7 @@ export const WardSecretaryPortalPage = () => {
               </div>
 
               {/* Right Col: Ward Quick Profile Card */}
-              <div className="bg-white rounded-3xl p-6 border border-[#E9E2DC] shadow-xs space-y-4">
+              <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-[#E9E2DC] shadow-xs space-y-4">
                 <div className="flex items-center space-x-3 pb-3 border-b border-slate-100">
                   <div className="w-10 h-10 rounded-xl bg-[#FFF8F0] border border-[#FFE5A3] flex items-center justify-center text-[#A00000] font-black">
                     72
@@ -1069,18 +1069,18 @@ export const WardSecretaryPortalPage = () => {
 
         {/* ================= TAB: REGISTER COMPLAINT ================= */}
         {activeTab === 'register-complaint' && (
-          <div className="space-y-6">
-            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#E9E2DC] shadow-sm">
-              <div className="border-b border-slate-100 pb-5 mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="space-y-4 sm:space-y-6">
+            <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-[#E9E2DC] shadow-sm">
+              <div className="border-b border-slate-100 pb-4 sm:pb-5 mb-4 sm:mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div>
-                  <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-red-50 text-[#850000] text-[11px] font-bold border border-red-200 mb-2">
+                  <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-red-50 text-[#850000] text-[10.5px] sm:text-[11px] font-bold border border-red-200 mb-1.5 sm:mb-2">
                     <ShieldCheck className="w-3.5 h-3.5" />
                     <span>Official Ward Secretary Form</span>
                   </div>
-                  <h2 className="text-xl sm:text-2xl font-black text-[#850000]">
+                  <h2 className="text-lg sm:text-2xl font-black text-[#850000]">
                     Ward Secretary Complaint Registration
                   </h2>
-                  <p className="text-xs text-slate-500 mt-1">
+                  <p className="text-[11px] sm:text-xs text-slate-500 mt-1">
                     களப்பணி குறை பதிவு • Submissions are saved to MongoDB Atlas and assigned status <strong className="text-red-700">New</strong> for immediate administrative review.
                   </p>
                 </div>
@@ -1095,25 +1095,25 @@ export const WardSecretaryPortalPage = () => {
               </div>
 
               {submittedComplaintToken ? (
-                <div className="max-w-xl mx-auto p-6 sm:p-8 rounded-3xl bg-emerald-50 border-2 border-emerald-300 text-center space-y-4">
-                  <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto shadow-inner">
-                    <CheckCircle2 className="w-9 h-9" />
+                <div className="max-w-xl mx-auto p-4 sm:p-8 rounded-2xl sm:rounded-3xl bg-emerald-50 border-2 border-emerald-300 text-center space-y-4">
+                  <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto shadow-inner">
+                    <CheckCircle2 className="w-8 h-8 sm:w-9 sm:h-9" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-black text-emerald-900">
+                    <h3 className="text-lg sm:text-xl font-black text-emerald-900">
                       Grievance Registered Successfully in MongoDB Atlas!
                     </h3>
                     <p className="text-xs text-emerald-700 mt-1">
                       The complaint has been recorded with initial status <strong>New</strong> and synced with the District Admin Command Center.
                     </p>
                   </div>
-                  <div className="bg-white px-5 py-3 rounded-2xl border-2 border-emerald-400 font-mono text-lg font-black text-[#850000] tracking-wider inline-block shadow-sm">
+                  <div className="bg-white px-4 sm:px-5 py-2.5 sm:py-3 rounded-2xl border-2 border-emerald-400 font-mono text-base sm:text-lg font-black text-[#850000] tracking-wider inline-block shadow-sm break-all max-w-full">
                     {submittedComplaintToken}
                   </div>
-                  <div className="flex flex-wrap justify-center gap-3 pt-3">
+                  <div className="flex flex-wrap justify-center gap-2.5 sm:gap-3 pt-2 sm:pt-3">
                     <button
                       onClick={() => setSubmittedComplaintToken(null)}
-                      className="px-5 py-2.5 rounded-xl bg-[#850000] hover:bg-[#A00000] text-white text-xs font-bold transition shadow-xs cursor-pointer"
+                      className="px-4 sm:px-5 py-2.5 rounded-xl bg-[#850000] hover:bg-[#A00000] text-white text-xs font-bold transition shadow-xs cursor-pointer"
                     >
                       Register Another Complaint
                     </button>
@@ -1122,18 +1122,18 @@ export const WardSecretaryPortalPage = () => {
                         setSubmittedComplaintToken(null);
                         setActiveTab('complaints');
                       }}
-                      className="px-5 py-2.5 rounded-xl bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold transition shadow-xs cursor-pointer"
+                      className="px-4 sm:px-5 py-2.5 rounded-xl bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold transition shadow-xs cursor-pointer"
                     >
                       View in My Complaints
                     </button>
                   </div>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
                   {/* Left Form (8 Cols) */}
-                  <form onSubmit={handleSubmitComplaint} className="lg:col-span-8 space-y-5">
+                  <form onSubmit={handleSubmitComplaint} className="lg:col-span-8 space-y-4 sm:space-y-5">
                     {/* Citizen Details Row */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                       <div>
                         <label className="block text-xs font-bold text-slate-700 mb-1">
                           Complainant / Citizen Name <span className="text-red-600">*</span>
@@ -1171,7 +1171,7 @@ export const WardSecretaryPortalPage = () => {
                     </div>
 
                     {/* Category & Priority Row */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                       <div>
                         <label className="block text-xs font-bold text-slate-700 mb-1">
                           Complaint Category <span className="text-red-600">*</span>
@@ -1245,7 +1245,7 @@ export const WardSecretaryPortalPage = () => {
                     </div>
 
                     {/* Jurisdiction Locked Badges */}
-                    <div className="p-3 bg-amber-50/60 rounded-2xl border border-amber-200/80 flex flex-wrap items-center justify-between gap-2 text-xs">
+                    <div className="p-3 bg-amber-50/60 rounded-xl sm:rounded-2xl border border-amber-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
                       <div>
                         <span className="text-[10px] text-amber-800 font-bold block uppercase tracking-wider">
                           Designated Jurisdiction
@@ -1254,7 +1254,7 @@ export const WardSecretaryPortalPage = () => {
                           {assignedWard} • {paguthi} Paguthi • {constituency}
                         </span>
                       </div>
-                      <span className="text-[10px] bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full font-bold border border-amber-300">
+                      <span className="text-[10px] bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full font-bold border border-amber-300 self-start sm:self-auto">
                         Ward Verified
                       </span>
                     </div>
@@ -1270,7 +1270,7 @@ export const WardSecretaryPortalPage = () => {
                         placeholder="Provide full details of the issue, citizen statements, affected area, and immediate risks observed during field inspection..."
                         value={complaintForm.description}
                         onChange={(e) => setComplaintForm({ ...complaintForm, description: e.target.value })}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-xs text-slate-800 focus:outline-none focus:border-[#850000]"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 sm:p-3.5 text-xs text-slate-800 focus:outline-none focus:border-[#850000]"
                       />
                     </div>
 
@@ -1285,7 +1285,7 @@ export const WardSecretaryPortalPage = () => {
                         </span>
                       </div>
 
-                      <div className="border-2 border-dashed border-slate-200 rounded-2xl p-4 text-center hover:border-red-300 transition bg-slate-50/60">
+                      <div className="border-2 border-dashed border-slate-200 rounded-2xl p-3.5 sm:p-4 text-center hover:border-red-300 transition bg-slate-50/60">
                         <input
                           type="file"
                           id="complaint-photos-input"
@@ -1301,7 +1301,7 @@ export const WardSecretaryPortalPage = () => {
                             complaintForm.photos.length >= 5 ? 'opacity-40 cursor-not-allowed' : ''
                           }`}
                         >
-                          <UploadCloud className="w-8 h-8 text-[#850000] mb-1" />
+                          <UploadCloud className="w-7 h-7 sm:w-8 sm:h-8 text-[#850000] mb-1" />
                           <span className="text-xs font-bold text-slate-700">
                             Click to upload site photographs
                           </span>
@@ -1313,9 +1313,9 @@ export const WardSecretaryPortalPage = () => {
 
                       {/* Photo Previews */}
                       {complaintForm.photos.length > 0 && (
-                        <div className="flex flex-wrap gap-2.5 mt-3">
+                        <div className="flex flex-wrap gap-2 sm:gap-2.5 mt-3">
                           {complaintForm.photos.map((src, idx) => (
-                            <div key={idx} className="relative group w-20 h-20 rounded-xl overflow-hidden border border-slate-200 shadow-xs">
+                            <div key={idx} className="relative group w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden border border-slate-200 shadow-xs">
                               <img src={src} alt="Preview" className="w-full h-full object-cover" />
                               <button
                                 type="button"
@@ -1336,7 +1336,7 @@ export const WardSecretaryPortalPage = () => {
                       <button
                         type="submit"
                         disabled={isSubmittingComplaint}
-                        className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-[#850000] via-[#A00000] to-[#850000] text-white text-xs font-black tracking-wider uppercase hover:shadow-lg transition cursor-pointer flex items-center justify-center space-x-2 disabled:opacity-50"
+                        className="w-full py-3 sm:py-3.5 px-4 sm:px-6 rounded-xl sm:rounded-2xl bg-gradient-to-r from-[#850000] via-[#A00000] to-[#850000] text-white text-xs font-black tracking-wider uppercase hover:shadow-lg transition cursor-pointer flex items-center justify-center space-x-2 disabled:opacity-50"
                       >
                         <ShieldCheck className="w-4 h-4 text-[#FFD32A]" />
                         <span>
@@ -1427,45 +1427,45 @@ export const WardSecretaryPortalPage = () => {
 
         {/* ================= TAB 2: ASSIGNED WARD INFORMATION ================= */}
         {activeTab === 'ward-info' && (
-          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#E9E2DC] shadow-xs space-y-6">
-            <div className="border-b border-slate-100 pb-4">
-              <h3 className="text-lg font-extrabold text-[#252525]">
+          <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-[#E9E2DC] shadow-xs space-y-4 sm:space-y-6">
+            <div className="border-b border-slate-100 pb-3 sm:pb-4">
+              <h3 className="text-base sm:text-lg font-extrabold text-[#252525]">
                 {assignedWard} Comprehensive Information
               </h3>
-              <p className="text-xs text-slate-500">
+              <p className="text-[11px] sm:text-xs text-slate-500">
                 Demographic, electoral, infrastructural, and administrative details for official grassroots governance
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
-              <div className="p-4 bg-[#FFF8F0] rounded-2xl border border-[#FFE5A3]/60 space-y-1">
-                <span className="text-[10.5px] text-slate-500 block font-semibold">Ward Number & Designation</span>
-                <strong className="text-base font-extrabold text-[#850000] block">{assignedWard} - R.S. Puram West</strong>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 text-xs">
+              <div className="p-3.5 sm:p-4 bg-[#FFF8F0] rounded-xl sm:rounded-2xl border border-[#FFE5A3]/60 space-y-1">
+                <span className="text-[10px] sm:text-[10.5px] text-slate-500 block font-semibold">Ward Number & Designation</span>
+                <strong className="text-sm sm:text-base font-extrabold text-[#850000] block">{assignedWard} - R.S. Puram West</strong>
                 <span className="text-[11px] text-slate-600 block">Coimbatore City Municipal Corporation</span>
               </div>
 
-              <div className="p-4 bg-[#FFF8F0] rounded-2xl border border-[#FFE5A3]/60 space-y-1">
-                <span className="text-[10.5px] text-slate-500 block font-semibold">Assembly Constituency</span>
-                <strong className="text-base font-extrabold text-[#850000] block">{constituency} (LAC 118)</strong>
+              <div className="p-3.5 sm:p-4 bg-[#FFF8F0] rounded-xl sm:rounded-2xl border border-[#FFE5A3]/60 space-y-1">
+                <span className="text-[10px] sm:text-[10.5px] text-slate-500 block font-semibold">Assembly Constituency</span>
+                <strong className="text-sm sm:text-base font-extrabold text-[#850000] block">{constituency} (LAC 118)</strong>
                 <span className="text-[11px] text-slate-600 block">District: Coimbatore District</span>
               </div>
 
-              <div className="p-4 bg-[#FFF8F0] rounded-2xl border border-[#FFE5A3]/60 space-y-1">
-                <span className="text-[10.5px] text-slate-500 block font-semibold">Assigned Paguthi & Zone</span>
-                <strong className="text-base font-extrabold text-[#850000] block">{paguthi} Paguthi</strong>
+              <div className="p-3.5 sm:p-4 bg-[#FFF8F0] rounded-xl sm:rounded-2xl border border-[#FFE5A3]/60 space-y-1">
+                <span className="text-[10px] sm:text-[10.5px] text-slate-500 block font-semibold">Assigned Paguthi & Zone</span>
+                <strong className="text-sm sm:text-base font-extrabold text-[#850000] block">{paguthi} Paguthi</strong>
                 <span className="text-[11px] text-slate-600 block">Central Zone Administrative Office</span>
               </div>
 
-              <div className="p-4 bg-[#FFF8F0] rounded-2xl border border-[#FFE5A3]/60 space-y-1">
-                <span className="text-[10.5px] text-slate-500 block font-semibold">Estimated Population & Voters</span>
-                <strong className="text-base font-extrabold text-[#850000] block">~45,200 Residents</strong>
+              <div className="p-3.5 sm:p-4 bg-[#FFF8F0] rounded-xl sm:rounded-2xl border border-[#FFE5A3]/60 space-y-1">
+                <span className="text-[10px] sm:text-[10.5px] text-slate-500 block font-semibold">Estimated Population & Voters</span>
+                <strong className="text-sm sm:text-base font-extrabold text-[#850000] block">~45,200 Residents</strong>
                 <span className="text-[11px] text-slate-600 block">32,800 Registered Electorates</span>
               </div>
             </div>
 
             {/* In-depth Ward Sections */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs">
-              <div className="p-5 rounded-2xl border border-slate-200 space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 text-xs">
+              <div className="p-4 sm:p-5 rounded-2xl border border-slate-200 space-y-3">
                 <h4 className="font-extrabold text-sm text-slate-900 flex items-center space-x-2">
                   <MapPin className="w-4 h-4 text-[#A00000]" />
                   <span>Geographical Boundaries & Coverage</span>
@@ -1479,7 +1479,7 @@ export const WardSecretaryPortalPage = () => {
                 </ul>
               </div>
 
-              <div className="p-5 rounded-2xl border border-slate-200 space-y-3">
+              <div className="p-4 sm:p-5 rounded-2xl border border-slate-200 space-y-3">
                 <h4 className="font-extrabold text-sm text-slate-900 flex items-center space-x-2">
                   <Building className="w-4 h-4 text-[#A00000]" />
                   <span>Key Civic & Public Infrastructure</span>
@@ -1495,7 +1495,7 @@ export const WardSecretaryPortalPage = () => {
             </div>
 
             {/* Ward Leadership & Secretary Responsibilities */}
-            <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 text-xs">
+            <div className="p-4 sm:p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 text-xs">
               <h4 className="font-extrabold text-sm text-slate-900">
                 Official Duties of the TVK Ward Secretary
               </h4>
@@ -1508,13 +1508,13 @@ export const WardSecretaryPortalPage = () => {
 
         {/* ================= TAB 3: ASSIGNED MEMBERS ================= */}
         {activeTab === 'members' && (
-          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#E9E2DC] shadow-xs space-y-5">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+          <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-[#E9E2DC] shadow-xs space-y-4 sm:space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3 sm:pb-4">
               <div>
                 <h3 className="text-base font-extrabold text-[#252525]">
                   Assigned Cadre Members in {assignedWard}
                 </h3>
-                <p className="text-xs text-slate-500">
+                <p className="text-[11px] sm:text-xs text-slate-500">
                   Registered party office bearers and grassroots volunteers active in this ward
                 </p>
               </div>
@@ -1532,8 +1532,8 @@ export const WardSecretaryPortalPage = () => {
               </div>
             </div>
 
-            <div className="overflow-x-auto border border-slate-200 rounded-2xl">
-              <table className="w-full text-left text-xs min-w-[700px]">
+            <div className="overflow-x-auto w-full border border-slate-200 rounded-2xl">
+              <table className="w-full text-left text-xs min-w-[650px]">
                 <thead className="bg-[#FFF8F0] border-b border-slate-200 text-slate-700 font-extrabold uppercase text-[10px]">
                   <tr>
                     <th className="py-3 px-3">Member ID</th>
@@ -1593,27 +1593,27 @@ export const WardSecretaryPortalPage = () => {
 
         {/* ================= TAB 4: ASSIGNED COMPLAINTS ================= */}
         {activeTab === 'complaints' && (
-          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#E9E2DC] shadow-xs space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+          <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-[#E9E2DC] shadow-xs space-y-4 sm:space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3 sm:pb-4">
               <div>
                 <h3 className="text-base font-extrabold text-[#252525]">
                   Ward Civic Complaints & Field Action Management
                 </h3>
-                <p className="text-xs text-slate-500">
+                <p className="text-[11px] sm:text-xs text-slate-500">
                   {assignedWard} • Take Action on assigned petitions, upload resolution proofs, and inspect completed works
                 </p>
               </div>
 
               {/* Filters */}
-              <div className="flex flex-wrap items-center gap-2 text-xs">
+              <div className="flex flex-wrap items-center gap-2 text-xs w-full sm:w-auto">
                 {/* Search */}
-                <div className="relative">
+                <div className="relative flex-1 sm:flex-initial min-w-[140px]">
                   <input
                     type="text"
                     value={complaintSearch}
                     onChange={(e) => setComplaintSearch(e.target.value)}
                     placeholder="Search by Code, Citizen, Title..."
-                    className="pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-[#A00000]"
+                    className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-[#A00000]"
                   />
                   <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2" />
                 </div>
@@ -1633,14 +1633,14 @@ export const WardSecretaryPortalPage = () => {
             </div>
 
             {/* THREE MANDATORY SECTIONS: Assigned Complaints | Pending Actions | Completed Actions / Action Taken */}
-            <div className="flex flex-wrap items-center gap-2.5 p-1.5 bg-slate-100/80 rounded-2xl border border-slate-200">
+            <div className="flex overflow-x-auto no-scrollbar whitespace-nowrap sm:flex-wrap items-center gap-2 p-1.5 bg-slate-100/80 rounded-2xl border border-slate-200">
               <button
                 type="button"
                 onClick={() => {
                   setComplaintSection('all');
                   setComplaintStatusFilter('All');
                 }}
-                className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center space-x-2 cursor-pointer ${
+                className={`flex-shrink-0 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs font-bold transition flex items-center space-x-2 cursor-pointer ${
                   complaintSection === 'all'
                     ? 'bg-[#850000] text-white shadow-xs'
                     : 'text-slate-700 hover:bg-white/80'
@@ -1661,7 +1661,7 @@ export const WardSecretaryPortalPage = () => {
                   setComplaintSection('pending');
                   setComplaintStatusFilter('All');
                 }}
-                className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center space-x-2 cursor-pointer ${
+                className={`flex-shrink-0 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs font-bold transition flex items-center space-x-2 cursor-pointer ${
                   complaintSection === 'pending'
                     ? 'bg-amber-600 text-white shadow-xs'
                     : 'text-slate-700 hover:bg-white/80'
@@ -1682,7 +1682,7 @@ export const WardSecretaryPortalPage = () => {
                   setComplaintSection('completed');
                   setComplaintStatusFilter('All');
                 }}
-                className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center space-x-2 cursor-pointer ${
+                className={`flex-shrink-0 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs font-bold transition flex items-center space-x-2 cursor-pointer ${
                   complaintSection === 'completed'
                     ? 'bg-emerald-700 text-white shadow-xs'
                     : 'text-slate-700 hover:bg-white/80'
@@ -1699,14 +1699,14 @@ export const WardSecretaryPortalPage = () => {
             </div>
 
             {/* Section Description Badge */}
-            <div className="flex items-center justify-between text-xs px-1">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs px-1">
               <span className="text-slate-500 font-medium">
                 {complaintSection === 'all' && `Showing all ${filteredComplaints.length} grievances assigned in ${assignedWard}`}
                 {complaintSection === 'pending' && `Showing ${filteredComplaints.length} grievances awaiting on-ground resolution`}
                 {complaintSection === 'completed' && `Showing ${filteredComplaints.length} completed actions with ground verification details`}
               </span>
               {complaintSection === 'completed' && (
-                <span className="text-[11px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
+                <span className="text-[11px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full self-start sm:self-auto">
                   All action records permanently preserved in MySQL
                 </span>
               )}
@@ -1715,7 +1715,7 @@ export const WardSecretaryPortalPage = () => {
             {/* Complaints Cards Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {filteredComplaints.length === 0 ? (
-                <div className="col-span-2 py-12 text-center text-slate-400 bg-slate-50 rounded-2xl border border-slate-200">
+                <div className="col-span-1 md:col-span-2 py-12 text-center text-slate-400 bg-slate-50 rounded-2xl border border-slate-200">
                   {complaintSection === 'completed'
                     ? 'No completed actions found yet. Complete pending complaints to view them here permanently.'
                     : complaintSection === 'pending'
@@ -1731,12 +1731,12 @@ export const WardSecretaryPortalPage = () => {
                   return (
                     <div
                       key={c._id || c.id}
-                      className={`bg-white rounded-3xl p-5 border shadow-xs hover:shadow-md transition space-y-3.5 flex flex-col justify-between ${
+                      className={`bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-5 border shadow-xs hover:shadow-md transition space-y-3.5 flex flex-col justify-between ${
                         isCompleted ? 'border-emerald-200 bg-emerald-50/10' : 'border-[#E9E2DC]'
                       }`}
                     >
                       <div className="space-y-2.5">
-                        <div className="flex items-start justify-between">
+                        <div className="flex flex-wrap items-start justify-between gap-2">
                           <span className={`font-mono text-xs font-bold px-2.5 py-0.5 rounded-lg border ${
                             isCompleted
                               ? 'text-emerald-800 bg-emerald-50 border-emerald-200'
@@ -1754,23 +1754,23 @@ export const WardSecretaryPortalPage = () => {
                         <p className="text-xs text-slate-600 line-clamp-2">{c.description}</p>
 
                         {/* Citizen & Location Box */}
-                        <div className="p-3 bg-slate-50 rounded-xl text-xs space-y-1 border border-slate-100">
-                          <div className="flex items-center justify-between">
+                        <div className="p-3 bg-slate-50 rounded-xl text-xs space-y-1.5 border border-slate-100">
+                          <div className="flex flex-col min-[380px]:flex-row min-[380px]:items-center justify-between gap-0.5">
                             <span className="text-slate-500">Citizen:</span>
                             <strong className="text-slate-800">{c.citizenName} ({c.citizenMobile})</strong>
                           </div>
-                          <div className="flex items-center justify-between">
+                          <div className="flex flex-col min-[380px]:flex-row min-[380px]:items-center justify-between gap-0.5">
                             <span className="text-slate-500">Location:</span>
                             <span className="text-slate-700 font-medium line-clamp-1">{c.location || c.citizenAddress}</span>
                           </div>
                           {c.workStartedAt && (
-                            <div className="flex items-center justify-between pt-1 border-t border-slate-200/60 text-[11px]">
+                            <div className="flex flex-col min-[380px]:flex-row min-[380px]:items-center justify-between gap-0.5 pt-1 border-t border-slate-200/60 text-[11px]">
                               <span className="text-blue-700 font-semibold">Work Started:</span>
                               <span className="font-mono text-slate-600">{new Date(c.workStartedAt).toLocaleString()}</span>
                             </div>
                           )}
                           {c.completedAt && (
-                            <div className="flex items-center justify-between text-[11px]">
+                            <div className="flex flex-col min-[380px]:flex-row min-[380px]:items-center justify-between gap-0.5 text-[11px]">
                               <span className="text-emerald-700 font-semibold">Action Completed:</span>
                               <span className="font-mono text-slate-600">{new Date(c.completedAt).toLocaleString()}</span>
                             </div>
@@ -1813,7 +1813,7 @@ export const WardSecretaryPortalPage = () => {
                       </div>
 
                       {/* Actions Bar */}
-                      <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+                      <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
                         <button
                           type="button"
                           onClick={() => {
@@ -1874,13 +1874,13 @@ export const WardSecretaryPortalPage = () => {
 
         {/* ================= TAB 5: PROFILE ================= */}
         {activeTab === 'profile' && (
-          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#E9E2DC] shadow-xs space-y-6 max-w-3xl mx-auto">
-            <div className="flex items-center space-x-4 border-b border-slate-100 pb-5">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#850000] to-[#A00000] text-white flex items-center justify-center font-black text-2xl shadow-md border-2 border-[#FFD32A]">
+          <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-[#E9E2DC] shadow-xs space-y-4 sm:space-y-6 max-w-3xl mx-auto">
+            <div className="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left space-y-3 sm:space-y-0 sm:space-x-4 border-b border-slate-100 pb-4 sm:pb-5">
+              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br from-[#850000] to-[#A00000] text-white flex items-center justify-center font-black text-xl sm:text-2xl shadow-md border-2 border-[#FFD32A] flex-shrink-0">
                 {user?.name ? user.name.charAt(0).toUpperCase() : 'W'}
               </div>
-              <div>
-                <h3 className="text-xl font-extrabold text-slate-900">{user?.name || 'K. R. Vijayakumar'}</h3>
+              <div className="min-w-0">
+                <h3 className="text-lg sm:text-xl font-extrabold text-slate-900 truncate">{user?.name || 'K. R. Vijayakumar'}</h3>
                 <p className="text-xs text-[#850000] font-bold">Authorized Ward Secretary • {assignedWard}</p>
                 <span className="inline-block mt-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-50 text-emerald-800 border border-emerald-200">
                   Active Party Credentials
@@ -1888,34 +1888,34 @@ export const WardSecretaryPortalPage = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-              <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200">
-                <span className="text-slate-500 block text-[11px]">System Username</span>
-                <strong className="text-slate-900 font-mono font-bold text-sm">{user?.username || 'ward'}</strong>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-xs">
+              <div className="p-3 sm:p-3.5 bg-slate-50 rounded-xl border border-slate-200">
+                <span className="text-slate-500 block text-[10.5px] sm:text-[11px]">System Username</span>
+                <strong className="text-slate-900 font-mono font-bold text-xs sm:text-sm">{user?.username || 'ward'}</strong>
               </div>
-              <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200">
-                <span className="text-slate-500 block text-[11px]">Official Role</span>
-                <strong className="text-slate-900 font-bold text-sm">Ward Secretary</strong>
+              <div className="p-3 sm:p-3.5 bg-slate-50 rounded-xl border border-slate-200">
+                <span className="text-slate-500 block text-[10.5px] sm:text-[11px]">Official Role</span>
+                <strong className="text-slate-900 font-bold text-xs sm:text-sm">Ward Secretary</strong>
               </div>
-              <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200">
-                <span className="text-slate-500 block text-[11px]">Contact Mobile Number</span>
-                <strong className="text-slate-900 font-mono font-bold text-sm">{user?.phone || '9842100072'}</strong>
+              <div className="p-3 sm:p-3.5 bg-slate-50 rounded-xl border border-slate-200">
+                <span className="text-slate-500 block text-[10.5px] sm:text-[11px]">Contact Mobile Number</span>
+                <strong className="text-slate-900 font-mono font-bold text-xs sm:text-sm">{user?.phone || '9842100072'}</strong>
               </div>
-              <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200">
-                <span className="text-slate-500 block text-[11px]">Official Email</span>
-                <strong className="text-slate-900 font-bold text-sm">{user?.email || 'ward@tvkcbe.org'}</strong>
+              <div className="p-3 sm:p-3.5 bg-slate-50 rounded-xl border border-slate-200">
+                <span className="text-slate-500 block text-[10.5px] sm:text-[11px]">Official Email</span>
+                <strong className="text-slate-900 font-bold text-xs sm:text-sm">{user?.email || 'ward@tvkcbe.org'}</strong>
               </div>
-              <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200">
-                <span className="text-slate-500 block text-[11px]">Assigned Ward Jurisdiction</span>
-                <strong className="text-[#850000] font-bold text-sm">{assignedWard}</strong>
+              <div className="p-3 sm:p-3.5 bg-slate-50 rounded-xl border border-slate-200">
+                <span className="text-slate-500 block text-[10.5px] sm:text-[11px]">Assigned Ward Jurisdiction</span>
+                <strong className="text-[#850000] font-bold text-xs sm:text-sm">{assignedWard}</strong>
               </div>
-              <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200">
-                <span className="text-slate-500 block text-[11px]">Assembly Constituency</span>
-                <strong className="text-slate-900 font-bold text-sm">{constituency}</strong>
+              <div className="p-3 sm:p-3.5 bg-slate-50 rounded-xl border border-slate-200">
+                <span className="text-slate-500 block text-[10.5px] sm:text-[11px]">Assembly Constituency</span>
+                <strong className="text-slate-900 font-bold text-xs sm:text-sm">{constituency}</strong>
               </div>
             </div>
 
-            <div className="p-4 bg-[#FFF8F0] rounded-2xl border border-[#FFE5A3] text-xs space-y-1">
+            <div className="p-3.5 sm:p-4 bg-[#FFF8F0] rounded-xl sm:rounded-2xl border border-[#FFE5A3] text-xs space-y-1">
               <h5 className="font-bold text-[#850000]">Security & Access Notice</h5>
               <p className="text-slate-600">
                 Your authenticated account is strictly scoped to {assignedWard}. You have full operational privileges to inspect, initiate, and resolve grievances within this ward.
@@ -1933,12 +1933,13 @@ export const WardSecretaryPortalPage = () => {
           isOpen={isDetailModalOpen}
           onClose={() => setIsDetailModalOpen(false)}
           title={`Ward Complaint Inspection: ${selectedComplaint.issueCode}`}
+          maxWidth="max-w-4xl"
         >
           <div className="space-y-4 text-xs">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-5">
               {/* Left Column (7 Cols): Complaint Info & Photo Gallery & History */}
               <div className="lg:col-span-7 space-y-3.5">
-                <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+                <div className="p-3 sm:p-3.5 bg-slate-50 rounded-xl sm:rounded-2xl border border-slate-200 space-y-2">
                   <div className="flex items-center justify-between pb-1 border-b border-slate-200">
                     <span className="font-mono font-bold text-[#850000] text-sm">
                       {selectedComplaint.issueCode}
@@ -1951,7 +1952,7 @@ export const WardSecretaryPortalPage = () => {
                   <h4 className="font-extrabold text-slate-900 text-sm leading-snug">
                     {selectedComplaint.title}
                   </h4>
-                  <div className="grid grid-cols-2 gap-2 text-xs pt-1">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pt-1">
                     <div>
                       <span className="text-slate-400 block text-[10px] uppercase font-bold">Citizen</span>
                       <strong className="text-slate-800">{selectedComplaint.citizenName}</strong>
@@ -2031,7 +2032,7 @@ export const WardSecretaryPortalPage = () => {
               </div>
 
               {/* Right Column (5 Cols): Field Visit / Progress Update Form */}
-              <div className="lg:col-span-5 bg-slate-50/70 rounded-2xl p-4 border border-slate-200 space-y-3.5 flex flex-col justify-between">
+              <div className="lg:col-span-5 bg-slate-50/70 rounded-xl sm:rounded-2xl p-3.5 sm:p-4 border border-slate-200 space-y-3 sm:space-y-3.5 flex flex-col justify-between">
                 <form onSubmit={handleModalUpdateSubmit} className="space-y-3">
                   <div className="flex items-center space-x-1.5 pb-2 border-b border-slate-200">
                     <Camera className="w-4 h-4 text-[#850000]" />
@@ -2107,7 +2108,7 @@ export const WardSecretaryPortalPage = () => {
                   </button>
                 </form>
 
-                <div className="pt-2 border-t border-slate-200 flex justify-end items-center space-x-2">
+                <div className="pt-2 border-t border-slate-200 flex flex-wrap justify-end items-center gap-2">
                   {selectedComplaint.status !== 'Completed' && selectedComplaint.status !== 'Resolved' && (
                     <button
                       type="button"
@@ -2141,10 +2142,11 @@ export const WardSecretaryPortalPage = () => {
           isOpen={isReportModalOpen}
           onClose={() => setIsReportModalOpen(false)}
           title={`${t('wardSecretary.modalTakeActionTitle', 'Ward Secretary Take Action & Ground Evidence')}: ${selectedComplaint.issueCode || selectedComplaint.complaintId}`}
+          maxWidth="max-w-3xl"
         >
           <form onSubmit={handleSaveAndComplete} className="space-y-4 text-xs">
             {/* Read-Only Original Complaint Information */}
-            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-2.5">
+            <div className="bg-slate-50 border border-slate-200 rounded-xl sm:rounded-2xl p-3.5 sm:p-4 space-y-2.5">
               <div className="flex items-center justify-between pb-2 border-b border-slate-200">
                 <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider flex items-center space-x-1.5">
                   <FileText className="w-4 h-4 text-slate-600" />
@@ -2190,7 +2192,7 @@ export const WardSecretaryPortalPage = () => {
             </div>
 
             {/* A. Before Image Upload (Mandatory) */}
-            <div className="border border-slate-200 rounded-2xl p-4 bg-white space-y-2">
+            <div className="border border-slate-200 rounded-xl sm:rounded-2xl p-3.5 sm:p-4 bg-white space-y-2">
               <div className="flex items-center justify-between">
                 <label className="font-bold text-slate-800 text-xs flex items-center space-x-1.5">
                   <Camera className="w-4 h-4 text-red-700" />
@@ -2199,8 +2201,8 @@ export const WardSecretaryPortalPage = () => {
                 <span className="text-[10px] text-slate-400">JPG, PNG, WebP</span>
               </div>
               
-              <div className="flex flex-col sm:flex-row items-center gap-3">
-                <label className="cursor-pointer inline-flex items-center space-x-2 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-xl font-bold text-slate-700 text-xs transition">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3">
+                <label className="cursor-pointer inline-flex items-center justify-center space-x-2 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-xl font-bold text-slate-700 text-xs transition">
                   <UploadCloud className="w-4 h-4 text-slate-600" />
                   <span>{uploadingBeforeImage ? t('common.loading', 'Uploading Image...') : 'Choose Before Image'}</span>
                   <input
@@ -2223,7 +2225,7 @@ export const WardSecretaryPortalPage = () => {
               />
 
               {actionForm.beforeImage && (
-                <div className="relative inline-flex items-start gap-2 mt-2 bg-slate-50 p-2 rounded-xl border border-slate-200">
+                <div className="relative flex flex-col sm:flex-row items-start gap-2 mt-2 bg-slate-50 p-2 rounded-xl border border-slate-200">
                   <div className="relative">
                     <img
                       src={actionForm.beforeImage}
@@ -2251,7 +2253,7 @@ export const WardSecretaryPortalPage = () => {
             </div>
 
             {/* B. After Image Upload (Mandatory) */}
-            <div className="border border-slate-200 rounded-2xl p-4 bg-white space-y-2">
+            <div className="border border-slate-200 rounded-xl sm:rounded-2xl p-3.5 sm:p-4 bg-white space-y-2">
               <div className="flex items-center justify-between">
                 <label className="font-bold text-emerald-800 text-xs flex items-center space-x-1.5">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600" />
@@ -2260,8 +2262,8 @@ export const WardSecretaryPortalPage = () => {
                 <span className="text-[10px] text-slate-400">JPG, PNG, WebP</span>
               </div>
 
-              <div className="flex flex-col sm:flex-row items-center gap-3">
-                <label className="cursor-pointer inline-flex items-center space-x-2 px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 rounded-xl font-bold text-emerald-800 text-xs transition">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3">
+                <label className="cursor-pointer inline-flex items-center justify-center space-x-2 px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 rounded-xl font-bold text-emerald-800 text-xs transition">
                   <UploadCloud className="w-4 h-4 text-emerald-700" />
                   <span>{uploadingAfterImage ? t('common.loading', 'Uploading Image...') : 'Choose After Image'}</span>
                   <input
@@ -2284,7 +2286,7 @@ export const WardSecretaryPortalPage = () => {
               />
 
               {actionForm.afterImage && (
-                <div className="relative inline-flex items-start gap-2 mt-2 bg-slate-50 p-2 rounded-xl border border-slate-200">
+                <div className="relative flex flex-col sm:flex-row items-start gap-2 mt-2 bg-slate-50 p-2 rounded-xl border border-slate-200">
                   <div className="relative">
                     <img
                       src={actionForm.afterImage}
@@ -2312,7 +2314,7 @@ export const WardSecretaryPortalPage = () => {
             </div>
 
             {/* C. Action Details */}
-            <div className="border border-slate-200 rounded-2xl p-4 bg-white space-y-3">
+            <div className="border border-slate-200 rounded-xl sm:rounded-2xl p-3.5 sm:p-4 bg-white space-y-3">
               <h4 className="font-bold text-slate-800 text-xs flex items-center space-x-1.5">
                 <FileCheck className="w-4 h-4 text-[#850000]" />
                 <span>{t('wardSecretary.actionTakenLabel', 'Action Taken / Description of Work *')}</span>
@@ -2359,7 +2361,7 @@ export const WardSecretaryPortalPage = () => {
             </div>
 
             {/* Form Action Buttons */}
-            <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100">
               <button
                 type="button"
                 onClick={() => setIsReportModalOpen(false)}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Settings,
@@ -92,6 +92,50 @@ export const SettingsPage = () => {
     confirmPassword: '',
   });
 
+  // Dynamic Wards belonging strictly to selected Paguthi (Hook called unconditionally)
+  const availableWardsForPaguthi = useMemo(() => {
+    if (!secForm.paguthi) return [];
+    const canonicalP = secForm.paguthi === 'Podanur' ? 'Pothanur' : secForm.paguthi;
+
+    const dbWards = wards.filter((w) => {
+      const wp = w.paguthi === 'Podanur' ? 'Pothanur' : w.paguthi;
+      return wp === canonicalP;
+    });
+
+    const ruleNums = getWardsForPaguthi(canonicalP);
+    const combined = [];
+    const seenNumbers = new Set();
+
+    dbWards.forEach((w) => {
+      const num = Number(w.wardNumber);
+      if (!seenNumbers.has(num)) {
+        seenNumbers.add(num);
+        const cleanName = (w.wardName || '').replace(/^Ward\s*\d+\s*[-:]*\s*/i, '').trim();
+        combined.push({
+          wardNumber: num,
+          wardId: String(w.id || w._id),
+          wardName: cleanName || `${canonicalP} Ward ${num}`,
+          label: cleanName ? `Ward ${num} - ${cleanName}` : `Ward ${num}`,
+        });
+      }
+    });
+
+    ruleNums.forEach((wNum) => {
+      const num = Number(wNum);
+      if (!seenNumbers.has(num)) {
+        seenNumbers.add(num);
+        combined.push({
+          wardNumber: num,
+          wardId: String(num),
+          wardName: `${canonicalP} Ward ${num}`,
+          label: `Ward ${num}`,
+        });
+      }
+    });
+
+    return combined.sort((a, b) => a.wardNumber - b.wardNumber);
+  }, [secForm.paguthi, wards]);
+
   const fetchWardSecretaries = async () => {
     try {
       setSecLoading(true);
@@ -133,7 +177,10 @@ export const SettingsPage = () => {
       return;
     }
     const wardNum = parseInt(String(secForm.wardNumber || secForm.assignedWard || secForm.wardId).replace(/\D+/g, ''), 10);
-    if (!wardNum || !isWardValidForPaguthi(secForm.paguthi, wardNum)) {
+    const selectedWardItem = availableWardsForPaguthi.find(
+      (w) => String(w.wardNumber) === String(wardNum)
+    );
+    if (!wardNum || !selectedWardItem) {
       setSecFormError(`Please select a valid Ward belonging to ${secForm.paguthi}`);
       notifyError(`Please select a valid Ward belonging to ${secForm.paguthi}`);
       return;
@@ -156,17 +203,14 @@ export const SettingsPage = () => {
 
     setIsSubmittingSec(true);
     try {
-      const selectedWardObj = wards.find(
-        (w) => w.paguthi === secForm.paguthi && String(w.wardNumber) === String(wardNum)
-      );
       const payload = {
         name: secForm.name.trim(),
         phone: cleanPhone,
         age: secForm.age ? parseInt(secForm.age, 10) : 32,
         paguthi: secForm.paguthi,
-        wardId: selectedWardObj ? String(selectedWardObj.id || selectedWardObj._id) : String(wardNum),
+        wardId: selectedWardItem ? String(selectedWardItem.wardId) : String(wardNum),
         wardNumber: String(wardNum),
-        assignedWard: `Ward ${wardNum}`,
+        assignedWard: selectedWardItem ? selectedWardItem.label : `Ward ${wardNum}`,
         username: secForm.username.trim().toLowerCase(),
         password: secForm.password,
         confirmPassword: secForm.confirmPassword,
@@ -318,6 +362,9 @@ export const SettingsPage = () => {
   const auditLogs = settingsData?.auditLogs || [];
 
   const filteredSecretaries = wardSecretaries.filter((s) => {
+    // Exclude dummy or unassigned mock records without Paguthi
+    if (!s.paguthi) return false;
+
     const q = secSearch.trim().toLowerCase();
     if (q) {
       const matchName = (s.name || '').toLowerCase().includes(q);
@@ -328,7 +375,9 @@ export const SettingsPage = () => {
       if (!matchName && !matchPhone && !matchUser && !matchWard && !matchPaguthi) return false;
     }
     if (secPaguthiFilter !== 'All') {
-      if ((s.paguthi || '') !== secPaguthiFilter) return false;
+      const filterP = secPaguthiFilter === 'Podanur' ? 'Pothanur' : secPaguthiFilter;
+      const sp = s.paguthi === 'Podanur' ? 'Pothanur' : s.paguthi;
+      if (sp !== filterP) return false;
     }
     if (secWardFilter !== 'All') {
       if (String(s.wardId) !== String(secWardFilter) && !String(s.assignedWard).includes(`Ward ${secWardFilter}`)) {
@@ -510,20 +559,38 @@ export const SettingsPage = () => {
                     />
                   </div>
 
-                  {/* 2. Mobile Number */}
-                  <div>
-                    <label className="block font-bold text-slate-700 mb-1">
-                      Mobile Number *
-                    </label>
-                    <input
-                      type="tel"
-                      required
-                      value={secForm.phone}
-                      onChange={(e) => setSecForm({ ...secForm, phone: e.target.value })}
-                      placeholder="9842100072"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono text-slate-800 focus:outline-none focus:border-[#850000]"
-                    />
-                    <span className="text-[10px] text-slate-400 mt-0.5 block">10-digit Indian mobile number</span>
+                  {/* 2. Mobile Number & Age */}
+                  <div className="grid grid-cols-3 gap-2.5">
+                    <div className="col-span-2">
+                      <label className="block font-bold text-slate-700 mb-1">
+                        Mobile Number *
+                      </label>
+                      <input
+                        type="tel"
+                        required
+                        value={secForm.phone}
+                        onChange={(e) => setSecForm({ ...secForm, phone: e.target.value })}
+                        placeholder="9842100072"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono text-slate-800 focus:outline-none focus:border-[#850000]"
+                      />
+                      <span className="text-[10px] text-slate-400 mt-0.5 block">10-digit mobile number</span>
+                    </div>
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">
+                        Age *
+                      </label>
+                      <input
+                        type="number"
+                        required
+                        min="18"
+                        max="99"
+                        value={secForm.age}
+                        onChange={(e) => setSecForm({ ...secForm, age: e.target.value })}
+                        placeholder="35"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono text-slate-800 focus:outline-none focus:border-[#850000]"
+                      />
+                      <span className="text-[10px] text-slate-400 mt-0.5 block">Min 18</span>
+                    </div>
                   </div>
 
                   {/* 3. Paguthi */}
@@ -568,14 +635,14 @@ export const SettingsPage = () => {
                       value={secForm.wardNumber}
                       onChange={(e) => {
                         const selectedWardNum = e.target.value;
-                        const matchingWard = wards.find(
-                          (w) => w.paguthi === secForm.paguthi && String(w.wardNumber) === String(selectedWardNum)
+                        const selectedWardItem = availableWardsForPaguthi.find(
+                          (w) => String(w.wardNumber) === String(selectedWardNum)
                         );
                         setSecForm((prev) => ({
                           ...prev,
                           wardNumber: selectedWardNum,
-                          wardId: matchingWard ? String(matchingWard.id || matchingWard._id) : selectedWardNum,
-                          assignedWard: selectedWardNum ? `Ward ${selectedWardNum}` : '',
+                          wardId: selectedWardItem ? String(selectedWardItem.wardId) : selectedWardNum,
+                          assignedWard: selectedWardItem ? selectedWardItem.label : (selectedWardNum ? `Ward ${selectedWardNum}` : ''),
                         }));
                         setSecFormError('');
                       }}
@@ -584,15 +651,15 @@ export const SettingsPage = () => {
                       <option value="">
                         {!secForm.paguthi ? '-- Select Paguthi First --' : '-- Select Ward --'}
                       </option>
-                      {getWardsForPaguthi(secForm.paguthi).map((wNum) => (
-                        <option key={wNum} value={String(wNum)}>
-                          Ward {wNum}
+                      {availableWardsForPaguthi.map((w) => (
+                        <option key={w.wardNumber} value={String(w.wardNumber)}>
+                          {w.label}
                         </option>
                       ))}
                     </select>
                     {secForm.paguthi && (
                       <span className="text-[10px] text-emerald-600 mt-0.5 block font-medium">
-                        Showing wards belonging to {secForm.paguthi}
+                        Showing {availableWardsForPaguthi.length} wards belonging to {secForm.paguthi}
                       </span>
                     )}
                   </div>
@@ -745,26 +812,27 @@ export const SettingsPage = () => {
                   <table className="w-full text-left border-collapse text-xs">
                     <thead>
                       <tr className="bg-slate-50 text-slate-500 font-bold uppercase text-[10px] tracking-wider border-b border-slate-200">
-                        <th className="py-2.5 px-3">Full Name</th>
-                        <th className="py-2.5 px-3">Phone</th>
+                        <th className="py-2.5 px-3">Secretary Name</th>
+                        <th className="py-2.5 px-3">Phone Number</th>
+                        <th className="py-2.5 px-3 text-center">Age</th>
                         <th className="py-2.5 px-3">Paguthi</th>
-                        <th className="py-2.5 px-3">Assigned Ward</th>
+                        <th className="py-2.5 px-3">Selected Ward Name</th>
                         <th className="py-2.5 px-3">Username</th>
                         <th className="py-2.5 px-3 text-center">Status</th>
-                        <th className="py-2.5 px-3">Registered</th>
+                        <th className="py-2.5 px-3">Date</th>
                         <th className="py-2.5 px-3 text-center">Action</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {secLoading ? (
                         <tr>
-                          <td colSpan={8} className="py-8 text-center text-slate-400">
+                          <td colSpan={9} className="py-8 text-center text-slate-400">
                             Loading Ward Secretaries...
                           </td>
                         </tr>
                       ) : filteredSecretaries.length === 0 ? (
                         <tr>
-                          <td colSpan={8} className="py-12 text-center text-slate-500">
+                          <td colSpan={9} className="py-12 text-center text-slate-500">
                             <div className="flex flex-col items-center justify-center space-y-2">
                               <ShieldCheck className="w-8 h-8 text-slate-300" />
                               <p className="text-sm font-bold text-slate-700">No Ward Secretaries Registered Yet</p>
@@ -783,6 +851,9 @@ export const SettingsPage = () => {
                             <td className="py-2.5 px-3 font-mono text-slate-600 whitespace-nowrap">
                               {sec.phone || '—'}
                             </td>
+                            <td className="py-2.5 px-3 text-center font-mono text-slate-600 whitespace-nowrap">
+                              {sec.age || '—'}
+                            </td>
                             <td className="py-2.5 px-3 font-semibold text-slate-700 whitespace-nowrap">
                               <span className="bg-blue-50 text-blue-800 border border-blue-200 px-2 py-0.5 rounded text-[11px] font-bold">
                                 {sec.paguthi || '—'}
@@ -790,7 +861,7 @@ export const SettingsPage = () => {
                             </td>
                             <td className="py-2.5 px-3 font-medium text-slate-800 whitespace-nowrap">
                               <span className="bg-amber-50 text-amber-800 border border-amber-200 px-2 py-0.5 rounded text-[11px] font-bold">
-                                {sec.assignedWard || `Ward ${sec.wardNumber || ''}`}
+                                {sec.assignedWard || (sec.wardNumber ? `Ward ${sec.wardNumber}` : '—')}
                               </span>
                             </td>
                             <td className="py-2.5 px-3 font-mono font-bold text-slate-700 whitespace-nowrap">

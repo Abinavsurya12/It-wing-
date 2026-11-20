@@ -205,9 +205,10 @@ export const getWardSecretariesList = async (req, res) => {
     const secretaries = await User.findAll({
       where: {
         role: { [Op.in]: ['ward_secretary', 'ward', 'ward_officer'] },
+        paguthi: { [Op.and]: [{ [Op.ne]: null }, { [Op.ne]: '' }] },
       },
       attributes: ['id', '_id', 'name', 'phone', 'age', 'paguthi', 'assignedWard', 'wardId', 'username', 'role', 'isActive', 'createdAt', 'lastLogin'],
-      order: [['paguthi', 'ASC'], ['assignedWard', 'ASC'], ['name', 'ASC']],
+      order: [['createdAt', 'DESC'], ['name', 'ASC']],
     });
 
     res.json({
@@ -215,7 +216,7 @@ export const getWardSecretariesList = async (req, res) => {
       data: secretaries.map((s) => ({
         ...s.toJSON(),
         _id: s._id || String(s.id),
-        paguthi: s.paguthi || '',
+        paguthi: s.paguthi === 'Podanur' ? 'Pothanur' : (s.paguthi || ''),
       })),
     });
   } catch (error) {
@@ -279,14 +280,31 @@ export const registerWardSecretary = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Confirm Password does not match Password' });
     }
 
-    // Resolve Ward details from database
+    // Resolve Ward details from database strictly within the selected Paguthi
     let wardDoc = null;
     const rawWard = assignedWard || req.body.wardNumber || wardId;
     const parsedWardNum = rawWard ? parseInt(String(rawWard).replace(/\D+/g, ''), 10) : null;
     const canonicalPaguthi = (cleanPaguthi === 'Podanur') ? 'Pothanur' : cleanPaguthi;
     const paguthiFilter = (canonicalPaguthi === 'Pothanur') ? ['Pothanur', 'Podanur'] : [canonicalPaguthi];
 
-    if (canonicalPaguthi && parsedWardNum && !isNaN(parsedWardNum)) {
+    // Check by wardId if provided, but ONLY if it belongs to this paguthi!
+    if (wardId) {
+      const numWId = Number(wardId);
+      if (!isNaN(numWId) && numWId > 0) {
+        const candidate = await Ward.findOne({
+          where: {
+            id: numWId,
+            paguthi: { [Op.in]: paguthiFilter },
+          },
+        });
+        if (candidate) {
+          wardDoc = candidate;
+        }
+      }
+    }
+
+    // Check by wardNumber within this paguthi
+    if (!wardDoc && canonicalPaguthi && parsedWardNum && !isNaN(parsedWardNum)) {
       wardDoc = await Ward.findOne({
         where: {
           wardNumber: parsedWardNum,
@@ -294,22 +312,14 @@ export const registerWardSecretary = async (req, res) => {
         },
       });
     }
-    if (!wardDoc && wardId) {
-      const numWId = Number(wardId);
-      if (!isNaN(numWId) && numWId > 0) {
-        const candidate = await Ward.findByPk(numWId);
-        if (candidate) {
-          wardDoc = candidate;
-        }
-      }
-    }
 
-    // If ward doesn't exist yet for this paguthi, create it dynamically
+    // If ward doesn't exist yet for this paguthi, create it dynamically under this exact paguthi
     if (!wardDoc && canonicalPaguthi && parsedWardNum && !isNaN(parsedWardNum)) {
       const kinathu = await Constituency.findOne({ where: { name: 'Kinathukadavu' } });
+      const wardNameText = `${canonicalPaguthi} Ward ${parsedWardNum}`;
       wardDoc = await Ward.create({
         wardNumber: parsedWardNum,
-        wardName: `${canonicalPaguthi} Ward ${parsedWardNum}`,
+        wardName: wardNameText,
         tamilName: `${canonicalPaguthi} வார்டு ${parsedWardNum}`,
         paguthi: canonicalPaguthi,
         constituencyId: kinathu?.id || 6,
@@ -317,9 +327,14 @@ export const registerWardSecretary = async (req, res) => {
       });
     }
 
-    const finalWardLabel = wardDoc
-      ? `Ward ${wardDoc.wardNumber} - ${wardDoc.wardName}`
-      : (assignedWard || (parsedWardNum ? `Ward ${parsedWardNum}` : 'Ward'));
+    // Build the final clean label ensuring it belongs strictly to this Paguthi
+    let finalWardLabel = '';
+    if (wardDoc) {
+      const cleanWName = (wardDoc.wardName || '').replace(/^Ward\s*\d+\s*[-:]*\s*/i, '').trim();
+      finalWardLabel = cleanWName ? `Ward ${wardDoc.wardNumber} - ${cleanWName}` : `Ward ${wardDoc.wardNumber}`;
+    } else {
+      finalWardLabel = parsedWardNum ? `Ward ${parsedWardNum} - ${canonicalPaguthi} Ward ${parsedWardNum}` : 'Ward';
+    }
     const finalWardId = wardDoc ? wardDoc.id : null;
 
     // Check username uniqueness
