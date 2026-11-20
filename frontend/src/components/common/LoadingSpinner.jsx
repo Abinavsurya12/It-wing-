@@ -1,27 +1,44 @@
 import React from 'react';
+import StartupLoadingScreen from './StartupLoadingScreen';
 
-export const LoadingSpinner = ({ text = 'Loading data...', fullScreen = false }) => {
-  const content = (
-    <div className="flex flex-col items-center justify-center p-8 space-y-4">
-      <div className="relative">
-        <div className="w-12 h-12 rounded-full border-4 border-red-100 border-t-red-700 animate-spin"></div>
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="w-3 h-3 rounded-full bg-amber-500"></div>
-        </div>
-      </div>
-      <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">{text}</p>
-    </div>
-  );
-
+/**
+ * TVK Digital Governance CRM - Loading Spinner Component
+ * Reuses the minimal professional red-themed design.
+ * - When fullScreen={true}: Displays the full-screen pure white loading screen
+ *   with circular spinner, live 0%-100% progress counter, and slim progress bar.
+ * - When fullScreen={false}: Displays a compact inline red spinner suitable for
+ *   cards, tables, and modal actions without taking over the full page.
+ */
+export const LoadingSpinner = ({
+  text = 'Loading data...',
+  fullScreen = false,
+  isReady = true,
+  onComplete,
+}) => {
   if (fullScreen) {
     return (
-      <div className="fixed inset-0 bg-white/80 backdrop-blur-sm z-50 flex items-center justify-center">
-        {content}
-      </div>
+      <StartupLoadingScreen
+        text={text}
+        isReady={isReady}
+        onComplete={onComplete}
+      />
     );
   }
 
-  return content;
+  return (
+    <div className="flex flex-col items-center justify-center p-6 space-y-3">
+      {/* Small Red Circular Loader with Subtle Grey Track */}
+      <div className="relative w-8 h-8">
+        <div className="absolute inset-0 rounded-full border-2 border-slate-200"></div>
+        <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-[#850000] border-r-[#850000] animate-spin"></div>
+      </div>
+      {text && (
+        <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 text-center">
+          {text}
+        </p>
+      )}
+    </div>
+  );
 };
 
 export default LoadingSpinner;

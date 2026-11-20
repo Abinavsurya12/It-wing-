@@ -40,12 +40,16 @@ export const ConstituencyDetailPage = () => {
     fetchDetail();
   }, [id]);
 
-  if (loading) return <LoadingSpinner text={t('constituency.loadingText', 'Loading Constituency Details & Paguthi Hierarchy...')} />;
+  if (loading) return <LoadingSpinner fullScreen text={t('constituency.loadingText', 'Loading Constituency Details & Paguthi Hierarchy...')} />;
   if (!data) return <p className="text-center py-12 text-slate-500">{t('constituency.notFound', 'Constituency not found.')}</p>;
 
   const { constituency, paguthis = [], wards = [], issues = [], members = [] } = data;
 
-  const displayPaguthis = Array.isArray(paguthis) ? paguthis : [];
+  const displayPaguthis = (Array.isArray(paguthis) ? paguthis : []).map((p) => {
+    const rawName = typeof p === 'string' ? p : (p?.name || '');
+    const cleanName = rawName === 'Podanur' ? 'Pothanur' : rawName;
+    return typeof p === 'string' ? { name: cleanName } : { ...p, name: cleanName };
+  });
 
   const constituencyDisplayName = isTa && constituency.tamilName ? constituency.tamilName : constituency.name;
 

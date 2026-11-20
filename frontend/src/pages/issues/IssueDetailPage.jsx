@@ -139,7 +139,7 @@ export const IssueDetailPage = () => {
     }
   };
 
-  if (loading) return <LoadingSpinner text={t('issueDetail.loadingText', 'Loading Grievance & Timeline...')} />;
+  if (loading) return <LoadingSpinner fullScreen text={t('issueDetail.loadingText', 'Loading Grievance & Timeline...')} />;
   if (!data?.issue) return <p className="text-center py-12 text-slate-500">{t('issueDetail.notFound', 'Grievance not found.')}</p>;
 
   const { issue, activities } = data;

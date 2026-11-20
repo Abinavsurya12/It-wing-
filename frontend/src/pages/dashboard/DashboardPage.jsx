@@ -398,7 +398,7 @@ export const DashboardPage = () => {
   };
 
   if (loading) {
-    return <LoadingSpinner text={t('dashboard.loadingText', 'Loading TVK District CRM Dashboard...')} />;
+    return <LoadingSpinner fullScreen text={t('dashboard.loadingText', 'Loading TVK District CRM Dashboard...')} />;
   }
 
   const kpis = stats?.kpis || {};

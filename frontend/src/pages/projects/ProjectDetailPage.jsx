@@ -32,7 +32,7 @@ export const ProjectDetailPage = () => {
     fetchProj();
   }, [id]);
 
-  if (loading) return <LoadingSpinner text={t('projects.loadingText', 'Loading Project Information...')} />;
+  if (loading) return <LoadingSpinner fullScreen text={t('projects.loadingText', 'Loading Project Information...')} />;
   if (!project) return <p className="text-center py-12 text-slate-500">{t('common.noRecords', 'Project not found.')}</p>;
 
   return (

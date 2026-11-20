@@ -311,7 +311,7 @@ export const SettingsPage = () => {
     }
   };
 
-  if (loading && !settingsData) return <LoadingSpinner text="Loading Settings..." />;
+  if (loading && !settingsData) return <LoadingSpinner fullScreen text="Loading Settings..." />;
 
   const org = settingsData?.organization || {};
   const usersList = settingsData?.users || [];

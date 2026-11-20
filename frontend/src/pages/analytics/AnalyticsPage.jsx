@@ -68,7 +68,7 @@ export const AnalyticsPage = () => {
   const COLORS = ['#991b1b', '#d97706', '#2563eb', '#059669', '#7c3aed', '#db2777', '#0891b2', '#4b5563'];
 
   if (loading && !analyticsData) {
-    return <LoadingSpinner text={t('analytics.loadingText', 'Crunching Coimbatore District Analytics...')} />;
+    return <LoadingSpinner fullScreen text={t('analytics.loadingText', 'Crunching Coimbatore District Analytics...')} />;
   }
 
   const summary = analyticsData?.summary || {};

@@ -101,7 +101,7 @@ export const PaguthiDetailPage = () => {
     }
   };
 
-  if (loading) return <LoadingSpinner text={t('paguthi.loadingText', 'Loading Paguthi Details & Ward Hierarchy...')} />;
+  if (loading) return <LoadingSpinner fullScreen text={t('paguthi.loadingText', 'Loading Paguthi Details & Ward Hierarchy...')} />;
   if (!data) return <p className="text-center py-12 text-slate-500">{t('paguthi.notFound', 'Paguthi not found.')}</p>;
 
   const { constituency, paguthi, stats, wards = [], issues = [] } = data;

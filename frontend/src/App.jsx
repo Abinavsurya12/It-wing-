@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
+import { LoadingProvider } from './context/LoadingContext';
 
 // Layout
 import AdminLayout from './components/layout/AdminLayout';
@@ -219,7 +220,9 @@ function App() {
     <BrowserRouter>
       <NotificationProvider>
         <AuthProvider>
-          <AppContent />
+          <LoadingProvider>
+            <AppContent />
+          </LoadingProvider>
         </AuthProvider>
       </NotificationProvider>
     </BrowserRouter>

@@ -43,7 +43,7 @@ export const MemberDetailPage = () => {
     fetchMember();
   }, [id]);
 
-  if (loading) return <LoadingSpinner text={t('memberDetail.loadingText', 'Loading TVK Member Profile...')} />;
+  if (loading) return <LoadingSpinner fullScreen text={t('memberDetail.loadingText', 'Loading TVK Member Profile...')} />;
   if (!member) return <p className="text-center py-12 text-slate-500">{t('memberDetail.notFound', 'Member not found.')}</p>;
 
   const handlePrintCard = () => {

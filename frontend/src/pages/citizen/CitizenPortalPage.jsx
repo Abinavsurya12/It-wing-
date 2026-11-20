@@ -42,6 +42,7 @@ import StatusBadge from '../../components/common/StatusBadge';
 import PriorityBadge from '../../components/common/PriorityBadge';
 import Modal from '../../components/common/Modal';
 import Footer from '../../components/layout/Footer';
+import LoadingSpinner from '../../components/common/LoadingSpinner';
 import api from '../../services/api';
 import { getSafeImageUrl } from '../../utils/imageUtils';
 import coimbatoreCityBg from '../../assets/coimbatore-city-bg.png';
@@ -319,6 +320,10 @@ export const CitizenPortalPage = () => {
       badge: t('citizen.historyStatusBadge', 'History & Status'),
     },
   ];
+
+  if (loading && complaints.length === 0 && appointments.length === 0) {
+    return <LoadingSpinner fullScreen text="Loading TVK Citizen Portal..." />;
+  }
 
   return (
     <div className="min-h-screen bg-[#FFF8F0] flex flex-col font-sans overflow-x-hidden">

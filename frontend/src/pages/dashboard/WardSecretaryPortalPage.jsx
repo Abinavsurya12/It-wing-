@@ -50,6 +50,7 @@ import StatusBadge from '../../components/common/StatusBadge';
 import PriorityBadge from '../../components/common/PriorityBadge';
 import Modal from '../../components/common/Modal';
 import Footer from '../../components/layout/Footer';
+import LoadingSpinner from '../../components/common/LoadingSpinner';
 import api from '../../services/api';
 
 export const WardSecretaryPortalPage = () => {
@@ -615,6 +616,10 @@ export const WardSecretaryPortalPage = () => {
       setIsSavingModalUpdate(false);
     }
   };
+
+  if (loading && !wardData) {
+    return <LoadingSpinner fullScreen text="Loading Ward Secretary Portal..." />;
+  }
 
   return (
     <div className="min-h-screen bg-[#FFF8F0] flex flex-col font-sans w-full max-w-full overflow-x-hidden">

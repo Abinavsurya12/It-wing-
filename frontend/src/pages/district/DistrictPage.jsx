@@ -43,7 +43,7 @@ export const DistrictPage = () => {
   }, []);
 
   if (loading) {
-    return <LoadingSpinner text={t('district.loadingText', 'Loading Coimbatore District Hierarchy...')} />;
+    return <LoadingSpinner fullScreen text={t('district.loadingText', 'Loading Coimbatore District Hierarchy...')} />;
   }
 
   // Target exclusively Kinathukadavu constituency card

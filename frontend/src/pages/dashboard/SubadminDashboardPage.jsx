@@ -713,6 +713,10 @@ export const SubadminDashboardPage = () => {
     }
   };
 
+  if (complaintsLoading && complaints.length === 0) {
+    return <LoadingSpinner fullScreen text="Loading Subadmin Governance Dashboard..." />;
+  }
+
   return (
     <div className="min-h-screen bg-[#FFF8F0] flex flex-col font-sans w-full max-w-full overflow-x-hidden">
       {/* ================= TOP HEADER ================= */}

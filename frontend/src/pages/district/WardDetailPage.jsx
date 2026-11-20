@@ -50,7 +50,7 @@ export const WardDetailPage = () => {
     fetchWard();
   }, [id]);
 
-  if (loading) return <LoadingSpinner text="Loading Ward Governance Dashboard..." />;
+  if (loading) return <LoadingSpinner fullScreen text="Loading Ward Governance Dashboard..." />;
   if (!wardData) return <p className="text-center py-12 text-slate-500">Ward not found.</p>;
 
   const { ward, membersKpi, issuesKpi, members = [], issues = [] } = wardData;
