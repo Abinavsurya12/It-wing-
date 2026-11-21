@@ -54,10 +54,12 @@ import image3 from '../../assets/image3.png';
 
 export const CitizenPortalPage = () => {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, loading: authLoading, updateUser, logout } = useAuth();
   const { t } = useTranslation();
   const { success: notifySuccess, error: notifyError } = useNotification();
 
+  // Fresh profile loaded directly from MySQL database
+  const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [complaints, setComplaints] = useState([]);
   const [appointments, setAppointments] = useState([]);
@@ -71,14 +73,20 @@ export const CitizenPortalPage = () => {
   // Active section tab: 'overview' | 'book-appointment' | 'my-appointments' | 'my-complaints'
   const [activeSection, setActiveSection] = useState('overview');
 
+  // Active user entity (prioritizing freshly fetched database record over cached localStorage)
+  const currentUser = profile || user;
+  const assignedWardDisplay = currentUser?.assignedWard?.trim() || 'Not Assigned';
+  const paguthiDisplay = currentUser?.paguthi?.trim() || 'Not Assigned';
+  const constituencyDisplay = currentUser?.constituency?.trim() || 'Not Assigned';
+
   // Appointment Form state
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingSuccessMsg, setBookingSuccessMsg] = useState('');
   const [newBookedId, setNewBookedId] = useState('');
   const [appointmentForm, setAppointmentForm] = useState({
-    fullName: user?.name || '',
-    mobileNumber: user?.phone || '',
-    email: user?.email || '',
+    fullName: currentUser?.name || '',
+    mobileNumber: currentUser?.phone || '',
+    email: currentUser?.email || '',
     subject: '',
     description: '',
     preferredDate: '',
@@ -90,54 +98,81 @@ export const CitizenPortalPage = () => {
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [isApptModalOpen, setIsApptModalOpen] = useState(false);
 
-  const fetchCitizenData = async () => {
+  // Fetch authenticated citizen profile and portal data
+  // isInitial = true triggers full-screen loading on first mount only; background sync is completely silent
+  const fetchCitizenData = async (isInitial = false) => {
     try {
-      setLoading(true);
-      const [issuesRes, apptRes, notifRes, projectsRes] = await Promise.all([
-        api.get('/issues?limit=50'),
+      if (isInitial) {
+        setLoading(true);
+      }
+      const [profileRes, issuesRes, apptRes, notifRes, projectsRes] = await Promise.all([
+        api.get('/auth/me').catch(() => null),
+        api.get('/issues?limit=50').catch(() => ({ data: { success: false, data: [] } })),
         api.get('/appointments/my').catch(() => ({ data: { success: false, data: [] } })),
         api.get('/notifications').catch(() => ({ data: { success: false, data: [], unreadCount: 0 } })),
         api.get('/projects').catch(() => ({ data: { success: false, data: [] } })),
       ]);
 
-      if (issuesRes.data.success) {
+      if (profileRes?.data?.success && profileRes.data.data) {
+        setProfile(profileRes.data.data);
+        if (updateUser) {
+          updateUser(profileRes.data.data);
+        }
+      }
+      if (issuesRes?.data?.success) {
         setComplaints(issuesRes.data.data || []);
       }
-      if (apptRes.data.success) {
+      if (apptRes?.data?.success) {
         setAppointments(apptRes.data.data || []);
       }
-      if (notifRes.data.success) {
+      if (notifRes?.data?.success) {
         setNotifications(notifRes.data.data || []);
         setUnreadCount(notifRes.data.unreadCount || 0);
       }
-      if (projectsRes.data?.success) {
+      if (projectsRes?.data?.success) {
         setProjects(projectsRes.data.data || []);
       }
     } catch (err) {
       console.error('Error loading citizen portal data:', err);
     } finally {
-      setLoading(false);
+      if (isInitial) {
+        setLoading(false);
+      }
     }
   };
 
-  // Live polling synchronization: updates status automatically every 6 seconds
+  // Initial load once on component mount; silent background updates without flashing or full-page reload
   useEffect(() => {
-    fetchCitizenData();
-    const timer = setInterval(fetchCitizenData, 6000);
+    fetchCitizenData(true);
+
+    const timer = setInterval(() => {
+      // Background poll only when document is active/visible
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        fetchCitizenData(false);
+      }
+    }, 12000);
+
     return () => clearInterval(timer);
   }, []);
 
+  // Route protection for unauthenticated visits without full-page hard refresh
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate('/login', { replace: true });
+    }
+  }, [authLoading, user, navigate]);
+
   // Update default form values when user changes
   useEffect(() => {
-    if (user) {
+    if (currentUser) {
       setAppointmentForm((prev) => ({
         ...prev,
-        fullName: prev.fullName || user.name || '',
-        mobileNumber: prev.mobileNumber || user.phone || '',
-        email: prev.email || user.email || '',
+        fullName: prev.fullName || currentUser.name || '',
+        mobileNumber: prev.mobileNumber || currentUser.phone || '',
+        email: prev.email || currentUser.email || '',
       }));
     }
-  }, [user]);
+  }, [currentUser]);
 
   // Lock body scroll when mobile menu is open
   useEffect(() => {
@@ -323,7 +358,8 @@ export const CitizenPortalPage = () => {
     },
   ];
 
-  if (loading && complaints.length === 0 && appointments.length === 0) {
+  // Initial load only renders full-screen spinner if user profile is not yet available
+  if (loading && !profile && !user) {
     return <LoadingSpinner fullScreen text="Loading TVK Citizen Portal..." />;
   }
 
@@ -348,6 +384,7 @@ export const CitizenPortalPage = () => {
         {/* Desktop Nav Links */}
         <nav className="hidden lg:flex items-center space-x-4 text-xs font-bold text-white/90">
           <button
+            type="button"
             onClick={() => setActiveSection('overview')}
             className={`py-1 cursor-pointer transition ${
               activeSection === 'overview' ? 'text-[#FFD32A] border-b-2 border-[#FFD32A]' : 'hover:text-[#FFD32A]'
@@ -356,6 +393,7 @@ export const CitizenPortalPage = () => {
             {t('header.dashboard', 'Dashboard')}
           </button>
           <button
+            type="button"
             onClick={() => setActiveSection('book-appointment')}
             className={`py-1 cursor-pointer transition ${
               activeSection === 'book-appointment' ? 'text-[#FFD32A] border-b-2 border-[#FFD32A]' : 'hover:text-[#FFD32A]'
@@ -364,6 +402,7 @@ export const CitizenPortalPage = () => {
             {t('citizen.bookAppointment', 'Book Appointment')}
           </button>
           <button
+            type="button"
             onClick={() => setActiveSection('my-appointments')}
             className={`py-1 cursor-pointer transition ${
               activeSection === 'my-appointments' ? 'text-[#FFD32A] border-b-2 border-[#FFD32A]' : 'hover:text-[#FFD32A]'
@@ -474,6 +513,7 @@ export const CitizenPortalPage = () => {
           </div>
 
           <button
+            type="button"
             onClick={logout}
             className="flex items-center space-x-1 bg-black/20 hover:bg-black/40 px-2.5 sm:px-3 py-1.5 rounded-full border border-white/20 transition text-[11px] cursor-pointer"
           >
@@ -483,6 +523,7 @@ export const CitizenPortalPage = () => {
 
           {/* Mobile Menu Toggle */}
           <button
+            type="button"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="p-1.5 rounded-lg bg-black/20 lg:hidden text-white cursor-pointer"
           >
@@ -495,6 +536,7 @@ export const CitizenPortalPage = () => {
       {mobileMenuOpen && (
         <div className="lg:hidden bg-[#850000] text-white px-4 py-3 border-b-2 border-[#FFD32A] space-y-2 text-xs font-bold shadow-lg animate-fadeIn">
           <button
+            type="button"
             onClick={() => {
               setActiveSection('overview');
               setMobileMenuOpen(false);
@@ -504,6 +546,7 @@ export const CitizenPortalPage = () => {
             {t('header.dashboard', 'Dashboard')}
           </button>
           <button
+            type="button"
             onClick={() => {
               setActiveSection('book-appointment');
               setMobileMenuOpen(false);
@@ -513,6 +556,7 @@ export const CitizenPortalPage = () => {
             {t('citizen.bookAppointment', 'Book Minister Appointment')}
           </button>
           <button
+            type="button"
             onClick={() => {
               setActiveSection('my-appointments');
               setMobileMenuOpen(false);
@@ -655,19 +699,19 @@ export const CitizenPortalPage = () => {
         <div className="bg-white rounded-3xl p-5 sm:p-6 border border-[#E9E2DC] shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center space-x-3.5">
             <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-[#850000] to-[#A00000] text-white flex items-center justify-center font-extrabold text-xl shadow-md border-2 border-[#FFD32A] flex-shrink-0">
-              {user?.name ? user.name.charAt(0).toUpperCase() : 'C'}
+              {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : 'C'}
             </div>
             <div>
               <div className="flex items-center space-x-2 flex-wrap">
                 <h3 className="text-base sm:text-lg font-extrabold text-slate-900">
-                  {user?.name || 'Citizen'}
+                  {currentUser?.name || 'Citizen'}
                 </h3>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-red-50 text-[#A00000] border border-red-200">
                   Verified Citizen
                 </span>
               </div>
               <p className="text-xs text-slate-500 font-medium mt-0.5">
-                Registered Mobile: <strong className="text-slate-800 font-mono">{user?.phone || '9842567890'}</strong>
+                Registered Mobile: <strong className="text-slate-800 font-mono">{currentUser?.phone || 'Not Assigned'}</strong>
               </p>
             </div>
           </div>
@@ -680,15 +724,15 @@ export const CitizenPortalPage = () => {
             </div>
             <div className="bg-[#FFF8F0] p-2 rounded-xl border border-[#FFE5A3]/50">
               <span className="text-[10px] text-slate-500 block">Assigned Ward</span>
-              <strong className="text-slate-900 font-bold text-[11px]">{user?.assignedWard || 'Not Assigned'}</strong>
+              <strong className="text-slate-900 font-bold text-[11px]">{assignedWardDisplay}</strong>
             </div>
             <div className="bg-[#FFF8F0] p-2 rounded-xl border border-[#FFE5A3]/50">
               <span className="text-[10px] text-slate-500 block">Paguthi</span>
-              <strong className="text-[#A00000] font-bold text-[11px]">{user?.paguthi || 'Not Assigned'}</strong>
+              <strong className="text-[#A00000] font-bold text-[11px]">{paguthiDisplay}</strong>
             </div>
             <div className="bg-[#FFF8F0] p-2 rounded-xl border border-[#FFE5A3]/50">
               <span className="text-[10px] text-slate-500 block">Constituency</span>
-              <strong className="text-slate-900 font-bold text-[11px]">{user?.constituency || 'Not Assigned'}</strong>
+              <strong className="text-slate-900 font-bold text-[11px]">{constituencyDisplay}</strong>
             </div>
           </div>
         </div>
@@ -698,6 +742,7 @@ export const CitizenPortalPage = () => {
       <section className="max-w-6xl w-full mx-auto px-4 mt-6">
         <div className="bg-white p-2 rounded-2xl border border-slate-200 shadow-xs flex flex-wrap gap-2 text-xs font-bold">
           <button
+            type="button"
             onClick={() => setActiveSection('overview')}
             className={`px-4 py-2 rounded-xl transition cursor-pointer ${
               activeSection === 'overview'
@@ -708,6 +753,7 @@ export const CitizenPortalPage = () => {
             {t('citizen.publicServices', 'Public Services Overview')}
           </button>
           <button
+            type="button"
             onClick={() => setActiveSection('book-appointment')}
             className={`px-4 py-2 rounded-xl transition cursor-pointer flex items-center space-x-1 ${
               activeSection === 'book-appointment'
@@ -719,6 +765,7 @@ export const CitizenPortalPage = () => {
             <span>{t('citizen.bookAppointment', 'Book Appointment Form')}</span>
           </button>
           <button
+            type="button"
             onClick={() => setActiveSection('my-appointments')}
             className={`px-4 py-2 rounded-xl transition cursor-pointer flex items-center space-x-1 ${
               activeSection === 'my-appointments'

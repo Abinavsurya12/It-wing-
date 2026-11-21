@@ -80,6 +80,30 @@ export const login = async (req, res) => {
       ipAddress: req.ip || '127.0.0.1',
     });
 
+    // Resolve location details from database
+    let userPaguthi = user.paguthi || '';
+    let userWard = user.assignedWard || '';
+    let userConstituency = user.constituency || '';
+
+    if (user.wardId && (!userPaguthi || !userWard || !userConstituency)) {
+      try {
+        const wardRecord = await Ward.findByPk(user.wardId);
+        if (wardRecord) {
+          if (!userPaguthi && wardRecord.paguthi) userPaguthi = wardRecord.paguthi;
+          if (!userWard && wardRecord.wardNumber) {
+            const cleanWName = (wardRecord.wardName || '').replace(/^Ward\s*\d+\s*[-:]*\s*/i, '').trim();
+            userWard = cleanWName ? `Ward ${wardRecord.wardNumber} - ${cleanWName}` : `Ward ${wardRecord.wardNumber}`;
+          }
+          if (!userConstituency && wardRecord.constituencyId) {
+            const cObj = await Constituency.findByPk(wardRecord.constituencyId);
+            if (cObj) userConstituency = cObj.name;
+          }
+        }
+      } catch (locErr) {
+        console.warn('Error resolving user ward record:', locErr.message);
+      }
+    }
+
     res.json({
       success: true,
       data: {
@@ -91,10 +115,10 @@ export const login = async (req, res) => {
         role: user.role,
         phone: user.phone,
         assignedDistrict: user.assignedDistrict,
-        assignedWard: user.assignedWard,
+        assignedWard: userWard,
         wardId: user.wardId || null,
-        paguthi: user.paguthi || '',
-        constituency: user.constituency,
+        paguthi: userPaguthi,
+        constituency: userConstituency,
         address: user.address,
         avatarUrl: user.avatarUrl,
         token: generateToken(user.id),
@@ -334,6 +358,31 @@ export const getMe = async (req, res) => {
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
+
+    // Resolve location details from database
+    let userPaguthi = user.paguthi || '';
+    let userWard = user.assignedWard || '';
+    let userConstituency = user.constituency || '';
+
+    if (user.wardId && (!userPaguthi || !userWard || !userConstituency)) {
+      try {
+        const wardRecord = await Ward.findByPk(user.wardId);
+        if (wardRecord) {
+          if (!userPaguthi && wardRecord.paguthi) userPaguthi = wardRecord.paguthi;
+          if (!userWard && wardRecord.wardNumber) {
+            const cleanWName = (wardRecord.wardName || '').replace(/^Ward\s*\d+\s*[-:]*\s*/i, '').trim();
+            userWard = cleanWName ? `Ward ${wardRecord.wardNumber} - ${cleanWName}` : `Ward ${wardRecord.wardNumber}`;
+          }
+          if (!userConstituency && wardRecord.constituencyId) {
+            const cObj = await Constituency.findByPk(wardRecord.constituencyId);
+            if (cObj) userConstituency = cObj.name;
+          }
+        }
+      } catch (locErr) {
+        console.warn('Error resolving user ward record:', locErr.message);
+      }
+    }
+
     res.json({
       success: true,
       data: {
@@ -346,10 +395,10 @@ export const getMe = async (req, res) => {
         phone: user.phone,
         age: user.age,
         assignedDistrict: user.assignedDistrict,
-        assignedWard: user.assignedWard,
+        assignedWard: userWard,
         wardId: user.wardId || null,
-        paguthi: user.paguthi || '',
-        constituency: user.constituency || '',
+        paguthi: userPaguthi,
+        constituency: userConstituency,
         address: user.address,
         avatarUrl: user.avatarUrl,
         isActive: user.isActive,
