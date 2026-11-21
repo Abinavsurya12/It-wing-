@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   User,
@@ -8,6 +8,9 @@ import {
   EyeOff,
   AlertCircle,
   UserPlus,
+  Building,
+  MapPin,
+  Landmark,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import api from '../../services/api';
@@ -16,20 +19,118 @@ import LanguageSwitcher from '../../components/common/LanguageSwitcher';
 import Footer from '../../components/layout/Footer';
 import coimbatoreCityBg from '../../assets/coimbatore-city-bg.png';
 import vickyAnaImg from '../../assets/vicky ana.png';
+import {
+  PAGUTHI_LABEL,
+  PAGUTHI_OPTIONS,
+  getWardsForPaguthi,
+} from '../../utils/paguthiWardData';
 
 export const SignupPage = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { success: notifySuccess, error: notifyError } = useNotification();
 
-  // ONLY 3 FIELDS AS REQUIRED: Name, Phone Number, Password
+  // Registration Fields
   const [name, setName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [paguthi, setPaguthi] = useState('');
+  const [wardNumber, setWardNumber] = useState('');
+  const [wardId, setWardId] = useState('');
+  const [assignedWard, setAssignedWard] = useState('');
+  const [constituency, setConstituency] = useState('');
   const [password, setPassword] = useState('');
 
+  const [dbWards, setDbWards] = useState([]);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+
+  // Fetch actual master ward records from backend
+  useEffect(() => {
+    const fetchLocations = async () => {
+      try {
+        const res = await api.get('/auth/location-options');
+        if (res.data?.success && Array.isArray(res.data.data?.wards)) {
+          setDbWards(res.data.data.wards);
+        }
+      } catch (err) {
+        console.warn('Using standard location master rules:', err.message);
+      }
+    };
+    fetchLocations();
+  }, []);
+
+  // Dynamic Wards belonging strictly to selected Paguthi (Matches Ward Secretary Registration)
+  const availableWardsForPaguthi = useMemo(() => {
+    if (!paguthi) return [];
+    const canonicalP = paguthi === 'Podanur' ? 'Pothanur' : paguthi;
+
+    const matchedDbWards = dbWards.filter((w) => {
+      const wp = w.paguthi === 'Podanur' ? 'Pothanur' : w.paguthi;
+      return wp === canonicalP;
+    });
+
+    const ruleNums = getWardsForPaguthi(canonicalP);
+    const combined = [];
+    const seenNumbers = new Set();
+
+    matchedDbWards.forEach((w) => {
+      const num = Number(w.wardNumber);
+      if (!seenNumbers.has(num)) {
+        seenNumbers.add(num);
+        const cleanName = (w.wardName || '').replace(/^Ward\s*\d+\s*[-:]*\s*/i, '').trim();
+        const cName = w.constituency?.name || 'Kinathukadavu';
+        combined.push({
+          wardNumber: num,
+          wardId: String(w.id || w._id),
+          wardName: cleanName || `${canonicalP} Ward ${num}`,
+          label: cleanName ? `Ward ${num} - ${cleanName}` : `Ward ${num}`,
+          constituency: cName,
+        });
+      }
+    });
+
+    ruleNums.forEach((wNum) => {
+      const num = Number(wNum);
+      if (!seenNumbers.has(num)) {
+        seenNumbers.add(num);
+        combined.push({
+          wardNumber: num,
+          wardId: String(num),
+          wardName: `${canonicalP} Ward ${num}`,
+          label: `Ward ${num}`,
+          constituency: 'Kinathukadavu',
+        });
+      }
+    });
+
+    return combined.sort((a, b) => a.wardNumber - b.wardNumber);
+  }, [paguthi, dbWards]);
+
+  // Handle Paguthi selection & reset ward
+  const handlePaguthiChange = (e) => {
+    const selectedP = e.target.value;
+    setPaguthi(selectedP);
+    setWardNumber('');
+    setWardId('');
+    setAssignedWard('');
+    setConstituency('');
+    setErrorMessage('');
+  };
+
+  // Handle Ward selection & auto-map constituency
+  const handleWardChange = (e) => {
+    const selectedNum = e.target.value;
+    const selectedItem = availableWardsForPaguthi.find(
+      (w) => String(w.wardNumber) === String(selectedNum)
+    );
+    setWardNumber(selectedNum);
+    setWardId(selectedItem ? String(selectedItem.wardId) : selectedNum);
+    setAssignedWard(selectedItem ? selectedItem.label : (selectedNum ? `Ward ${selectedNum}` : ''));
+    const mappedConstituency = selectedItem?.constituency || 'Kinathukadavu';
+    setConstituency(mappedConstituency);
+    setErrorMessage('');
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -52,6 +153,16 @@ export const SignupPage = () => {
       return;
     }
 
+    if (!paguthi) {
+      setErrorMessage(`Please select ${PAGUTHI_LABEL}`);
+      return;
+    }
+
+    if (!wardNumber) {
+      setErrorMessage('Please select your Ward');
+      return;
+    }
+
     if (!password || password.length < 6) {
       setErrorMessage('Password must be at least 6 characters long');
       return;
@@ -63,6 +174,11 @@ export const SignupPage = () => {
         name: cleanName,
         phoneNumber: cleanPhone,
         password,
+        paguthi,
+        wardId,
+        wardNumber,
+        assignedWard,
+        constituency: constituency || 'Kinathukadavu',
       });
 
       if (res.data.success) {
@@ -238,6 +354,80 @@ export const SignupPage = () => {
                   </div>
                   <p className="text-[10px] text-slate-400 mt-1">
                     Enter valid 10-digit mobile number for SMS notifications
+                  </p>
+                </div>
+
+                {/* FIELD 3: PAGUTHI / ONDRIYAM / NAGARAM */}
+                <div>
+                  <label className="block text-[11px] font-bold text-[#252525] mb-1 tracking-wider uppercase">
+                    {PAGUTHI_LABEL} *
+                  </label>
+                  <div className="relative">
+                    <Building className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                    <select
+                      required
+                      value={paguthi}
+                      onChange={handlePaguthiChange}
+                      className="w-full bg-white border border-[#E9E2DC] rounded-xl pl-10 pr-3.5 py-2.5 text-xs sm:text-sm text-[#252525] focus:outline-none focus:border-[#B00000] focus:ring-2 focus:ring-[#B00000]/20 transition"
+                    >
+                      <option value="">-- Select {PAGUTHI_LABEL} --</option>
+                      {PAGUTHI_OPTIONS.map((p) => (
+                        <option key={p} value={p}>
+                          {p}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* FIELD 4: WARD NUMBER */}
+                <div>
+                  <label className="block text-[11px] font-bold text-[#252525] mb-1 tracking-wider uppercase">
+                    Ward *
+                  </label>
+                  <div className="relative">
+                    <MapPin className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                    <select
+                      required
+                      disabled={!paguthi}
+                      value={wardNumber}
+                      onChange={handleWardChange}
+                      className="w-full bg-white border border-[#E9E2DC] rounded-xl pl-10 pr-3.5 py-2.5 text-xs sm:text-sm text-[#252525] focus:outline-none focus:border-[#B00000] focus:ring-2 focus:ring-[#B00000]/20 transition disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed"
+                    >
+                      <option value="">
+                        {!paguthi ? '-- Select Paguthi First --' : '-- Select Ward --'}
+                      </option>
+                      {availableWardsForPaguthi.map((w) => (
+                        <option key={w.wardNumber} value={String(w.wardNumber)}>
+                          {w.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  {paguthi && (
+                    <p className="text-[10px] text-emerald-600 mt-1 font-medium">
+                      Showing {availableWardsForPaguthi.length} wards belonging to {paguthi}
+                    </p>
+                  )}
+                </div>
+
+                {/* FIELD 5: CONSTITUENCY */}
+                <div>
+                  <label className="block text-[11px] font-bold text-[#252525] mb-1 tracking-wider uppercase">
+                    Constituency *
+                  </label>
+                  <div className="relative">
+                    <Landmark className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                    <input
+                      type="text"
+                      readOnly
+                      value={constituency || (!paguthi ? 'Select Paguthi & Ward' : 'Kinathukadavu')}
+                      placeholder="Constituency"
+                      className="w-full bg-slate-50 border border-[#E9E2DC] rounded-xl pl-10 pr-3.5 py-2.5 text-xs sm:text-sm text-slate-700 font-medium cursor-not-allowed select-none"
+                    />
+                  </div>
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    Automatically mapped based on your selected administrative ward
                   </p>
                 </div>
 

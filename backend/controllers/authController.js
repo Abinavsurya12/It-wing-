@@ -1,6 +1,8 @@
 import jwt from 'jsonwebtoken';
 import { Op } from 'sequelize';
 import User from '../models/User.js';
+import Ward from '../models/Ward.js';
+import Constituency from '../models/Constituency.js';
 import AuditLog from '../models/AuditLog.js';
 
 const generateToken = (id) => {
@@ -103,12 +105,68 @@ export const login = async (req, res) => {
   }
 };
 
+// @desc    Get public location options for user registration
+// @route   GET /api/auth/location-options
+// @access  Public
+export const getLocationOptions = async (req, res) => {
+  try {
+    const wards = await Ward.findAll({
+      attributes: ['id', 'wardNumber', 'wardName', 'tamilName', 'paguthi', 'constituencyId', 'zone'],
+      order: [['wardNumber', 'ASC']],
+    });
+
+    const constituencies = await Constituency.findAll({
+      attributes: ['id', 'name', 'code', 'paguthis'],
+      order: [['id', 'ASC']],
+    });
+
+    const constMap = {};
+    constituencies.forEach((c) => {
+      constMap[c.id] = { id: c.id, name: c.name, code: c.code };
+    });
+
+    const formattedWards = wards.map((w) => ({
+      id: w.id,
+      wardNumber: w.wardNumber,
+      wardName: w.wardName,
+      tamilName: w.tamilName,
+      paguthi: w.paguthi,
+      constituencyId: w.constituencyId,
+      zone: w.zone,
+      constituency: constMap[w.constituencyId] || { name: 'Kinathukadavu' },
+    }));
+
+    res.json({
+      success: true,
+      data: {
+        wards: formattedWards,
+        constituencies,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 // @desc    Register a new Citizen / User account
 // @route   POST /api/auth/register
 // @access  Public
 export const registerCitizen = async (req, res) => {
   try {
-    const { name, fullName, phoneNumber, mobileNumber, phone, password } = req.body;
+    const {
+      name,
+      fullName,
+      phoneNumber,
+      mobileNumber,
+      phone,
+      password,
+      paguthi,
+      wardId,
+      wardNumber,
+      assignedWard,
+      constituency,
+    } = req.body;
+
     const citizenName = (name || fullName || '').trim();
     const citizenPhone = (phoneNumber || mobileNumber || phone || '').trim();
 
@@ -133,6 +191,16 @@ export const registerCitizen = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Password must be at least 6 characters long' });
     }
 
+    const cleanPaguthi = (paguthi || '').trim();
+    if (!cleanPaguthi) {
+      return res.status(400).json({ success: false, message: 'Paguthi selection is required' });
+    }
+
+    const rawWard = assignedWard || wardNumber || wardId;
+    if (!rawWard) {
+      return res.status(400).json({ success: false, message: 'Ward selection is required' });
+    }
+
     // Check duplicate mobile or username
     const duplicatePhone = await User.findOne({
       where: {
@@ -147,7 +215,68 @@ export const registerCitizen = async (req, res) => {
       });
     }
 
-    // Strictly Citizen role only
+    // Resolve Ward details from database strictly within the selected Paguthi
+    const parsedWardNum = rawWard ? parseInt(String(rawWard).replace(/\D+/g, ''), 10) : null;
+    const canonicalPaguthi = (cleanPaguthi === 'Podanur') ? 'Pothanur' : cleanPaguthi;
+    const paguthiFilter = (canonicalPaguthi === 'Pothanur') ? ['Pothanur', 'Podanur'] : [canonicalPaguthi];
+
+    let wardDoc = null;
+    if (wardId) {
+      const numWId = Number(wardId);
+      if (!isNaN(numWId) && numWId > 0) {
+        wardDoc = await Ward.findOne({
+          where: {
+            id: numWId,
+            paguthi: { [Op.in]: paguthiFilter },
+          },
+        });
+      }
+    }
+
+    if (!wardDoc && canonicalPaguthi && parsedWardNum && !isNaN(parsedWardNum)) {
+      wardDoc = await Ward.findOne({
+        where: {
+          wardNumber: parsedWardNum,
+          paguthi: { [Op.in]: paguthiFilter },
+        },
+      });
+    }
+
+    // If ward doesn't exist yet for this paguthi, create it dynamically under this exact paguthi (matches settingsController logic)
+    if (!wardDoc && canonicalPaguthi && parsedWardNum && !isNaN(parsedWardNum)) {
+      const kinathu = await Constituency.findOne({ where: { name: 'Kinathukadavu' } });
+      const wardNameText = `${canonicalPaguthi} Ward ${parsedWardNum}`;
+      wardDoc = await Ward.create({
+        wardNumber: parsedWardNum,
+        wardName: wardNameText,
+        tamilName: `${canonicalPaguthi} வார்டு ${parsedWardNum}`,
+        paguthi: canonicalPaguthi,
+        constituencyId: kinathu?.id || 6,
+        zone: 'South Zone',
+      });
+    }
+
+    // Build the final clean label ensuring it belongs strictly to this Paguthi
+    let finalWardLabel = '';
+    if (wardDoc) {
+      const cleanWName = (wardDoc.wardName || '').replace(/^Ward\s*\d+\s*[-:]*\s*/i, '').trim();
+      finalWardLabel = cleanWName ? `Ward ${wardDoc.wardNumber} - ${cleanWName}` : `Ward ${wardDoc.wardNumber}`;
+    } else {
+      finalWardLabel = parsedWardNum ? `Ward ${parsedWardNum} - ${canonicalPaguthi} Ward ${parsedWardNum}` : 'Ward';
+    }
+    const finalWardId = wardDoc ? wardDoc.id : null;
+
+    // Resolve constituency from wardDoc / Constituency table
+    let resolvedConstituency = (constituency || '').trim();
+    if (wardDoc?.constituencyId) {
+      const cObj = await Constituency.findByPk(wardDoc.constituencyId);
+      if (cObj) resolvedConstituency = cObj.name;
+    }
+    if (!resolvedConstituency) {
+      resolvedConstituency = 'Kinathukadavu';
+    }
+
+    // Create Citizen user record in MySQL
     const newUser = await User.create({
       name: citizenName,
       username: citizenPhone,
@@ -156,8 +285,10 @@ export const registerCitizen = async (req, res) => {
       role: 'citizen',
       phone: citizenPhone,
       assignedDistrict: 'Coimbatore',
-      constituency: 'Coimbatore South',
-      assignedWard: 'Ward 72 - R.S. Puram',
+      constituency: resolvedConstituency,
+      assignedWard: finalWardLabel || `Ward ${parsedWardNum}`,
+      wardId: finalWardId,
+      paguthi: cleanPaguthi,
       isActive: true,
     });
 
@@ -167,7 +298,7 @@ export const registerCitizen = async (req, res) => {
       userName: newUser.name,
       action: 'CITIZEN_REGISTRATION',
       module: 'AUTH',
-      details: `Citizen ${newUser.name} (${newUser.phone}) registered via 3-field signup portal`,
+      details: `Citizen ${newUser.name} (${newUser.phone}) registered with Paguthi: ${cleanPaguthi}, Ward: ${finalWardLabel}, Constituency: ${resolvedConstituency}`,
       ipAddress: req.ip || '127.0.0.1',
     });
 
@@ -181,6 +312,11 @@ export const registerCitizen = async (req, res) => {
         username: newUser.username,
         phone: newUser.phone,
         role: newUser.role,
+        assignedDistrict: newUser.assignedDistrict,
+        assignedWard: newUser.assignedWard,
+        wardId: newUser.wardId,
+        paguthi: newUser.paguthi,
+        constituency: newUser.constituency,
         token: generateToken(newUser.id),
       },
     });
@@ -195,9 +331,29 @@ export const registerCitizen = async (req, res) => {
 export const getMe = async (req, res) => {
   try {
     const user = await User.findById(req.user.id || req.user._id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
     res.json({
       success: true,
-      data: user,
+      data: {
+        _id: user._id || String(user.id),
+        id: user.id,
+        name: user.name,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        phone: user.phone,
+        age: user.age,
+        assignedDistrict: user.assignedDistrict,
+        assignedWard: user.assignedWard,
+        wardId: user.wardId || null,
+        paguthi: user.paguthi || '',
+        constituency: user.constituency || '',
+        address: user.address,
+        avatarUrl: user.avatarUrl,
+        isActive: user.isActive,
+      },
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -248,4 +404,4 @@ export const resetPassword = async (req, res) => {
   }
 };
 
-export default { login, registerCitizen, getMe, forgotPassword, resetPassword };
+export default { login, registerCitizen, getLocationOptions, getMe, forgotPassword, resetPassword };

@@ -33,6 +33,8 @@ import {
   IdCard,
   CreditCard,
   Users,
+  LandPlot,
+  Accessibility,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
@@ -198,8 +200,8 @@ export const CitizenPortalPage = () => {
         requestedTime: appointmentForm.preferredTime,
         preferredTimeSlot: appointmentForm.preferredTime,
         additionalInfo: appointmentForm.additionalInfo.trim(),
-        constituency: user?.constituency || 'Coimbatore South',
-        ward: user?.assignedWard || 'Ward 72',
+        constituency: user?.constituency || 'Not Assigned',
+        ward: user?.assignedWard || 'Not Assigned',
       };
 
       const res = await api.post('/appointments', payload);
@@ -678,15 +680,15 @@ export const CitizenPortalPage = () => {
             </div>
             <div className="bg-[#FFF8F0] p-2 rounded-xl border border-[#FFE5A3]/50">
               <span className="text-[10px] text-slate-500 block">Assigned Ward</span>
-              <strong className="text-slate-900 font-bold text-[11px]">{user?.assignedWard || 'Ward 72'}</strong>
+              <strong className="text-slate-900 font-bold text-[11px]">{user?.assignedWard || 'Not Assigned'}</strong>
             </div>
             <div className="bg-[#FFF8F0] p-2 rounded-xl border border-[#FFE5A3]/50">
               <span className="text-[10px] text-slate-500 block">Paguthi</span>
-              <strong className="text-[#A00000] font-bold text-[11px]">{user?.paguthi || 'R.S. Puram'}</strong>
+              <strong className="text-[#A00000] font-bold text-[11px]">{user?.paguthi || 'Not Assigned'}</strong>
             </div>
             <div className="bg-[#FFF8F0] p-2 rounded-xl border border-[#FFE5A3]/50">
               <span className="text-[10px] text-slate-500 block">Constituency</span>
-              <strong className="text-slate-900 font-bold text-[11px]">{user?.constituency || 'Coimbatore South'}</strong>
+              <strong className="text-slate-900 font-bold text-[11px]">{user?.constituency || 'Not Assigned'}</strong>
             </div>
           </div>
         </div>
@@ -969,7 +971,7 @@ export const CitizenPortalPage = () => {
                           <div>
                             <span>{t('citizen.jurisdiction', 'Jurisdiction')}: </span>
                             <strong className="text-slate-800">
-                              {c.wardId?.wardName ? `Ward ${c.wardId.wardNumber} - ${c.wardId.wardName}` : (c.wardNumber ? `Ward ${c.wardNumber}` : (user?.assignedWard || 'Ward 72'))}
+                              {c.wardId?.wardName ? `Ward ${c.wardId.wardNumber} - ${c.wardId.wardName}` : (c.wardNumber ? `Ward ${c.wardNumber}` : (user?.assignedWard || 'Not Assigned'))}
                             </strong>
                             {c.category && (
                               <span className="ml-2 px-1.5 py-0.2 bg-slate-100 text-slate-600 rounded text-[10px]">
@@ -1233,8 +1235,8 @@ export const CitizenPortalPage = () => {
                 </div>
               </div>
 
-              {/* 3 Grid Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6">
+              {/* Grid Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
                 {/* Link 1: Aadhaar Card */}
                 <a
                   href="https://myaadhaar.uidai.gov.in/"
@@ -1333,6 +1335,74 @@ export const CitizenPortalPage = () => {
                   </div>
                   <div className="pt-4 mt-5 border-t border-slate-200/80 flex items-center justify-between text-xs font-bold text-[#850000]">
                     <span>Join tvk.family</span>
+                    <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                  </div>
+                </a>
+
+                {/* Link 4: Land Records */}
+                <a
+                  href="https://eservices.tn.gov.in/eservicesnew/home.html"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group bg-slate-50/70 hover:bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 hover:border-[#850000] p-5 sm:p-6 shadow-2xs hover:shadow-lg transition-all duration-200 flex flex-col justify-between h-full min-w-0 focus:outline-none focus:ring-2 focus:ring-[#850000] focus:ring-offset-2"
+                >
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="w-11 h-11 rounded-xl bg-amber-50 text-[#850000] group-hover:bg-[#850000] group-hover:text-white flex items-center justify-center border border-amber-200 transition-colors duration-200 shadow-2xs">
+                        <LandPlot className="w-5 h-5" />
+                      </div>
+                      <span className="w-8 h-8 rounded-lg bg-white border border-slate-200/80 text-slate-400 group-hover:text-[#850000] group-hover:border-red-200 flex items-center justify-center transition-colors">
+                        <ExternalLink className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#A00000] bg-amber-50 px-2 py-0.5 rounded border border-amber-200/60 inline-block mb-1.5">
+                        Government of Tamil Nadu
+                      </span>
+                      <h4 className="text-base sm:text-lg font-black text-slate-900 group-hover:text-[#850000] transition-colors leading-snug">
+                        E-Services of Land Records | Tamil Nadu Government
+                      </h4>
+                      <p className="text-xs sm:text-[13px] text-slate-600 mt-2 leading-relaxed">
+                        Official portal to view Patta, Chitta, FMB sketch, and verify rural and urban land records online.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="pt-4 mt-5 border-t border-slate-200/80 flex items-center justify-between text-xs font-bold text-[#850000]">
+                    <span>Visit Official Portal</span>
+                    <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                  </div>
+                </a>
+
+                {/* Link 5: Disability Certificate */}
+                <a
+                  href="https://swavlambancard.gov.in"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group bg-slate-50/70 hover:bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 hover:border-[#850000] p-5 sm:p-6 shadow-2xs hover:shadow-lg transition-all duration-200 flex flex-col justify-between h-full min-w-0 focus:outline-none focus:ring-2 focus:ring-[#850000] focus:ring-offset-2"
+                >
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="w-11 h-11 rounded-xl bg-red-50 text-[#850000] group-hover:bg-[#850000] group-hover:text-white flex items-center justify-center border border-red-200 transition-colors duration-200 shadow-2xs">
+                        <Accessibility className="w-5 h-5" />
+                      </div>
+                      <span className="w-8 h-8 rounded-lg bg-white border border-slate-200/80 text-slate-400 group-hover:text-[#850000] group-hover:border-red-200 flex items-center justify-center transition-colors">
+                        <ExternalLink className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#850000] bg-red-50 px-2 py-0.5 rounded border border-red-200/60 inline-block mb-1.5">
+                        UDID Portal
+                      </span>
+                      <h4 className="text-base sm:text-lg font-black text-slate-900 group-hover:text-[#850000] transition-colors leading-snug">
+                        Disability Certificate
+                      </h4>
+                      <p className="text-xs sm:text-[13px] text-slate-600 mt-2 leading-relaxed">
+                        Department of Empowerment of Persons with Disabilities portal for UDID Card and Disability Certificate services.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="pt-4 mt-5 border-t border-slate-200/80 flex items-center justify-between text-xs font-bold text-[#850000]">
+                    <span>Visit Official Portal</span>
                     <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
                   </div>
                 </a>
