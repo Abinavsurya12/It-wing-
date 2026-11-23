@@ -141,9 +141,6 @@ export const PaguthiDetailPage = () => {
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
             {paguthi}
           </h1>
-          <p className="text-xs sm:text-sm font-semibold text-[#FFD32A] mt-0.5">
-            {t('constituency.paguthiAdminTitle', 'Paguthi Administration')}
-          </p>
 
           <p className="text-xs sm:text-sm text-red-100 max-w-2xl mt-2 leading-relaxed font-medium">
             {t('paguthi.subtitle', 'Jurisdiction covering designated Municipal Wards, TVK grassroots cadre units, and local civic grievance redressal.')}
@@ -228,8 +225,9 @@ export const PaguthiDetailPage = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {wards.map((w) => (
               <div
-                key={w._id}
-                className="bg-white rounded-2xl border border-[#E9E2DC] shadow-xs hover:shadow-md hover:border-[#A00000] transition-all duration-200 flex flex-col justify-between overflow-hidden relative"
+                key={w._id || w.id}
+                onClick={() => navigate(`/admin/district/wards/${w._id || w.id}?tab=complaints`)}
+                className="bg-white rounded-2xl border border-[#E9E2DC] shadow-xs hover:shadow-md hover:border-[#A00000] transition-all duration-200 flex flex-col justify-between overflow-hidden relative cursor-pointer group"
               >
                 <div className="h-1 bg-[#A00000]"></div>
                 
@@ -239,11 +237,11 @@ export const PaguthiDetailPage = () => {
                       {t('district.wardLabel', 'Ward')} {w.wardNumber}
                     </span>
                     <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
-                      {paguthi} {t('common.paguthi', 'Paguthi')}
+                      {paguthi}
                     </span>
                   </div>
 
-                  <h3 className="text-base font-extrabold text-slate-900 mt-2">
+                  <h3 className="text-base font-extrabold text-slate-900 mt-2 group-hover:text-[#A00000] transition">
                     {w.wardName}
                   </h3>
                   {w.tamilName && (
@@ -253,7 +251,9 @@ export const PaguthiDetailPage = () => {
                   <div className="mt-3.5 space-y-1.5 text-xs text-slate-600 border-t border-slate-100 pt-3">
                     <div className="flex items-center justify-between">
                       <span className="text-slate-500">{t('ward.secretaryName', 'Ward Secretary')}:</span>
-                      <strong className="text-slate-900 font-semibold">{w.wardSecretary || t('common.unassigned', 'Unassigned')}</strong>
+                      <strong className={`font-semibold ${w.wardSecretary && w.wardSecretary !== 'Not Assigned' ? 'text-slate-900 font-bold' : 'text-slate-500'}`}>
+                        {w.wardSecretary || 'Not Assigned'}
+                      </strong>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-slate-500">Secretary Status:</span>
@@ -264,13 +264,18 @@ export const PaguthiDetailPage = () => {
                             : 'bg-slate-100 text-slate-600 border border-slate-200'
                         }`}
                       >
-                        {w.wardSecretaryRegistrationStatus === 'Registered' ? 'Registered' : 'Unassigned'}
+                        {w.wardSecretaryRegistrationStatus === 'Registered' ? 'Registered' : 'Not Assigned'}
                       </span>
                     </div>
-                    {w.contactNumber && (
+                    {w.contactNumber ? (
                       <div className="flex items-center justify-between">
                         <span className="text-slate-500">{t('district.contactLabel', 'Contact')}:</span>
-                        <span className="font-mono text-slate-700">{w.contactNumber}</span>
+                        <span className="font-mono text-slate-700 font-medium">{w.contactNumber}</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-500">{t('district.contactLabel', 'Contact')}:</span>
+                        <span className="text-slate-400 font-mono text-[11px]">Not Available</span>
                       </div>
                     )}
                     {w.areaCoverage && (
@@ -305,14 +310,17 @@ export const PaguthiDetailPage = () => {
                   </div>
                 </div>
 
-                {/* View Ward Button */}
+                {/* View Ward Complaints Button */}
                 <div className="p-4 pt-0">
                   <button
                     type="button"
-                    onClick={() => navigate(`/admin/district/wards/${w._id}`)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/admin/district/wards/${w._id || w.id}?tab=complaints`);
+                    }}
                     className="w-full py-2 px-3 bg-[#A00000] hover:bg-[#850000] text-white text-xs font-bold rounded-xl transition shadow-xs flex items-center justify-center space-x-1.5 cursor-pointer"
                   >
-                    <span>{t('districtHierarchy.viewWard', 'View Ward')}</span>
+                    <span>View Ward Complaints ({w.totalComplaints || 0})</span>
                     <ChevronRight className="w-4 h-4" />
                   </button>
                 </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   ArrowLeft,
@@ -27,11 +27,12 @@ import * as XLSX from 'xlsx';
 export const WardDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { t, i18n } = useTranslation();
   const isTa = i18n.language === 'ta';
   const [loading, setLoading] = useState(true);
   const [wardData, setWardData] = useState(null);
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'complaints');
 
   useEffect(() => {
     const fetchWard = async () => {
@@ -60,23 +61,22 @@ export const WardDetailPage = () => {
 
   const downloadWardReportExcel = () => {
     const rows = issues.map((i) => ({
-      'Issue Code': i.issueCode,
-      'Title': i.title,
-      'Category': i.category,
-      'Priority': i.priority,
-      'Status': i.status,
-      'Citizen Name': i.citizenName,
-      'Citizen Mobile': i.citizenMobile,
-      'Location': i.location || i.citizenAddress,
-      'Work Started': i.workStartedAt ? new Date(i.workStartedAt).toLocaleString() : 'Not Started',
-      'Resolved At': i.resolvedAt ? new Date(i.resolvedAt).toLocaleString() : 'Pending',
-      'Final Report': i.finalReport || '-',
+      'Complaint ID': i.issueCode || `CMP-${i.id || i._id}`,
+      'Citizen Name': i.citizenName || 'N/A',
+      'Mobile Number': i.citizenMobile || 'N/A',
+      'Category': i.category || 'General',
+      'Description': i.description || i.title || '-',
+      'Paguthi': i.paguthi || paguthiName,
+      'Assigned Ward': `Ward ${ward.wardNumber}${ward.wardName ? ' - ' + ward.wardName : ''}`,
+      'Registration Date': i.createdAt ? new Date(i.createdAt).toLocaleDateString('en-IN') : '-',
+      'Status': i.status || 'Pending',
+      'Assigned Ward Secretary': i.assignedWardSecretary?.name || ward.wardSecretary || 'Not Assigned',
     }));
 
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, `Ward_${ward.wardNumber}_Report`);
-    XLSX.writeFile(wb, `TVK_Ward_${ward.wardNumber}_Report.xlsx`);
+    XLSX.utils.book_append_sheet(wb, ws, `Ward_${ward.wardNumber}_Complaints`);
+    XLSX.writeFile(wb, `TVK_Ward_${ward.wardNumber}_Complaints.xlsx`);
   };
 
   return (
@@ -138,13 +138,13 @@ export const WardDetailPage = () => {
               {t('district.adminZoneLabel', 'Zone')}: <strong className="text-white">{ward.zone}</strong>
             </span>
             <span className="bg-black/20 px-3 py-1 rounded-full border border-white/10 font-medium">
-              {t('ward.secretaryName', 'Assigned Ward Secretary')}: <strong className="text-[#FFD32A]">{ward.wardSecretary || ward.officeBearer || t('ward.unassignedSecretary', 'To be designated')}</strong>
+              {t('ward.secretaryName', 'Assigned Ward Secretary')}:{' '}
+              <strong className="text-[#FFD32A]">{ward.wardSecretary || 'Not Assigned'}</strong>
             </span>
-            {ward.contactNumber && (
-              <span className="bg-black/20 px-3 py-1 rounded-full border border-white/10 font-medium">
-                {t('district.contactLabel', 'Contact')}: <strong className="text-white">{ward.contactNumber}</strong>
-              </span>
-            )}
+            <span className="bg-black/20 px-3 py-1 rounded-full border border-white/10 font-medium">
+              {t('district.contactLabel', 'Contact')}:{' '}
+              <strong className="text-white">{ward.contactNumber || 'Not Available'}</strong>
+            </span>
           </div>
         </div>
 
@@ -351,49 +351,92 @@ export const WardDetailPage = () => {
             </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-[#FFF8F0] border-b border-slate-200 text-slate-700 font-bold uppercase text-[10px]">
-                <tr>
-                  <th className="py-3 px-4">{t('issues.colIssueId', 'Code')}</th>
-                  <th className="py-3 px-4">{t('common.title', 'Title')}</th>
-                  <th className="py-3 px-4">{t('issues.colCategory', 'Category')}</th>
-                  <th className="py-3 px-4">{t('issues.colPriority', 'Priority')}</th>
-                  <th className="py-3 px-4">{t('issues.colCitizen', 'Citizen')}</th>
-                  <th className="py-3 px-4">{t('issues.colStatus', 'Status')}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {issues.length === 0 ? (
+          {issues.length === 0 ? (
+            <div className="py-12 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200 p-8">
+              <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-3">
+                <CheckCircle2 className="w-6 h-6" />
+              </div>
+              <h4 className="text-base font-bold text-slate-800">No Complaints Found</h4>
+              <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1">
+                No citizen complaints are currently registered for Ward {ward.wardNumber} in {paguthiName} Paguthi.
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-[#FFF8F0] border-b border-slate-200 text-slate-700 font-bold uppercase text-[10px]">
                   <tr>
-                    <td colSpan="6" className="py-6 text-center text-slate-400">
-                      {t('dataTable.noRecords', 'No complaints registered in this ward yet.')}
-                    </td>
+                    <th className="py-3 px-3">Complaint ID</th>
+                    <th className="py-3 px-3">Citizen Info</th>
+                    <th className="py-3 px-3">Category</th>
+                    <th className="py-3 px-3">Grievance Description</th>
+                    <th className="py-3 px-3">Paguthi & Ward</th>
+                    <th className="py-3 px-3">Registration Date</th>
+                    <th className="py-3 px-3">Status</th>
+                    <th className="py-3 px-3">Assigned Secretary</th>
                   </tr>
-                ) : (
-                  issues.map((i) => (
-                    <tr key={i._id} className="hover:bg-slate-50 transition">
-                      <td className="py-3 px-4 font-mono font-bold text-[#A00000]">{i.issueCode}</td>
-                      <td className="py-3 px-4 font-bold text-slate-800 max-w-xs">{i.title}</td>
-                      <td className="py-3 px-4">{i.category}</td>
-                      <td className="py-3 px-4">
-                        <PriorityBadge priority={i.priority} />
-                      </td>
-                      <td className="py-3 px-4">
-                        <div>
-                          <p className="font-bold text-slate-800">{i.citizenName}</p>
-                          <p className="text-[11px] font-mono text-slate-500">{i.citizenMobile}</p>
-                        </div>
-                      </td>
-                      <td className="py-3 px-4">
-                        <StatusBadge status={i.status} />
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {issues.map((i) => {
+                    const complaintId = i.issueCode || `CMP-${i.id || i._id}`;
+                    const citizenName = i.citizenName || 'N/A';
+                    const citizenMobile = i.citizenMobile || 'N/A';
+                    const category = i.category || 'General';
+                    const description = i.description || i.title || '-';
+                    const complaintPaguthi = i.paguthi || paguthiName;
+                    const assignedWardLabel = `Ward ${ward.wardNumber}${ward.wardName ? ' - ' + ward.wardName : ''}`;
+                    const regDate = i.createdAt
+                      ? new Date(i.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+                      : '-';
+                    const assignedSec = i.assignedWardSecretary?.name || ward.wardSecretary || 'Not Assigned';
+
+                    return (
+                      <tr key={i._id || i.id} className="hover:bg-slate-50 transition">
+                        <td className="py-3 px-3 font-mono font-bold text-[#A00000] whitespace-nowrap">
+                          {complaintId}
+                        </td>
+                        <td className="py-3 px-3">
+                          <p className="font-bold text-slate-800">{citizenName}</p>
+                          <p className="text-[11px] font-mono text-slate-500">{citizenMobile}</p>
+                        </td>
+                        <td className="py-3 px-3 whitespace-nowrap">
+                          <span className="px-2 py-0.5 rounded-full text-[10.5px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                            {category}
+                          </span>
+                        </td>
+                        <td className="py-3 px-3 max-w-xs">
+                          <p className="font-medium text-slate-800 line-clamp-2 leading-relaxed" title={description}>
+                            {description}
+                          </p>
+                        </td>
+                        <td className="py-3 px-3">
+                          <p className="font-bold text-[#A00000]">{complaintPaguthi}</p>
+                          <p className="text-[11px] text-slate-500">{assignedWardLabel}</p>
+                        </td>
+                        <td className="py-3 px-3 text-slate-600 whitespace-nowrap font-medium">
+                          {regDate}
+                        </td>
+                        <td className="py-3 px-3 whitespace-nowrap">
+                          <StatusBadge status={i.status} />
+                        </td>
+                        <td className="py-3 px-3 whitespace-nowrap">
+                          <span
+                            className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${
+                              assignedSec !== 'Not Assigned'
+                                ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                : 'bg-slate-100 text-slate-500 border-slate-200'
+                            }`}
+                          >
+                            {assignedSec}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 
@@ -406,7 +449,7 @@ export const WardDetailPage = () => {
             </div>
             <div>
               <h3 className="text-base font-extrabold text-slate-900">
-                {ward.wardSecretary || ward.officeBearer || t('ward.unassignedSecretary', 'To be designated')}
+                {ward.wardSecretary || 'Not Assigned'}
               </h3>
               <p className="text-xs text-[#850000] font-bold">
                 {t('ward.secretaryDetailsTitle', 'Ward Secretary')} – {t('district.wardLabel', 'Ward')} {ward.wardNumber} ({paguthiName} {t('common.paguthi', 'Paguthi')})
@@ -417,7 +460,7 @@ export const WardDetailPage = () => {
           <div className="space-y-3 text-xs">
             <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
               <span className="text-slate-500">{t('district.contactLabel', 'Contact Number')}:</span>
-              <strong className="text-slate-900 font-mono font-bold">{ward.contactNumber || t('common.none', 'Not Provided')}</strong>
+              <strong className="text-slate-900 font-mono font-bold">{ward.contactNumber || 'Not Available'}</strong>
             </div>
             <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
               <span className="text-slate-500">{t('district.adminZoneLabel', 'Administrative Zone')}:</span>

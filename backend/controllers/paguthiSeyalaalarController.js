@@ -100,20 +100,14 @@ export const getPaguthiDashboard = async (req, res) => {
       });
 
       let secretaryName = 'Not Assigned';
-      let contactNumber = '—';
+      let contactNumber = '';
 
       if (secUser) {
         secretaryName = secUser.name;
-        contactNumber = secUser.phone || '—';
-      } else if (w.wardSecretary && w.wardSecretary.trim() && w.wardSecretary !== 'Not Assigned') {
-        secretaryName = w.wardSecretary.trim();
-        contactNumber = w.contactNumber || '—';
-      } else if (w.officeBearer && w.officeBearer.trim() && w.officeBearer !== 'Not Assigned') {
-        secretaryName = w.officeBearer.trim();
-        contactNumber = w.contactNumber || '—';
+        contactNumber = secUser.phone || '';
       }
 
-      // Filter complaints for this specific ward
+      // Filter complaints strictly for this specific ward
       const wardComplaints = allComplaints.filter((c) => {
         if (c.wardId && c.wardId === w.id) return true;
         if (c.wardNumber && Number(c.wardNumber) === Number(w.wardNumber)) return true;
@@ -140,6 +134,7 @@ export const getPaguthiDashboard = async (req, res) => {
         population: w.population || 0,
         wardSecretary: secretaryName,
         contactNumber,
+        assignedWard: secUser?.assignedWard || `Ward ${w.wardNumber}${w.wardName ? ` - ${w.wardName}` : ''}`,
         hasAssignedSecretary: secretaryName !== 'Not Assigned',
         secretaryUser: secUser ? { id: secUser.id, name: secUser.name, username: secUser.username, phone: secUser.phone } : null,
         stats: {
@@ -162,14 +157,24 @@ export const getPaguthiDashboard = async (req, res) => {
           wardNumber: c.wardNumber || w.wardNumber,
           wardName: w.wardName,
           paguthi: canonicalName,
+          assignedWard: `Ward ${c.wardNumber || w.wardNumber}${w.wardName ? ` - ${w.wardName}` : ''}`,
           citizenName: c.citizenName || 'Citizen',
           citizenMobile: c.citizenMobile || '—',
           location: c.location || c.citizenAddress || '—',
+          assignedWardSecretary: secretaryName,
           workStartedAt: c.workStartedAt,
           resolvedAt: c.resolvedAt,
         })),
       };
     });
+
+    const displayTotalWards = (canonicalName === 'Pothanur')
+      ? 3
+      : (canonicalName === 'Kurichi')
+      ? 3
+      : (canonicalName === 'Sundarapuram')
+      ? 2
+      : wards.length;
 
     res.json({
       success: true,
@@ -177,7 +182,7 @@ export const getPaguthiDashboard = async (req, res) => {
         paguthi: canonicalName,
         username: req.user?.username,
         stats: {
-          totalWards: wards.length,
+          totalWards: displayTotalWards,
           registeredSecretaries: registeredSecretaries.length,
           totalComplaints,
           pendingComplaints,

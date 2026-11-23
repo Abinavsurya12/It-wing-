@@ -330,13 +330,10 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                       </span>
                     </div>
 
-                    {/* Paguthi Title & Subtitle */}
+                    {/* Paguthi Title */}
                     <h3 className="text-xl sm:text-2xl font-black text-slate-900 mt-3 sm:mt-4 group-hover:text-[#850000] transition tracking-tight">
                       {paguthi}
                     </h3>
-                    <p className="text-xs text-[#850000] font-bold mt-0.5">
-                      Paguthi Administration
-                    </p>
 
                     {/* Live Database Statistics Counts */}
                     <div className="grid grid-cols-2 gap-2 sm:gap-2.5 mt-4 sm:mt-5 pt-3 sm:pt-4 border-t border-slate-100 text-xs">
@@ -576,7 +573,7 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                         <div className="bg-slate-50 rounded-xl p-2.5 border border-slate-200 space-y-1.5 text-xs">
                           <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-1 text-[11px]">
                             <span className="text-slate-500 font-medium">Secretary:</span>
-                            {w.hasAssignedSecretary ? (
+                            {w.hasAssignedSecretary && w.wardSecretary && w.wardSecretary !== 'Not Assigned' ? (
                               <span className="font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 text-[10.5px] truncate max-w-[160px]">
                                 {w.wardSecretary}
                               </span>
@@ -592,7 +589,7 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                               <Phone className="w-3 h-3 text-slate-400 flex-shrink-0" /> Contact:
                             </span>
                             <span className="font-semibold text-slate-700 font-mono text-[10.5px]">
-                              {w.contactNumber}
+                              {w.contactNumber || 'Not Available'}
                             </span>
                           </div>
                         </div>
@@ -846,13 +843,13 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                     <div>
                       Secretary:{' '}
                       <strong className="text-white">
-                        {selectedWardForComplaints.wardSecretary}
+                        {selectedWardForComplaints.wardSecretary || 'Not Assigned'}
                       </strong>
                     </div>
                     <div>
                       Contact:{' '}
                       <strong className="text-[#FFD32A] font-mono">
-                        {selectedWardForComplaints.contactNumber}
+                        {selectedWardForComplaints.contactNumber || 'Not Available'}
                       </strong>
                     </div>
                   </div>
@@ -894,29 +891,44 @@ export const PaguthiSeyalaalarDashboardPage = () => {
               {/* Modal Body: Complaints List */}
               <div className="p-3 sm:p-6 overflow-y-auto flex-1 space-y-3">
                 {getFilteredWardComplaints(selectedWardForComplaints.complaints).length === 0 ? (
-                  <div className="text-center py-12 text-slate-500 text-xs">
-                    No complaints registered in this status category for Ward {selectedWardForComplaints.wardNumber}.
+                  <div className="py-12 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200 p-8">
+                    <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-3">
+                      <CheckCircle2 className="w-6 h-6" />
+                    </div>
+                    <h4 className="text-base font-bold text-slate-800">No Complaints Found</h4>
+                    <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1">
+                      No citizen complaints found for Ward {selectedWardForComplaints.wardNumber} in {paguthi} Paguthi.
+                    </p>
                   </div>
                 ) : (
                   getFilteredWardComplaints(selectedWardForComplaints.complaints).map((c) => {
                     const isResolved = ['Completed', 'Resolved', 'Closed'].includes(c.status);
                     const isInProgress = c.status === 'In Progress';
+                    const complaintId = c.issueCode || `CMP-${c.id}`;
+                    const citizenName = c.citizenName || 'N/A';
+                    const citizenMobile = c.citizenMobile || 'N/A';
+                    const category = c.category || 'General';
+                    const description = c.description || c.title || '-';
+                    const regDate = c.createdAt
+                      ? new Date(c.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+                      : '-';
+                    const assignedSec = selectedWardForComplaints.wardSecretary || 'Not Assigned';
 
                     return (
                       <div
                         key={c.id}
-                        className="bg-white p-3.5 sm:p-4 rounded-xl sm:rounded-2xl border border-slate-200 hover:border-[#850000] shadow-2xs transition space-y-2"
+                        className="bg-white p-3.5 sm:p-4 rounded-xl sm:rounded-2xl border border-slate-200 hover:border-[#850000] shadow-2xs transition space-y-2.5"
                       >
                         <div className="flex flex-wrap items-start justify-between gap-2">
                           <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                             <span className="font-mono font-bold text-[#850000] text-xs">
-                              {c.issueCode || `GRI-${c.id}`}
+                              {complaintId}
                             </span>
                             <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
-                              {c.category}
+                              {category}
                             </span>
-                            <span className="text-[10px] sm:text-[10.5px] text-slate-400">
-                              {c.createdAt ? new Date(c.createdAt).toLocaleDateString('en-GB') : ''}
+                            <span className="text-[10px] sm:text-[10.5px] text-slate-500 font-medium">
+                              {regDate}
                             </span>
                           </div>
 
@@ -936,15 +948,24 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                         </div>
 
                         <h4 className="text-xs sm:text-sm font-bold text-slate-900 leading-snug">{c.title}</h4>
-                        <p className="text-xs text-slate-600 leading-relaxed break-words">{c.description}</p>
+                        <p className="text-xs text-slate-600 leading-relaxed break-words">{description}</p>
 
-                        <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between text-[10.5px] sm:text-[11px] text-slate-500 gap-1.5">
+                        <div className="pt-2 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 text-[10.5px] sm:text-[11px] text-slate-600 bg-slate-50/70 p-2 rounded-lg">
                           <div>
-                            Citizen: <strong className="text-slate-800">{c.citizenName}</strong> • Phone:{' '}
-                            <strong className="text-slate-800 font-mono">{c.citizenMobile}</strong>
+                            <span className="text-slate-400 block text-[10px] uppercase font-bold">Citizen & Mobile</span>
+                            <strong className="text-slate-800">{citizenName}</strong> •{' '}
+                            <span className="font-mono font-semibold text-slate-700">{citizenMobile}</span>
                           </div>
                           <div>
-                            Location: <span className="font-medium text-slate-700">{c.location}</span>
+                            <span className="text-slate-400 block text-[10px] uppercase font-bold">Paguthi & Ward</span>
+                            <strong className="text-[#850000]">{paguthi}</strong> •{' '}
+                            <span className="text-slate-700">Ward {selectedWardForComplaints.wardNumber}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400 block text-[10px] uppercase font-bold">Assigned Secretary</span>
+                            <span className={`font-bold ${assignedSec !== 'Not Assigned' ? 'text-emerald-800' : 'text-slate-500'}`}>
+                              {assignedSec}
+                            </span>
                           </div>
                         </div>
                       </div>

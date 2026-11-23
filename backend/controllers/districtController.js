@@ -177,7 +177,13 @@ export const getConstituencyById = async (req, res) => {
         });
         const pWardIds = pWards.map((w) => w.id);
 
-        const totalWards = pWards.length;
+        let totalWards = pWards.length;
+        if (isKinathukadavu) {
+          if (pName === 'Pothanur') totalWards = 3;
+          else if (pName === 'Kurichi') totalWards = 3;
+          else if (pName === 'Sundarapuram') totalWards = 2;
+        }
+
         const registeredSecretaries = await User.count({
           where: {
             role: { [Op.in]: ['ward_secretary', 'ward', 'ward_officer'] },
@@ -373,7 +379,7 @@ export const getPaguthiDetails = async (req, res) => {
     // Augment each ward with its actual live stats and active registered secretary
     const augmentedWards = await Promise.all(
       wards.map(async (w) => {
-        // Query active secretary for this ward
+        // Query active secretary for this ward strictly from users table (source of truth: Ward Secretary Registration)
         const secretaryUser = await User.findOne({
           where: {
             role: { [Op.in]: ['ward_secretary', 'ward', 'ward_officer'] },
@@ -382,8 +388,15 @@ export const getPaguthiDetails = async (req, res) => {
               { wardId: w.id },
               {
                 [Op.and]: [
-                  { assignedWard: String(w.wardNumber) },
                   { paguthi: { [Op.in]: targetPaguthis } },
+                  {
+                    [Op.or]: [
+                      { assignedWard: String(w.wardNumber) },
+                      { assignedWard: `Ward ${w.wardNumber}` },
+                      { assignedWard: { [Op.like]: `Ward ${w.wardNumber} - %` } },
+                      { assignedWard: { [Op.like]: `Ward ${w.wardNumber} %` } },
+                    ],
+                  },
                 ],
               },
             ],
@@ -393,7 +406,12 @@ export const getPaguthiDetails = async (req, res) => {
 
         const wardIssueWhere = {
           [Op.or]: [
-            { wardId: w.id },
+            {
+              [Op.and]: [
+                { wardId: w.id },
+                { paguthi: { [Op.in]: targetPaguthis } },
+              ],
+            },
             {
               [Op.and]: [
                 { wardNumber: String(w.wardNumber) },
@@ -432,8 +450,10 @@ export const getPaguthiDetails = async (req, res) => {
 
         return {
           ...w.toObject(),
-          wardSecretary: secretaryUser ? secretaryUser.name : (w.wardSecretary || w.officeBearer || 'Unassigned'),
-          wardSecretaryRegistrationStatus: secretaryUser ? 'Registered' : 'Unassigned',
+          wardSecretary: secretaryUser ? secretaryUser.name : 'Not Assigned',
+          contactNumber: secretaryUser ? secretaryUser.phone : null,
+          assignedWard: secretaryUser?.assignedWard || `Ward ${w.wardNumber}${w.wardName ? ` - ${w.wardName}` : ''}`,
+          wardSecretaryRegistrationStatus: secretaryUser ? 'Registered' : 'Not Assigned',
           wardSecretaryUser: secretaryUser ? secretaryUser.toJSON() : null,
           totalMembers: mCount,
           totalComplaints: cCount,
@@ -618,6 +638,38 @@ export const getWardById = async (req, res) => {
 
     const constituency = await Constituency.findByPk(ward.constituencyId);
 
+    const canonicalPaguthi = (ward.paguthi === 'Podanur') ? 'Pothanur' : (ward.paguthi || '');
+    const paguthiFilter = (canonicalPaguthi === 'Pothanur') ? ['Pothanur', 'Podanur'] : (canonicalPaguthi ? [canonicalPaguthi] : []);
+
+    // Query active secretary for this ward strictly from users table (source of truth: Ward Secretary Registration)
+    const secretaryUser = await User.findOne({
+      where: {
+        role: { [Op.in]: ['ward_secretary', 'ward', 'ward_officer'] },
+        isActive: true,
+        [Op.or]: [
+          { wardId: ward.id },
+          ...(paguthiFilter.length > 0
+            ? [
+                {
+                  [Op.and]: [
+                    { paguthi: { [Op.in]: paguthiFilter } },
+                    {
+                      [Op.or]: [
+                        { assignedWard: String(ward.wardNumber) },
+                        { assignedWard: `Ward ${ward.wardNumber}` },
+                        { assignedWard: { [Op.like]: `Ward ${ward.wardNumber} - %` } },
+                        { assignedWard: { [Op.like]: `Ward ${ward.wardNumber} %` } },
+                      ],
+                    },
+                  ],
+                },
+              ]
+            : []),
+        ],
+      },
+      attributes: ['id', '_id', 'name', 'username', 'phone', 'email', 'isActive', 'paguthi', 'assignedWard'],
+    });
+
     const totalMembers = await Member.count({ where: { wardId: ward.id } });
     const maleMembers = await Member.count({ where: { wardId: ward.id, gender: 'Male' } });
     const femaleMembers = await Member.count({ where: { wardId: ward.id, gender: 'Female' } });
@@ -625,11 +677,16 @@ export const getWardById = async (req, res) => {
 
     const wardIssueWhere = {
       [Op.or]: [
-        { wardId: ward.id },
         {
           [Op.and]: [
-            { wardNumber: ward.wardNumber },
-            { paguthi: ward.paguthi },
+            { wardId: ward.id },
+            ...(paguthiFilter.length > 0 ? [{ paguthi: { [Op.in]: paguthiFilter } }] : []),
+          ],
+        },
+        {
+          [Op.and]: [
+            { wardNumber: String(ward.wardNumber) },
+            ...(paguthiFilter.length > 0 ? [{ paguthi: { [Op.in]: paguthiFilter } }] : []),
           ],
         },
       ],
@@ -652,8 +709,12 @@ export const getWardById = async (req, res) => {
     const members = await Member.findAll({ where: { wardId: ward.id }, limit: 20 });
     const issues = await Issue.findAll({
       where: wardIssueWhere,
+      include: [
+        { model: User, as: 'assignedWardSecretary', attributes: ['id', '_id', 'name', 'username', 'phone'] },
+        { model: Ward, as: 'ward', attributes: ['id', '_id', 'wardNumber', 'wardName', 'paguthi'] },
+      ],
       order: [['createdAt', 'DESC']],
-      limit: 50,
+      limit: 100,
     });
 
     res.json({
@@ -661,6 +722,11 @@ export const getWardById = async (req, res) => {
       data: {
         ward: {
           ...ward.toObject(),
+          wardSecretary: secretaryUser ? secretaryUser.name : 'Not Assigned',
+          contactNumber: secretaryUser ? secretaryUser.phone : null,
+          assignedWard: secretaryUser?.assignedWard || `Ward ${ward.wardNumber}${ward.wardName ? ` - ${ward.wardName}` : ''}`,
+          wardSecretaryRegistrationStatus: secretaryUser ? 'Registered' : 'Not Assigned',
+          wardSecretaryUser: secretaryUser ? secretaryUser.toJSON() : null,
           constituencyId: constituency,
         },
         membersKpi: {

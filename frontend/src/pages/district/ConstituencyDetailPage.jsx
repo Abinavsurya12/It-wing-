@@ -157,23 +157,25 @@ export const ConstituencyDetailPage = () => {
                     <div className="w-10 h-10 rounded-xl bg-[#FFF8F0] border border-[#FFE5A3] flex items-center justify-center text-[#A00000] shadow-xs group-hover:scale-105 transition">
                       <MapPin className="w-5 h-5" />
                     </div>
-                    <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded bg-red-50 text-[#A00000] border border-red-200">
-                      {t('constituency.paguthiNumber', { number: idx + 1, defaultValue: `Paguthi ${idx + 1}` })}
-                    </span>
                   </div>
 
                   <h3 className="text-base font-extrabold text-slate-900 mt-3 group-hover:text-[#A00000] transition">
                     {p.name}
                   </h3>
-                  <p className="text-xs text-[#850000] font-semibold mt-0.5">
-                    {t('constituency.paguthiAdminTitle', 'Paguthi Administration')}
-                  </p>
 
                   {/* Key Statistics Counts */}
                   <div className="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-slate-100 text-xs">
                     <div className="bg-[#FFF8F0] p-2 rounded-xl border border-[#FFE5A3]/40">
                       <span className="text-[10.5px] text-slate-500 block">{t('constituency.totalWards', 'Total Wards')}</span>
-                      <strong className="text-slate-900 font-bold text-sm">{p.totalWards || 0}</strong>
+                      <strong className="text-slate-900 font-bold text-sm">
+                        {p.name === 'Pothanur'
+                          ? '3 Wards'
+                          : p.name === 'Kurichi'
+                          ? '3 Wards'
+                          : p.name === 'Sundarapuram'
+                          ? '2 Wards'
+                          : `${p.totalWards || 0} ${p.totalWards === 1 ? 'Ward' : 'Wards'}`}
+                      </strong>
                     </div>
                     <div className="bg-emerald-50 p-2 rounded-xl border border-emerald-200/50">
                       <span className="text-[10.5px] text-emerald-700 block">Registered Secs</span>
