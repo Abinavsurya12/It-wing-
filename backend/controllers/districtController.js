@@ -59,6 +59,7 @@ const KINATHUKADAVU_LOCAL_BODIES = [
   'Vellalur Nagaram',
   'Othakkalmandapam Peruratchi',
   'Chettipalayam Peruratchi',
+  'Kinathukadavu Ondriyam',
 ];
 
 // @desc    Get all constituencies
@@ -303,14 +304,35 @@ export const getPaguthiDetails = async (req, res) => {
       }
     }
 
+    // Paguthi-to-Ward mapping for municipal administrative jurisdictions
+    const PAGUTHI_WARD_MAP = {
+      Pothanur: [95, 99, 100],
+      Podanur: [95, 99, 100],
+      Kurichi: [85, 96, 98],
+      Sundarapuram: [94],
+      Malumichampatti: [95],
+      'Kinathukadavu Ondriyam': [2, 4],
+    };
+
+    let wardWhere = {
+      [Op.or]: [
+        { constituencyId: constituency.id, paguthi: { [Op.in]: targetPaguthis } },
+        { paguthi: { [Op.in]: targetPaguthis } },
+      ],
+    };
+
+    if (PAGUTHI_WARD_MAP[canonicalPaguthiName]) {
+      wardWhere = {
+        [Op.or]: [
+          { paguthi: { [Op.in]: targetPaguthis } },
+          { wardNumber: { [Op.in]: PAGUTHI_WARD_MAP[canonicalPaguthiName] } },
+        ],
+      };
+    }
+
     // Find all wards for this paguthi
     const wards = await Ward.findAll({
-      where: {
-        [Op.or]: [
-          { constituencyId: constituency.id, paguthi: { [Op.in]: targetPaguthis } },
-          { paguthi: { [Op.in]: targetPaguthis } },
-        ],
-      },
+      where: wardWhere,
       order: [['wardNumber', 'ASC']],
     });
 
@@ -380,29 +402,50 @@ export const getPaguthiDetails = async (req, res) => {
     const augmentedWards = await Promise.all(
       wards.map(async (w) => {
         // Query active secretary for this ward strictly from users table (source of truth: Ward Secretary Registration)
+        const wardPaguthis = (w.paguthi === 'Pothanur' || w.paguthi === 'Podanur')
+          ? ['Pothanur', 'Podanur']
+          : (w.paguthi ? [w.paguthi] : targetPaguthis);
+
         const secretaryUser = await User.findOne({
           where: {
             role: { [Op.in]: ['ward_secretary', 'ward', 'ward_officer'] },
             isActive: true,
             [Op.or]: [
               { wardId: w.id },
-              {
-                [Op.and]: [
-                  { paguthi: { [Op.in]: targetPaguthis } },
-                  {
-                    [Op.or]: [
-                      { assignedWard: String(w.wardNumber) },
-                      { assignedWard: `Ward ${w.wardNumber}` },
-                      { assignedWard: { [Op.like]: `Ward ${w.wardNumber} - %` } },
-                      { assignedWard: { [Op.like]: `Ward ${w.wardNumber} %` } },
-                    ],
-                  },
-                ],
-              },
+              ...(wardPaguthis.length > 0
+                ? [
+                    {
+                      [Op.and]: [
+                        { paguthi: { [Op.in]: wardPaguthis } },
+                        {
+                          [Op.or]: [
+                            { assignedWard: String(w.wardNumber) },
+                            { assignedWard: `Ward ${w.wardNumber}` },
+                            { assignedWard: `Ward ${w.wardNumber} - ${w.wardName}` },
+                            { assignedWard: { [Op.like]: `Ward ${w.wardNumber} - %` } },
+                            { assignedWard: { [Op.like]: `Ward ${w.wardNumber} %` } },
+                            { assignedWard: { [Op.like]: `%Ward ${w.wardNumber}%` } },
+                          ],
+                        },
+                      ],
+                    },
+                  ]
+                : [
+                    { assignedWard: String(w.wardNumber) },
+                    { assignedWard: `Ward ${w.wardNumber}` },
+                    { assignedWard: `Ward ${w.wardNumber} - ${w.wardName}` },
+                    { assignedWard: { [Op.like]: `Ward ${w.wardNumber} - %` } },
+                  ]),
             ],
           },
+          order: [['id', 'DESC']],
           attributes: ['id', '_id', 'name', 'username', 'phone', 'email', 'isActive', 'paguthi', 'assignedWard'],
         });
+
+        const cleanSecName = secretaryUser
+          ? secretaryUser.name.replace(/\s*\([^)]*Secretary[^)]*\)/i, '').trim()
+          : 'Not Assigned';
+        const cleanPhone = secretaryUser ? (secretaryUser.phone || null) : null;
 
         const wardIssueWhere = {
           [Op.or]: [
@@ -418,6 +461,7 @@ export const getPaguthiDetails = async (req, res) => {
                 { paguthi: { [Op.in]: targetPaguthis } },
               ],
             },
+            { wardId: w.id },
           ],
         };
 
@@ -450,8 +494,8 @@ export const getPaguthiDetails = async (req, res) => {
 
         return {
           ...w.toObject(),
-          wardSecretary: secretaryUser ? secretaryUser.name : 'Not Assigned',
-          contactNumber: secretaryUser ? secretaryUser.phone : null,
+          wardSecretary: cleanSecName,
+          contactNumber: cleanPhone,
           assignedWard: secretaryUser?.assignedWard || `Ward ${w.wardNumber}${w.wardName ? ` - ${w.wardName}` : ''}`,
           wardSecretaryRegistrationStatus: secretaryUser ? 'Registered' : 'Not Assigned',
           wardSecretaryUser: secretaryUser ? secretaryUser.toJSON() : null,
@@ -657,18 +701,31 @@ export const getWardById = async (req, res) => {
                       [Op.or]: [
                         { assignedWard: String(ward.wardNumber) },
                         { assignedWard: `Ward ${ward.wardNumber}` },
+                        { assignedWard: `Ward ${ward.wardNumber} - ${ward.wardName}` },
                         { assignedWard: { [Op.like]: `Ward ${ward.wardNumber} - %` } },
                         { assignedWard: { [Op.like]: `Ward ${ward.wardNumber} %` } },
+                        { assignedWard: { [Op.like]: `%Ward ${ward.wardNumber}%` } },
                       ],
                     },
                   ],
                 },
               ]
-            : []),
+            : [
+                { assignedWard: String(ward.wardNumber) },
+                { assignedWard: `Ward ${ward.wardNumber}` },
+                { assignedWard: `Ward ${ward.wardNumber} - ${ward.wardName}` },
+                { assignedWard: { [Op.like]: `Ward ${ward.wardNumber} - %` } },
+              ]),
         ],
       },
+      order: [['id', 'DESC']],
       attributes: ['id', '_id', 'name', 'username', 'phone', 'email', 'isActive', 'paguthi', 'assignedWard'],
     });
+
+    const cleanSecName = secretaryUser
+      ? secretaryUser.name.replace(/\s*\([^)]*Secretary[^)]*\)/i, '').trim()
+      : 'Not Assigned';
+    const cleanPhone = secretaryUser ? (secretaryUser.phone || null) : null;
 
     const totalMembers = await Member.count({ where: { wardId: ward.id } });
     const maleMembers = await Member.count({ where: { wardId: ward.id, gender: 'Male' } });
@@ -677,18 +734,17 @@ export const getWardById = async (req, res) => {
 
     const wardIssueWhere = {
       [Op.or]: [
-        {
-          [Op.and]: [
-            { wardId: ward.id },
-            ...(paguthiFilter.length > 0 ? [{ paguthi: { [Op.in]: paguthiFilter } }] : []),
-          ],
-        },
-        {
-          [Op.and]: [
-            { wardNumber: String(ward.wardNumber) },
-            ...(paguthiFilter.length > 0 ? [{ paguthi: { [Op.in]: paguthiFilter } }] : []),
-          ],
-        },
+        { wardId: ward.id },
+        ...(paguthiFilter.length > 0
+          ? [
+              {
+                [Op.and]: [
+                  { wardNumber: String(ward.wardNumber) },
+                  { paguthi: { [Op.in]: paguthiFilter } },
+                ],
+              },
+            ]
+          : [{ wardNumber: String(ward.wardNumber) }]),
       ],
     };
 
@@ -709,10 +765,6 @@ export const getWardById = async (req, res) => {
     const members = await Member.findAll({ where: { wardId: ward.id }, limit: 20 });
     const issues = await Issue.findAll({
       where: wardIssueWhere,
-      include: [
-        { model: User, as: 'assignedWardSecretary', attributes: ['id', '_id', 'name', 'username', 'phone'] },
-        { model: Ward, as: 'ward', attributes: ['id', '_id', 'wardNumber', 'wardName', 'paguthi'] },
-      ],
       order: [['createdAt', 'DESC']],
       limit: 100,
     });
@@ -722,8 +774,8 @@ export const getWardById = async (req, res) => {
       data: {
         ward: {
           ...ward.toObject(),
-          wardSecretary: secretaryUser ? secretaryUser.name : 'Not Assigned',
-          contactNumber: secretaryUser ? secretaryUser.phone : null,
+          wardSecretary: cleanSecName,
+          contactNumber: cleanPhone,
           assignedWard: secretaryUser?.assignedWard || `Ward ${ward.wardNumber}${ward.wardName ? ` - ${ward.wardName}` : ''}`,
           wardSecretaryRegistrationStatus: secretaryUser ? 'Registered' : 'Not Assigned',
           wardSecretaryUser: secretaryUser ? secretaryUser.toJSON() : null,
@@ -742,7 +794,14 @@ export const getWardById = async (req, res) => {
           pendingIssues,
         },
         members,
-        issues,
+        issues: issues.map((iss) => {
+          const item = iss.toJSON ? iss.toJSON() : iss;
+          return {
+            ...item,
+            assignedWardSecretary: secretaryUser ? { name: cleanSecName, phone: cleanPhone } : null,
+            ward: ward.toObject(),
+          };
+        }),
       },
     });
   } catch (error) {

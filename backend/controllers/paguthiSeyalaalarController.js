@@ -30,15 +30,37 @@ export const getPaguthiDashboard = async (req, res) => {
       : [paguthi];
     const canonicalName = (paguthi === 'Podanur') ? 'Pothanur' : paguthi;
 
+    // Paguthi-to-Ward mapping for municipal administrative jurisdictions
+    const PAGUTHI_WARD_MAP = {
+      Pothanur: [95, 99, 100],
+      Podanur: [95, 99, 100],
+      Kurichi: [85, 96, 98],
+      Sundarapuram: [94],
+      Malumichampatti: [95],
+      'Kinathukadavu Ondriyam': [2, 4],
+    };
+
+    let wardWhere = {
+      paguthi: { [Op.in]: paguthiFilter },
+    };
+
+    if (PAGUTHI_WARD_MAP[canonicalName]) {
+      wardWhere = {
+        [Op.or]: [
+          { paguthi: { [Op.in]: paguthiFilter } },
+          { wardNumber: { [Op.in]: PAGUTHI_WARD_MAP[canonicalName] } },
+        ],
+      };
+    }
+
     // 1. Fetch all wards for this Paguthi
     const wards = await Ward.findAll({
-      where: {
-        paguthi: { [Op.in]: paguthiFilter },
-      },
+      where: wardWhere,
       order: [['wardNumber', 'ASC']],
     });
 
     const wardIds = wards.map((w) => w.id);
+    const targetWardNums = wards.map((w) => w.wardNumber);
 
     // 2. Fetch all active registered ward secretaries for this Paguthi
     const registeredSecretaries = await User.findAll({
@@ -48,8 +70,12 @@ export const getPaguthiDashboard = async (req, res) => {
         [Op.or]: [
           { paguthi: { [Op.in]: paguthiFilter } },
           ...(wardIds.length > 0 ? [{ wardId: { [Op.in]: wardIds } }] : []),
+          ...(targetWardNums.length > 0
+            ? targetWardNums.map((wn) => ({ assignedWard: { [Op.like]: `%Ward ${wn}%` } }))
+            : []),
         ],
       },
+      order: [['id', 'DESC']],
       attributes: ['id', '_id', 'name', 'username', 'phone', 'email', 'assignedWard', 'paguthi', 'wardId'],
     });
 
@@ -103,7 +129,7 @@ export const getPaguthiDashboard = async (req, res) => {
       let contactNumber = '';
 
       if (secUser) {
-        secretaryName = secUser.name;
+        secretaryName = secUser.name.replace(/\s*\([^)]*Secretary[^)]*\)/i, '').trim();
         contactNumber = secUser.phone || '';
       }
 
