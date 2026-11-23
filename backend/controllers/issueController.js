@@ -370,6 +370,18 @@ export const getIssueById = async (req, res) => {
       }
     }
 
+    // Strict Data Filtering: Citizen / User can ONLY view and download their own complaints
+    if (['citizen', 'user'].includes(req.user?.role)) {
+      const isOwnerById = issue.userId && (Number(issue.userId) === Number(req.user.id) || String(issue.userId) === String(req.user._id));
+      const isOwnerByPhone = req.user.phone && issue.citizenMobile && (String(issue.citizenMobile).trim() === String(req.user.phone).trim());
+      if (!isOwnerById && !isOwnerByPhone) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied. You can only view and download your own complaints.',
+        });
+      }
+    }
+
     const activities = await IssueActivity.findAll({
       where: { issueId: issue.id },
       include: [{ model: User, as: 'performer', attributes: ['id', 'name', 'role'] }],
@@ -778,6 +790,18 @@ export const addIssueActivity = async (req, res) => {
       }
     }
 
+    // Strict Data Filtering: Citizen / User can ONLY view and download their own complaints
+    if (['citizen', 'user'].includes(req.user?.role)) {
+      const isOwnerById = issue.userId && (Number(issue.userId) === Number(req.user.id) || String(issue.userId) === String(req.user._id));
+      const isOwnerByPhone = req.user.phone && issue.citizenMobile && (String(issue.citizenMobile).trim() === String(req.user.phone).trim());
+      if (!isOwnerById && !isOwnerByPhone) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied. You can only view and download your own complaints.',
+        });
+      }
+    }
+
     const activity = await IssueActivity.create({
       issueId: issue.id,
       performedBy: req.user ? req.user.id : null,
@@ -839,6 +863,18 @@ export const deleteIssue = async (req, res) => {
         return res.status(403).json({
           success: false,
           message: 'Access denied. You can only view complaints in your assigned municipal ward and paguthi.',
+        });
+      }
+    }
+
+    // Strict Data Filtering: Citizen / User can ONLY view and download their own complaints
+    if (['citizen', 'user'].includes(req.user?.role)) {
+      const isOwnerById = issue.userId && (Number(issue.userId) === Number(req.user.id) || String(issue.userId) === String(req.user._id));
+      const isOwnerByPhone = req.user.phone && issue.citizenMobile && (String(issue.citizenMobile).trim() === String(req.user.phone).trim());
+      if (!isOwnerById && !isOwnerByPhone) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied. You can only view and download your own complaints.',
         });
       }
     }

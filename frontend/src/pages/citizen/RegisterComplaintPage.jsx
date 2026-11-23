@@ -14,12 +14,15 @@ import {
   UploadCloud,
   X,
   Image as ImageIcon,
+  Download,
+  Loader2,
 } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useNotification } from '../../context/NotificationContext';
 import LanguageSwitcher from '../../components/common/LanguageSwitcher';
 import Footer from '../../components/layout/Footer';
+import { downloadTamilComplaintPdf } from '../../utils/tamilComplaintPdfGenerator';
 import {
   PAGUTHI_LABEL,
   PAGUTHI_OPTIONS,
@@ -51,6 +54,34 @@ export const RegisterComplaintPage = () => {
   const [wards, setWards] = useState([]);
   const [loading, setLoading] = useState(false);
   const [submittedCode, setSubmittedCode] = useState('');
+  const [submittedComplaint, setSubmittedComplaint] = useState(null);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+
+  const handleDownloadSubmittedTamilPdf = async () => {
+    if (!submittedComplaint) return;
+    try {
+      setDownloadingPdf(true);
+      let fullComplaint = submittedComplaint;
+      const fetchId = submittedComplaint.id || submittedComplaint._id;
+      if (fetchId) {
+        try {
+          const res = await api.get(`/issues/${fetchId}`);
+          if (res.data?.success && res.data?.data) {
+            fullComplaint = res.data.data.issue || res.data.data;
+          }
+        } catch (fetchErr) {
+          console.warn('Using submitted complaint object for PDF:', fetchErr.message);
+        }
+      }
+      await downloadTamilComplaintPdf(fullComplaint, user);
+      notifySuccess('Tamil complaint PDF downloaded successfully! (புகார் ஒப்புகைச் சீட்டு பதிவிறக்கம் செய்யப்பட்டது)');
+    } catch (err) {
+      console.error('Failed to download Tamil complaint PDF:', err);
+      notifyError('Failed to generate Tamil PDF. Please try again.');
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
 
   // Image Upload States
   const [imageFile, setImageFile] = useState(null);
@@ -162,6 +193,7 @@ export const RegisterComplaintPage = () => {
       if (res.data.success) {
         notifySuccess('Complaint registered successfully! ID: ' + (res.data.data.issueCode || res.data.data.complaintId));
         setSubmittedCode(res.data.data.issueCode || res.data.data.complaintId);
+        setSubmittedComplaint(res.data.data);
       }
     } catch (err) {
       notifyError(err.response?.data?.message || 'Failed to register complaint');
@@ -206,7 +238,30 @@ export const RegisterComplaintPage = () => {
                 {submittedCode}
               </div>
 
-              <div className="pt-2 flex justify-center space-x-3">
+              {/* Immediate Tamil PDF Download Button */}
+              <div className="pt-1">
+                <button
+                  type="button"
+                  onClick={handleDownloadSubmittedTamilPdf}
+                  disabled={downloadingPdf}
+                  className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 px-6 py-3 bg-[#A00000] hover:bg-[#850000] text-white rounded-xl text-xs font-bold transition shadow-md cursor-pointer disabled:opacity-50"
+                  title="Download Official Tamil Complaint PDF (புகார் நகல்)"
+                >
+                  {downloadingPdf ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                      <span>{t('common.generatingPdf', 'PDF உருவாக்கப்படுகிறது...')}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-4 h-4 shrink-0 text-[#FFD32A]" />
+                      <span>{t('citizen.downloadTamilPdf', 'Download Tamil PDF (புகார் நகல் பதிவிறக்கம்)')}</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              <div className="pt-2 flex flex-wrap justify-center gap-3">
                 <Link
                   to="/citizen/my-complaints"
                   className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold transition"
@@ -216,6 +271,7 @@ export const RegisterComplaintPage = () => {
                 <button
                   onClick={() => {
                     setSubmittedCode('');
+                    setSubmittedComplaint(null);
                     setFormData({
                       title: '',
                       category: 'Drinking Water',
