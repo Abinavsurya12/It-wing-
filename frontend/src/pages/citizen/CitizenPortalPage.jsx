@@ -290,7 +290,7 @@ export const CitizenPortalPage = () => {
         if (fetchId) {
           const detailRes = await api.get(`/issues/${fetchId}`);
           if (detailRes.data?.success && detailRes.data?.data) {
-            cData = detailRes.data.data;
+            cData = detailRes.data.data.issue || detailRes.data.data;
           }
         }
       } catch (fetchErr) {
@@ -330,7 +330,7 @@ export const CitizenPortalPage = () => {
       doc.setFont('helvetica', 'bold');
       doc.text('OFFICIAL COMPLAINT ACKNOWLEDGEMENT & SUMMARY', margin, currentY);
 
-      const issueCode = cData.issueCode || cData.complaintId || `CMP-${cData.id || 'N/A'}`;
+      const issueCode = cData.issueCode || cData.complaintId || (cData.id ? `CMP-${cData.id}` : 'N/A');
       const regDate = cData.createdAt
         ? new Date(cData.createdAt).toLocaleDateString('en-IN', {
             day: '2-digit',
@@ -351,24 +351,34 @@ export const CitizenPortalPage = () => {
         { align: 'right' }
       );
 
-      currentY += 4;
+      // Status indicator on top sub-header
+      currentY += 4.5;
+      const status = cData.status || 'Pending';
+      const isCompleted = ['Completed', 'Resolved', 'Closed'].includes(status);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(100, 100, 100);
+      doc.text('Current Status: ', margin, currentY);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(isCompleted ? 16 : 180, isCompleted ? 120 : 80, isCompleted ? 60 : 0);
+      doc.text(String(status).toUpperCase(), margin + 21, currentY);
 
-      // Extract and resolve required details
+      currentY += 3.5;
+
+      // Extract and resolve required details from DB/API
       const citizenName = cData.citizenName || currentUser?.name || 'Citizen';
       const citizenMobile = cData.citizenMobile || currentUser?.phone || 'Not Available';
-      const paguthi = cData.paguthi || currentUser?.paguthi || 'Coimbatore';
-      const assignedWard = cData.wardId?.wardName
-        ? `Ward ${cData.wardId.wardNumber} - ${cData.wardId.wardName}`
-        : cData.wardNumber
-        ? `Ward ${cData.wardNumber}${cData.wardName ? ` - ${cData.wardName}` : ''}`
-        : currentUser?.assignedWard || 'Not Assigned';
+      const paguthi = cData.paguthi || cData.ward?.paguthi || currentUser?.paguthi || 'Coimbatore';
+      const wardNum = cData.ward?.wardNumber || cData.wardId?.wardNumber || cData.wardNumber;
+      const wardName = cData.ward?.wardName || cData.wardId?.wardName || cData.wardName;
+      const assignedWard = wardNum
+        ? `Ward ${wardNum}${wardName ? ` - ${wardName}` : ''}`
+        : (currentUser?.assignedWard || 'Not Assigned');
       const constituency =
-        cData.constituency?.name || cData.constituency || currentUser?.constituency || 'Coimbatore';
+        cData.constituency?.name || cData.constituencyName || cData.constituency || currentUser?.constituency || 'Coimbatore';
       const category = cData.category || 'General Civic Grievance';
-      const status = cData.status || 'Pending';
-      const priority = cData.priority || 'Medium';
+      const address = cData.citizenAddress || cData.address || cData.location || currentUser?.address || 'Not Provided';
 
-      // 3. Section 1: Citizen & Jurisdiction Details
       const runAutoTable = (options) => {
         if (typeof doc.autoTable === 'function') {
           doc.autoTable(options);
@@ -377,93 +387,71 @@ export const CitizenPortalPage = () => {
         }
       };
 
+      // 3. Official Complaint Details Table (Exact 1-9 Field Order)
       runAutoTable({
         startY: currentY,
         margin: { left: margin, right: margin },
         head: [
           [
             {
-              content: '1. CITIZEN & JURISDICTION DETAILS',
-              colSpan: 4,
-              styles: { fillColor: [133, 0, 0], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8.5 },
+              content: 'OFFICIAL COMPLAINT DETAILS',
+              colSpan: 2,
+              styles: { fillColor: [133, 0, 0], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 9 },
             },
           ],
         ],
         body: [
           [
-            { content: 'Citizen Name:', styles: { fontStyle: 'bold', fillColor: [250, 248, 245], width: 35 } },
-            citizenName,
-            { content: 'Registered Mobile:', styles: { fontStyle: 'bold', fillColor: [250, 248, 245], width: 38 } },
-            citizenMobile,
+            { content: 'Complaint ID / Reference Number:', styles: { fontStyle: 'bold', fillColor: [250, 248, 245] } },
+            { content: issueCode, styles: { fontStyle: 'bold', textColor: [160, 0, 0] } },
           ],
           [
-            { content: 'Paguthi / Zone:', styles: { fontStyle: 'bold', fillColor: [250, 248, 245] } },
-            paguthi,
-            { content: 'Constituency:', styles: { fontStyle: 'bold', fillColor: [250, 248, 245] } },
-            constituency,
+            { content: 'Citizen Name:', styles: { fontStyle: 'bold', fillColor: [250, 248, 245] } },
+            { content: citizenName },
+          ],
+          [
+            { content: 'Mobile Number:', styles: { fontStyle: 'bold', fillColor: [250, 248, 245] } },
+            { content: citizenMobile },
+          ],
+          [
+            { content: 'Paguthi:', styles: { fontStyle: 'bold', fillColor: [250, 248, 245] } },
+            { content: paguthi },
           ],
           [
             { content: 'Assigned Ward:', styles: { fontStyle: 'bold', fillColor: [250, 248, 245] } },
-            assignedWard,
-            { content: 'District:', styles: { fontStyle: 'bold', fillColor: [250, 248, 245] } },
-            'Coimbatore District',
+            { content: assignedWard },
           ],
-        ],
-        theme: 'grid',
-        styles: { fontSize: 8, cellPadding: 2.5, textColor: [35, 35, 35] },
-      });
-
-      currentY = (doc.lastAutoTable ? doc.lastAutoTable.finalY : currentY + 30) + 4;
-
-      // 4. Section 2: Grievance Record Metadata
-      const isCompleted = ['Completed', 'Resolved', 'Closed'].includes(status);
-      runAutoTable({
-        startY: currentY,
-        margin: { left: margin, right: margin },
-        head: [
           [
-            {
-              content: '2. GRIEVANCE & RECORD METADATA',
-              colSpan: 4,
-              styles: { fillColor: [133, 0, 0], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8.5 },
-            },
+            { content: 'Constituency:', styles: { fontStyle: 'bold', fillColor: [250, 248, 245] } },
+            { content: constituency },
           ],
-        ],
-        body: [
           [
-            { content: 'Complaint Ticket ID:', styles: { fontStyle: 'bold', fillColor: [250, 248, 245], width: 35 } },
-            { content: issueCode, styles: { fontStyle: 'bold', textColor: [160, 0, 0] } },
-            { content: 'Current Status:', styles: { fontStyle: 'bold', fillColor: [250, 248, 245], width: 38 } },
-            {
-              content: status,
-              styles: {
-                fontStyle: 'bold',
-                textColor: isCompleted ? [16, 120, 60] : [180, 80, 0],
-              },
-            },
+            { content: 'Date:', styles: { fontStyle: 'bold', fillColor: [250, 248, 245] } },
+            { content: regDate },
           ],
           [
             { content: 'Category:', styles: { fontStyle: 'bold', fillColor: [250, 248, 245] } },
-            category,
-            { content: 'Priority:', styles: { fontStyle: 'bold', fillColor: [250, 248, 245] } },
-            priority,
+            { content: category },
           ],
           [
-            { content: 'Registration Date:', styles: { fontStyle: 'bold', fillColor: [250, 248, 245] } },
-            regDate,
-            { content: 'Assigned Department:', styles: { fontStyle: 'bold', fillColor: [250, 248, 245] } },
-            cData.assignedDepartment || 'Corporation / Municipal Admin',
+            { content: 'Address:', styles: { fontStyle: 'bold', fillColor: [250, 248, 245] } },
+            { content: address },
           ],
         ],
         theme: 'grid',
-        styles: { fontSize: 8, cellPadding: 2.5, textColor: [35, 35, 35] },
+        styles: { fontSize: 8.5, cellPadding: 2.8, textColor: [35, 35, 35], overflow: 'linebreak' },
+        columnStyles: {
+          0: { cellWidth: 55, fontStyle: 'bold', fillColor: [250, 248, 245] },
+          1: { cellWidth: 127 },
+        },
       });
 
-      currentY = (doc.lastAutoTable ? doc.lastAutoTable.finalY : currentY + 30) + 4;
+      currentY = (doc.lastAutoTable ? doc.lastAutoTable.finalY : currentY + 65) + 5;
 
-      // 5. Section 3: Complaint Subject & Detailed Description
-      const titleText = cData.title || 'Civic Issue Grievance';
-      const descText = cData.description || 'No detailed description provided.';
+      // 4. Section: Detailed Description of Grievance
+      const descBody = cData.title && cData.title !== cData.description
+        ? `Subject: ${cData.title}\n\n${cData.description || 'No detailed description provided.'}`
+        : (cData.description || 'No detailed description provided.');
 
       runAutoTable({
         startY: currentY,
@@ -471,16 +459,16 @@ export const CitizenPortalPage = () => {
         head: [
           [
             {
-              content: '3. COMPLAINT SUBJECT & DESCRIPTION',
-              styles: { fillColor: [133, 0, 0], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8.5 },
+              content: 'Detailed Description of Grievance',
+              styles: { fillColor: [133, 0, 0], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 9 },
             },
           ],
         ],
         body: [
           [
             {
-              content: `Subject: ${titleText}\n\nDescription:\n${descText}`,
-              styles: { cellPadding: 3.5, fontSize: 8, lineHeightFactor: 1.35 },
+              content: descBody,
+              styles: { cellPadding: 3.5, fontSize: 8.5, lineHeightFactor: 1.35, overflow: 'linebreak' },
             },
           ],
         ],
@@ -490,7 +478,7 @@ export const CitizenPortalPage = () => {
 
       currentY = (doc.lastAutoTable ? doc.lastAutoTable.finalY : currentY + 30) + 4;
 
-      // 6. Section 4: Field Resolution (if completed/resolved or has notes)
+      // 5. Section: Field Resolution & Administrative Actions (if completed/resolved or has notes)
       const actionTaken = cData.actionTaken || cData.finalReport;
       const remarks = cData.wardSecretaryRemarks;
 
@@ -498,13 +486,13 @@ export const CitizenPortalPage = () => {
         const resBody = [];
         if (actionTaken) {
           resBody.push([
-            { content: 'Action Taken / Ground Resolution:', styles: { fontStyle: 'bold', fillColor: [250, 248, 245], width: 45 } },
+            { content: 'Action Taken / Ground Resolution:', styles: { fontStyle: 'bold', fillColor: [250, 248, 245] } },
             actionTaken,
           ]);
         }
         if (remarks) {
           resBody.push([
-            { content: 'Ward Secretary Remarks:', styles: { fontStyle: 'bold', fillColor: [250, 248, 245], width: 45 } },
+            { content: 'Ward Secretary Remarks:', styles: { fontStyle: 'bold', fillColor: [250, 248, 245] } },
             remarks,
           ]);
         }
@@ -515,7 +503,7 @@ export const CitizenPortalPage = () => {
             year: 'numeric',
           });
           resBody.push([
-            { content: 'Resolution Date:', styles: { fontStyle: 'bold', fillColor: [250, 248, 245], width: 45 } },
+            { content: 'Resolution Date:', styles: { fontStyle: 'bold', fillColor: [250, 248, 245] } },
             compDate,
           ]);
         }
@@ -526,7 +514,7 @@ export const CitizenPortalPage = () => {
           head: [
             [
               {
-                content: '4. FIELD RESOLUTION & ADMINISTRATIVE ACTIONS',
+                content: 'FIELD RESOLUTION & ADMINISTRATIVE ACTIONS',
                 colSpan: 2,
                 styles: { fillColor: [16, 120, 60], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8.5 },
               },
@@ -542,12 +530,16 @@ export const CitizenPortalPage = () => {
                   ],
                 ],
           theme: 'grid',
-          styles: { fontSize: 8, cellPadding: 2.5, textColor: [35, 35, 35] },
+          styles: { fontSize: 8.5, cellPadding: 2.5, textColor: [35, 35, 35], overflow: 'linebreak' },
+          columnStyles: {
+            0: { cellWidth: 55, fontStyle: 'bold', fillColor: [250, 248, 245] },
+            1: { cellWidth: 127 },
+          },
         });
         currentY = (doc.lastAutoTable ? doc.lastAutoTable.finalY : currentY + 30) + 4;
       }
 
-      // 7. Authenticity Verification Notice Box
+      // 6. Authenticity Notice
       if (currentY > pageHeight - 38) {
         doc.addPage();
         currentY = 20;
@@ -577,20 +569,24 @@ export const CitizenPortalPage = () => {
         currentY + 12.5
       );
 
-      // 8. Footer at bottom of page
-      doc.setDrawColor(230, 230, 230);
-      doc.setLineWidth(0.4);
-      doc.line(margin, pageHeight - 14, pageWidth - margin, pageHeight - 14);
+      // 7. Footer on all pages
+      const totalPages = doc.internal.getNumberOfPages();
+      for (let p = 1; p <= totalPages; p++) {
+        doc.setPage(p);
+        doc.setDrawColor(230, 230, 230);
+        doc.setLineWidth(0.4);
+        doc.line(margin, pageHeight - 14, pageWidth - margin, pageHeight - 14);
 
-      doc.setTextColor(120, 120, 120);
-      doc.setFontSize(7.5);
-      doc.setFont('helvetica', 'normal');
-      doc.text(
-        'Tamizhaga Vetri Kazhagam (TVK) • Coimbatore District Central Administrative Office',
-        margin,
-        pageHeight - 9
-      );
-      doc.text('Page 1 of 1', pageWidth - margin, pageHeight - 9, { align: 'right' });
+        doc.setTextColor(120, 120, 120);
+        doc.setFontSize(7.5);
+        doc.setFont('helvetica', 'normal');
+        doc.text(
+          'Tamizhaga Vetri Kazhagam (TVK) • Coimbatore District Central Administrative Office',
+          margin,
+          pageHeight - 9
+        );
+        doc.text(`Page ${p} of ${totalPages}`, pageWidth - margin, pageHeight - 9, { align: 'right' });
+      }
 
       // Clean filename
       const cleanCode = String(issueCode).replace(/[^a-zA-Z0-9_-]/g, '_');
