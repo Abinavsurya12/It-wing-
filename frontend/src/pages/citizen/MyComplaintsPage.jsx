@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, Search, Clock, CheckCircle2, Phone, AlertCircle, ChevronRight, Image as ImageIcon, X } from 'lucide-react';
+import { ArrowLeft, Search, Clock, CheckCircle2, Phone, AlertCircle, ChevronRight, Image as ImageIcon, X, Download, Loader2 } from 'lucide-react';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { useNotification } from '../../context/NotificationContext';
 import StatusBadge from '../../components/common/StatusBadge';
 import PriorityBadge from '../../components/common/PriorityBadge';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
@@ -16,10 +19,12 @@ import { getBeforeImageUrl, getAfterImageUrl } from '../../utils/imageUtils';
 export const MyComplaintsPage = () => {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const { success: notifySuccess, error: notifyError } = useNotification();
   const [mobileSearch, setMobileSearch] = useState(user?.phone || '');
   const [loading, setLoading] = useState(false);
   const [complaints, setComplaints] = useState([]);
   const [searched, setSearched] = useState(false);
+  const [downloadingPdfId, setDownloadingPdfId] = useState(null);
 
   // Zoomable Image Preview Modal State
   const [zoomModal, setZoomModal] = useState({
@@ -73,6 +78,321 @@ export const MyComplaintsPage = () => {
     }, 6000);
     return () => clearInterval(timer);
   }, [user]);
+
+  const handleDownloadComplaintPDF = async (complaint) => {
+    if (!complaint) return;
+    const complaintKey = complaint._id || complaint.id;
+    setDownloadingPdfId(complaintKey);
+
+    try {
+      let cData = complaint;
+      try {
+        const fetchId = complaint.id || complaint._id;
+        if (fetchId) {
+          const detailRes = await api.get(`/issues/${fetchId}`);
+          if (detailRes.data?.success && detailRes.data?.data) {
+            cData = detailRes.data.data;
+          }
+        }
+      } catch (fetchErr) {
+        console.warn('Could not fetch single issue detail, using in-memory complaint data:', fetchErr.message);
+      }
+
+      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 14;
+
+      // Header Banner
+      doc.setFillColor(160, 0, 0);
+      doc.rect(0, 0, pageWidth, 28, 'F');
+      doc.setFillColor(255, 211, 42);
+      doc.rect(0, 28, pageWidth, 2.5, 'F');
+
+      doc.setTextColor(255, 211, 42);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.text('TAMIZHAGA VETRI KAZHAGAM (TVK)', pageWidth / 2, 11, { align: 'center' });
+
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(8.5);
+      doc.setFont('helvetica', 'normal');
+      doc.text('COIMBATORE DISTRICT CITIZEN GRIEVANCE REDRESSAL RECORD', pageWidth / 2, 17.5, { align: 'center' });
+      doc.setFontSize(7.5);
+      doc.text('Official Digital Governance CRM Portal • Citizen Acknowledgement Copy', pageWidth / 2, 23, { align: 'center' });
+
+      let currentY = 37;
+      doc.setTextColor(160, 0, 0);
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text('OFFICIAL COMPLAINT ACKNOWLEDGEMENT & SUMMARY', margin, currentY);
+
+      const issueCode = cData.issueCode || cData.complaintId || `CMP-${cData.id || 'N/A'}`;
+      const regDate = cData.createdAt
+        ? new Date(cData.createdAt).toLocaleDateString('en-IN', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+          })
+        : 'N/A';
+
+      doc.setTextColor(110, 110, 110);
+      doc.setFontSize(7.5);
+      doc.setFont('helvetica', 'normal');
+      doc.text(
+        `Generated: ${new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`,
+        pageWidth - margin,
+        currentY,
+        { align: 'right' }
+      );
+
+      currentY += 4;
+
+      const citizenName = cData.citizenName || user?.name || 'Citizen';
+      const citizenMobile = cData.citizenMobile || user?.phone || 'Not Available';
+      const paguthi = cData.paguthi || user?.paguthi || 'Coimbatore';
+      const assignedWard = cData.wardId?.wardName
+        ? `Ward ${cData.wardId.wardNumber} - ${cData.wardId.wardName}`
+        : cData.wardNumber
+        ? `Ward ${cData.wardNumber}${cData.wardName ? ` - ${cData.wardName}` : ''}`
+        : user?.assignedWard || 'Not Assigned';
+      const constituency =
+        cData.constituency?.name || cData.constituency || user?.constituency || 'Coimbatore';
+      const category = cData.category || 'General Civic Grievance';
+      const status = cData.status || 'Pending';
+      const priority = cData.priority || 'Medium';
+
+      const runAutoTable = (options) => {
+        if (typeof doc.autoTable === 'function') {
+          doc.autoTable(options);
+        } else if (typeof autoTable === 'function') {
+          autoTable(doc, options);
+        }
+      };
+
+      runAutoTable({
+        startY: currentY,
+        margin: { left: margin, right: margin },
+        head: [
+          [
+            {
+              content: '1. CITIZEN & JURISDICTION DETAILS',
+              colSpan: 4,
+              styles: { fillColor: [133, 0, 0], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8.5 },
+            },
+          ],
+        ],
+        body: [
+          [
+            { content: 'Citizen Name:', styles: { fontStyle: 'bold', fillColor: [250, 248, 245], width: 35 } },
+            citizenName,
+            { content: 'Registered Mobile:', styles: { fontStyle: 'bold', fillColor: [250, 248, 245], width: 38 } },
+            citizenMobile,
+          ],
+          [
+            { content: 'Paguthi / Zone:', styles: { fontStyle: 'bold', fillColor: [250, 248, 245] } },
+            paguthi,
+            { content: 'Constituency:', styles: { fontStyle: 'bold', fillColor: [250, 248, 245] } },
+            constituency,
+          ],
+          [
+            { content: 'Assigned Ward:', styles: { fontStyle: 'bold', fillColor: [250, 248, 245] } },
+            assignedWard,
+            { content: 'District:', styles: { fontStyle: 'bold', fillColor: [250, 248, 245] } },
+            'Coimbatore District',
+          ],
+        ],
+        theme: 'grid',
+        styles: { fontSize: 8, cellPadding: 2.5, textColor: [35, 35, 35] },
+      });
+
+      currentY = (doc.lastAutoTable ? doc.lastAutoTable.finalY : currentY + 30) + 4;
+
+      const isCompleted = ['Completed', 'Resolved', 'Closed'].includes(status);
+      runAutoTable({
+        startY: currentY,
+        margin: { left: margin, right: margin },
+        head: [
+          [
+            {
+              content: '2. GRIEVANCE & RECORD METADATA',
+              colSpan: 4,
+              styles: { fillColor: [133, 0, 0], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8.5 },
+            },
+          ],
+        ],
+        body: [
+          [
+            { content: 'Complaint Ticket ID:', styles: { fontStyle: 'bold', fillColor: [250, 248, 245], width: 35 } },
+            { content: issueCode, styles: { fontStyle: 'bold', textColor: [160, 0, 0] } },
+            { content: 'Current Status:', styles: { fontStyle: 'bold', fillColor: [250, 248, 245], width: 38 } },
+            {
+              content: status,
+              styles: {
+                fontStyle: 'bold',
+                textColor: isCompleted ? [16, 120, 60] : [180, 80, 0],
+              },
+            },
+          ],
+          [
+            { content: 'Category:', styles: { fontStyle: 'bold', fillColor: [250, 248, 245] } },
+            category,
+            { content: 'Priority:', styles: { fontStyle: 'bold', fillColor: [250, 248, 245] } },
+            priority,
+          ],
+          [
+            { content: 'Registration Date:', styles: { fontStyle: 'bold', fillColor: [250, 248, 245] } },
+            regDate,
+            { content: 'Assigned Department:', styles: { fontStyle: 'bold', fillColor: [250, 248, 245] } },
+            cData.assignedDepartment || 'Corporation / Municipal Admin',
+          ],
+        ],
+        theme: 'grid',
+        styles: { fontSize: 8, cellPadding: 2.5, textColor: [35, 35, 35] },
+      });
+
+      currentY = (doc.lastAutoTable ? doc.lastAutoTable.finalY : currentY + 30) + 4;
+
+      const titleText = cData.title || 'Civic Issue Grievance';
+      const descText = cData.description || 'No detailed description provided.';
+
+      runAutoTable({
+        startY: currentY,
+        margin: { left: margin, right: margin },
+        head: [
+          [
+            {
+              content: '3. COMPLAINT SUBJECT & DESCRIPTION',
+              styles: { fillColor: [133, 0, 0], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8.5 },
+            },
+          ],
+        ],
+        body: [
+          [
+            {
+              content: `Subject: ${titleText}\n\nDescription:\n${descText}`,
+              styles: { cellPadding: 3.5, fontSize: 8, lineHeightFactor: 1.35 },
+            },
+          ],
+        ],
+        theme: 'grid',
+        styles: { textColor: [35, 35, 35] },
+      });
+
+      currentY = (doc.lastAutoTable ? doc.lastAutoTable.finalY : currentY + 30) + 4;
+
+      const actionTaken = cData.actionTaken || cData.finalReport;
+      const remarks = cData.wardSecretaryRemarks;
+
+      if (isCompleted || actionTaken || remarks) {
+        const resBody = [];
+        if (actionTaken) {
+          resBody.push([
+            { content: 'Action Taken / Ground Resolution:', styles: { fontStyle: 'bold', fillColor: [250, 248, 245], width: 45 } },
+            actionTaken,
+          ]);
+        }
+        if (remarks) {
+          resBody.push([
+            { content: 'Ward Secretary Remarks:', styles: { fontStyle: 'bold', fillColor: [250, 248, 245], width: 45 } },
+            remarks,
+          ]);
+        }
+        if (cData.completedAt || cData.resolvedAt) {
+          const compDate = new Date(cData.completedAt || cData.resolvedAt).toLocaleDateString('en-IN', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+          });
+          resBody.push([
+            { content: 'Resolution Date:', styles: { fontStyle: 'bold', fillColor: [250, 248, 245], width: 45 } },
+            compDate,
+          ]);
+        }
+
+        runAutoTable({
+          startY: currentY,
+          margin: { left: margin, right: margin },
+          head: [
+            [
+              {
+                content: '4. FIELD RESOLUTION & ADMINISTRATIVE ACTIONS',
+                colSpan: 2,
+                styles: { fillColor: [16, 120, 60], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8.5 },
+              },
+            ],
+          ],
+          body:
+            resBody.length > 0
+              ? resBody
+              : [
+                  [
+                    { content: 'Status Note:', styles: { fontStyle: 'bold', fillColor: [250, 248, 245] } },
+                    'Issue inspected and resolved satisfactorily by Ward team.',
+                  ],
+                ],
+          theme: 'grid',
+          styles: { fontSize: 8, cellPadding: 2.5, textColor: [35, 35, 35] },
+        });
+        currentY = (doc.lastAutoTable ? doc.lastAutoTable.finalY : currentY + 30) + 4;
+      }
+
+      if (currentY > pageHeight - 38) {
+        doc.addPage();
+        currentY = 20;
+      }
+
+      doc.setFillColor(255, 248, 240);
+      doc.setDrawColor(255, 211, 42);
+      doc.setLineWidth(0.3);
+      doc.roundedRect(margin, currentY, pageWidth - margin * 2, 16, 2, 2, 'FD');
+
+      doc.setTextColor(160, 0, 0);
+      doc.setFontSize(7.5);
+      doc.setFont('helvetica', 'bold');
+      doc.text('DIGITAL GOVERNANCE AUTHENTICITY NOTICE', margin + 3, currentY + 4.5);
+
+      doc.setTextColor(70, 70, 70);
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'normal');
+      doc.text(
+        'This document serves as an official electronic acknowledgement issued by the TVK Digital Governance CRM.',
+        margin + 3,
+        currentY + 8.5
+      );
+      doc.text(
+        'Citizens can track live progress at any time through the TVK Citizen Portal using their registered mobile number.',
+        margin + 3,
+        currentY + 12.5
+      );
+
+      doc.setDrawColor(230, 230, 230);
+      doc.setLineWidth(0.4);
+      doc.line(margin, pageHeight - 14, pageWidth - margin, pageHeight - 14);
+
+      doc.setTextColor(120, 120, 120);
+      doc.setFontSize(7.5);
+      doc.setFont('helvetica', 'normal');
+      doc.text(
+        'Tamizhaga Vetri Kazhagam (TVK) • Coimbatore District Central Administrative Office',
+        margin,
+        pageHeight - 9
+      );
+      doc.text('Page 1 of 1', pageWidth - margin, pageHeight - 9, { align: 'right' });
+
+      const cleanCode = String(issueCode).replace(/[^a-zA-Z0-9_-]/g, '_');
+      const fileName = `TVK-Complaint-${cleanCode}.pdf`;
+      doc.save(fileName);
+      notifySuccess(`Downloaded complaint PDF: ${fileName}`);
+    } catch (err) {
+      console.error('Error generating complaint PDF:', err);
+      notifyError('Failed to generate complaint PDF. Please try again.');
+    } finally {
+      setDownloadingPdfId(null);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#FFF8F0] flex flex-col font-sans">
@@ -157,9 +477,30 @@ export const MyComplaintsPage = () => {
                       <PriorityBadge priority={c.priority} />
                       <StatusBadge status={c.status} />
                     </div>
-                    <span className="text-[11px] text-slate-400">
-                      {t('citizen.registeredOn', 'Filed on')} {new Date(c.createdAt).toLocaleDateString()}
-                    </span>
+                    <div className="flex items-center space-x-3 flex-wrap">
+                      <span className="text-[11px] text-slate-400">
+                        {t('citizen.registeredOn', 'Filed on')} {new Date(c.createdAt).toLocaleDateString()}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleDownloadComplaintPDF(c)}
+                        disabled={downloadingPdfId === (c._id || c.id)}
+                        className="inline-flex items-center justify-center space-x-1.5 px-3 py-1.5 bg-red-50 hover:bg-red-100 text-[#A00000] border border-red-200 hover:border-red-300 rounded-xl text-xs font-bold transition shadow-2xs cursor-pointer disabled:opacity-50 shrink-0 min-h-[32px]"
+                        title="Download Official Complaint PDF"
+                      >
+                        {downloadingPdfId === (c._id || c.id) ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+                            <span>Generating...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Download className="w-3.5 h-3.5 shrink-0" />
+                            <span>Download PDF</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
                   </div>
 
                   <div>

@@ -35,7 +35,11 @@ import {
   Users,
   LandPlot,
   Accessibility,
+  Download,
+  Loader2,
 } from 'lucide-react';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
 import { useNotification } from '../../context/NotificationContext';
@@ -97,6 +101,9 @@ export const CitizenPortalPage = () => {
   // Appointment details modal
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [isApptModalOpen, setIsApptModalOpen] = useState(false);
+
+  // Complaints filter search state
+  const [complaintSearch, setComplaintSearch] = useState('');
 
   // Fetch authenticated citizen profile and portal data
   // isInitial = true triggers full-screen loading on first mount only; background sync is completely silent
@@ -267,6 +274,337 @@ export const CitizenPortalPage = () => {
     }
   };
 
+  // Download Complaint as PDF
+  const [downloadingPdfId, setDownloadingPdfId] = useState(null);
+
+  const handleDownloadComplaintPDF = async (complaint) => {
+    if (!complaint) return;
+    const complaintKey = complaint._id || complaint.id;
+    setDownloadingPdfId(complaintKey);
+
+    try {
+      // Fetch latest complaint record from database if possible
+      let cData = complaint;
+      try {
+        const fetchId = complaint.id || complaint._id;
+        if (fetchId) {
+          const detailRes = await api.get(`/issues/${fetchId}`);
+          if (detailRes.data?.success && detailRes.data?.data) {
+            cData = detailRes.data.data;
+          }
+        }
+      } catch (fetchErr) {
+        console.warn('Could not fetch single issue detail, using in-memory complaint data:', fetchErr.message);
+      }
+
+      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 14;
+
+      // 1. Header Banner - Deep TVK Crimson Red
+      doc.setFillColor(160, 0, 0);
+      doc.rect(0, 0, pageWidth, 28, 'F');
+
+      // Gold accent stripe
+      doc.setFillColor(255, 211, 42);
+      doc.rect(0, 28, pageWidth, 2.5, 'F');
+
+      // TVK Header Titles
+      doc.setTextColor(255, 211, 42);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.text('TAMIZHAGA VETRI KAZHAGAM (TVK)', pageWidth / 2, 11, { align: 'center' });
+
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(8.5);
+      doc.setFont('helvetica', 'normal');
+      doc.text('COIMBATORE DISTRICT CITIZEN GRIEVANCE REDRESSAL RECORD', pageWidth / 2, 17.5, { align: 'center' });
+      doc.setFontSize(7.5);
+      doc.text('Official Digital Governance CRM Portal • Citizen Acknowledgement Copy', pageWidth / 2, 23, { align: 'center' });
+
+      // 2. Document Heading & Timestamp
+      let currentY = 37;
+      doc.setTextColor(160, 0, 0);
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text('OFFICIAL COMPLAINT ACKNOWLEDGEMENT & SUMMARY', margin, currentY);
+
+      const issueCode = cData.issueCode || cData.complaintId || `CMP-${cData.id || 'N/A'}`;
+      const regDate = cData.createdAt
+        ? new Date(cData.createdAt).toLocaleDateString('en-IN', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+          })
+        : 'N/A';
+
+      doc.setTextColor(110, 110, 110);
+      doc.setFontSize(7.5);
+      doc.setFont('helvetica', 'normal');
+      doc.text(
+        `Generated: ${new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`,
+        pageWidth - margin,
+        currentY,
+        { align: 'right' }
+      );
+
+      currentY += 4;
+
+      // Extract and resolve required details
+      const citizenName = cData.citizenName || currentUser?.name || 'Citizen';
+      const citizenMobile = cData.citizenMobile || currentUser?.phone || 'Not Available';
+      const paguthi = cData.paguthi || currentUser?.paguthi || 'Coimbatore';
+      const assignedWard = cData.wardId?.wardName
+        ? `Ward ${cData.wardId.wardNumber} - ${cData.wardId.wardName}`
+        : cData.wardNumber
+        ? `Ward ${cData.wardNumber}${cData.wardName ? ` - ${cData.wardName}` : ''}`
+        : currentUser?.assignedWard || 'Not Assigned';
+      const constituency =
+        cData.constituency?.name || cData.constituency || currentUser?.constituency || 'Coimbatore';
+      const category = cData.category || 'General Civic Grievance';
+      const status = cData.status || 'Pending';
+      const priority = cData.priority || 'Medium';
+
+      // 3. Section 1: Citizen & Jurisdiction Details
+      const runAutoTable = (options) => {
+        if (typeof doc.autoTable === 'function') {
+          doc.autoTable(options);
+        } else if (typeof autoTable === 'function') {
+          autoTable(doc, options);
+        }
+      };
+
+      runAutoTable({
+        startY: currentY,
+        margin: { left: margin, right: margin },
+        head: [
+          [
+            {
+              content: '1. CITIZEN & JURISDICTION DETAILS',
+              colSpan: 4,
+              styles: { fillColor: [133, 0, 0], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8.5 },
+            },
+          ],
+        ],
+        body: [
+          [
+            { content: 'Citizen Name:', styles: { fontStyle: 'bold', fillColor: [250, 248, 245], width: 35 } },
+            citizenName,
+            { content: 'Registered Mobile:', styles: { fontStyle: 'bold', fillColor: [250, 248, 245], width: 38 } },
+            citizenMobile,
+          ],
+          [
+            { content: 'Paguthi / Zone:', styles: { fontStyle: 'bold', fillColor: [250, 248, 245] } },
+            paguthi,
+            { content: 'Constituency:', styles: { fontStyle: 'bold', fillColor: [250, 248, 245] } },
+            constituency,
+          ],
+          [
+            { content: 'Assigned Ward:', styles: { fontStyle: 'bold', fillColor: [250, 248, 245] } },
+            assignedWard,
+            { content: 'District:', styles: { fontStyle: 'bold', fillColor: [250, 248, 245] } },
+            'Coimbatore District',
+          ],
+        ],
+        theme: 'grid',
+        styles: { fontSize: 8, cellPadding: 2.5, textColor: [35, 35, 35] },
+      });
+
+      currentY = (doc.lastAutoTable ? doc.lastAutoTable.finalY : currentY + 30) + 4;
+
+      // 4. Section 2: Grievance Record Metadata
+      const isCompleted = ['Completed', 'Resolved', 'Closed'].includes(status);
+      runAutoTable({
+        startY: currentY,
+        margin: { left: margin, right: margin },
+        head: [
+          [
+            {
+              content: '2. GRIEVANCE & RECORD METADATA',
+              colSpan: 4,
+              styles: { fillColor: [133, 0, 0], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8.5 },
+            },
+          ],
+        ],
+        body: [
+          [
+            { content: 'Complaint Ticket ID:', styles: { fontStyle: 'bold', fillColor: [250, 248, 245], width: 35 } },
+            { content: issueCode, styles: { fontStyle: 'bold', textColor: [160, 0, 0] } },
+            { content: 'Current Status:', styles: { fontStyle: 'bold', fillColor: [250, 248, 245], width: 38 } },
+            {
+              content: status,
+              styles: {
+                fontStyle: 'bold',
+                textColor: isCompleted ? [16, 120, 60] : [180, 80, 0],
+              },
+            },
+          ],
+          [
+            { content: 'Category:', styles: { fontStyle: 'bold', fillColor: [250, 248, 245] } },
+            category,
+            { content: 'Priority:', styles: { fontStyle: 'bold', fillColor: [250, 248, 245] } },
+            priority,
+          ],
+          [
+            { content: 'Registration Date:', styles: { fontStyle: 'bold', fillColor: [250, 248, 245] } },
+            regDate,
+            { content: 'Assigned Department:', styles: { fontStyle: 'bold', fillColor: [250, 248, 245] } },
+            cData.assignedDepartment || 'Corporation / Municipal Admin',
+          ],
+        ],
+        theme: 'grid',
+        styles: { fontSize: 8, cellPadding: 2.5, textColor: [35, 35, 35] },
+      });
+
+      currentY = (doc.lastAutoTable ? doc.lastAutoTable.finalY : currentY + 30) + 4;
+
+      // 5. Section 3: Complaint Subject & Detailed Description
+      const titleText = cData.title || 'Civic Issue Grievance';
+      const descText = cData.description || 'No detailed description provided.';
+
+      runAutoTable({
+        startY: currentY,
+        margin: { left: margin, right: margin },
+        head: [
+          [
+            {
+              content: '3. COMPLAINT SUBJECT & DESCRIPTION',
+              styles: { fillColor: [133, 0, 0], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8.5 },
+            },
+          ],
+        ],
+        body: [
+          [
+            {
+              content: `Subject: ${titleText}\n\nDescription:\n${descText}`,
+              styles: { cellPadding: 3.5, fontSize: 8, lineHeightFactor: 1.35 },
+            },
+          ],
+        ],
+        theme: 'grid',
+        styles: { textColor: [35, 35, 35] },
+      });
+
+      currentY = (doc.lastAutoTable ? doc.lastAutoTable.finalY : currentY + 30) + 4;
+
+      // 6. Section 4: Field Resolution (if completed/resolved or has notes)
+      const actionTaken = cData.actionTaken || cData.finalReport;
+      const remarks = cData.wardSecretaryRemarks;
+
+      if (isCompleted || actionTaken || remarks) {
+        const resBody = [];
+        if (actionTaken) {
+          resBody.push([
+            { content: 'Action Taken / Ground Resolution:', styles: { fontStyle: 'bold', fillColor: [250, 248, 245], width: 45 } },
+            actionTaken,
+          ]);
+        }
+        if (remarks) {
+          resBody.push([
+            { content: 'Ward Secretary Remarks:', styles: { fontStyle: 'bold', fillColor: [250, 248, 245], width: 45 } },
+            remarks,
+          ]);
+        }
+        if (cData.completedAt || cData.resolvedAt) {
+          const compDate = new Date(cData.completedAt || cData.resolvedAt).toLocaleDateString('en-IN', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+          });
+          resBody.push([
+            { content: 'Resolution Date:', styles: { fontStyle: 'bold', fillColor: [250, 248, 245], width: 45 } },
+            compDate,
+          ]);
+        }
+
+        runAutoTable({
+          startY: currentY,
+          margin: { left: margin, right: margin },
+          head: [
+            [
+              {
+                content: '4. FIELD RESOLUTION & ADMINISTRATIVE ACTIONS',
+                colSpan: 2,
+                styles: { fillColor: [16, 120, 60], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8.5 },
+              },
+            ],
+          ],
+          body:
+            resBody.length > 0
+              ? resBody
+              : [
+                  [
+                    { content: 'Status Note:', styles: { fontStyle: 'bold', fillColor: [250, 248, 245] } },
+                    'Issue inspected and resolved satisfactorily by Ward team.',
+                  ],
+                ],
+          theme: 'grid',
+          styles: { fontSize: 8, cellPadding: 2.5, textColor: [35, 35, 35] },
+        });
+        currentY = (doc.lastAutoTable ? doc.lastAutoTable.finalY : currentY + 30) + 4;
+      }
+
+      // 7. Authenticity Verification Notice Box
+      if (currentY > pageHeight - 38) {
+        doc.addPage();
+        currentY = 20;
+      }
+
+      doc.setFillColor(255, 248, 240);
+      doc.setDrawColor(255, 211, 42);
+      doc.setLineWidth(0.3);
+      doc.roundedRect(margin, currentY, pageWidth - margin * 2, 16, 2, 2, 'FD');
+
+      doc.setTextColor(160, 0, 0);
+      doc.setFontSize(7.5);
+      doc.setFont('helvetica', 'bold');
+      doc.text('DIGITAL GOVERNANCE AUTHENTICITY NOTICE', margin + 3, currentY + 4.5);
+
+      doc.setTextColor(70, 70, 70);
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'normal');
+      doc.text(
+        'This document serves as an official electronic acknowledgement issued by the TVK Digital Governance CRM.',
+        margin + 3,
+        currentY + 8.5
+      );
+      doc.text(
+        'Citizens can track live progress at any time through the TVK Citizen Portal using their registered mobile number.',
+        margin + 3,
+        currentY + 12.5
+      );
+
+      // 8. Footer at bottom of page
+      doc.setDrawColor(230, 230, 230);
+      doc.setLineWidth(0.4);
+      doc.line(margin, pageHeight - 14, pageWidth - margin, pageHeight - 14);
+
+      doc.setTextColor(120, 120, 120);
+      doc.setFontSize(7.5);
+      doc.setFont('helvetica', 'normal');
+      doc.text(
+        'Tamizhaga Vetri Kazhagam (TVK) • Coimbatore District Central Administrative Office',
+        margin,
+        pageHeight - 9
+      );
+      doc.text('Page 1 of 1', pageWidth - margin, pageHeight - 9, { align: 'right' });
+
+      // Clean filename
+      const cleanCode = String(issueCode).replace(/[^a-zA-Z0-9_-]/g, '_');
+      const fileName = `TVK-Complaint-${cleanCode}.pdf`;
+      doc.save(fileName);
+      notifySuccess(`Downloaded complaint PDF: ${fileName}`);
+    } catch (err) {
+      console.error('Error generating complaint PDF:', err);
+      notifyError('Failed to generate complaint PDF. Please try again.');
+    } finally {
+      setDownloadingPdfId(null);
+    }
+  };
+
   const getStatusBadge = (status) => {
     switch (status) {
       case 'Pending':
@@ -410,9 +748,15 @@ export const CitizenPortalPage = () => {
           >
             {t('citizen.trackAppointment', 'My Appointments')} ({appointments.length})
           </button>
-          <Link to="/citizen/my-complaints" className="hover:text-[#FFD32A] transition py-1">
+          <button
+            type="button"
+            onClick={() => setActiveSection('my-complaints')}
+            className={`py-1 cursor-pointer transition ${
+              activeSection === 'my-complaints' ? 'text-[#FFD32A] border-b-2 border-[#FFD32A]' : 'hover:text-[#FFD32A]'
+            }`}
+          >
             {t('citizen.myComplaints', 'My Complaints')} ({complaints.length})
-          </Link>
+          </button>
           <Link to="/citizen/register-complaint" className="hover:text-[#FFD32A] transition py-1">
             + {t('citizen.registerComplaint', 'New Grievance')}
           </Link>
@@ -565,13 +909,16 @@ export const CitizenPortalPage = () => {
           >
             {t('citizen.trackAppointment', 'My Appointments')} ({appointments.length})
           </button>
-          <Link
-            to="/citizen/my-complaints"
-            onClick={() => setMobileMenuOpen(false)}
-            className="block py-1.5 border-b border-white/10"
+          <button
+            type="button"
+            onClick={() => {
+              setActiveSection('my-complaints');
+              setMobileMenuOpen(false);
+            }}
+            className="block w-full text-left py-1.5 border-b border-white/10"
           >
             {t('citizen.myComplaints', 'My Complaints')} ({complaints.length})
-          </Link>
+          </button>
           <Link
             to="/citizen/register-complaint"
             onClick={() => setMobileMenuOpen(false)}
@@ -744,37 +1091,49 @@ export const CitizenPortalPage = () => {
           <button
             type="button"
             onClick={() => setActiveSection('overview')}
-            className={`px-4 py-2 rounded-xl transition cursor-pointer ${
+            className={`w-full sm:w-auto px-4 py-2.5 rounded-xl transition cursor-pointer flex items-center justify-center sm:justify-start space-x-1.5 ${
               activeSection === 'overview'
                 ? 'bg-[#A00000] text-white shadow-xs'
                 : 'text-slate-600 hover:bg-slate-100'
             }`}
           >
-            {t('citizen.publicServices', 'Public Services Overview')}
+            <span>{t('citizen.publicServices', 'Public Services Overview')}</span>
           </button>
           <button
             type="button"
             onClick={() => setActiveSection('book-appointment')}
-            className={`px-4 py-2 rounded-xl transition cursor-pointer flex items-center space-x-1 ${
+            className={`w-full sm:w-auto px-4 py-2.5 rounded-xl transition cursor-pointer flex items-center justify-center sm:justify-start space-x-1.5 ${
               activeSection === 'book-appointment'
                 ? 'bg-[#A00000] text-white shadow-xs'
                 : 'text-slate-600 hover:bg-slate-100'
             }`}
           >
-            <CalendarCheck className="w-3.5 h-3.5" />
+            <CalendarCheck className="w-3.5 h-3.5 shrink-0" />
             <span>{t('citizen.bookAppointment', 'Book Appointment Form')}</span>
           </button>
           <button
             type="button"
             onClick={() => setActiveSection('my-appointments')}
-            className={`px-4 py-2 rounded-xl transition cursor-pointer flex items-center space-x-1 ${
+            className={`w-full sm:w-auto px-4 py-2.5 rounded-xl transition cursor-pointer flex items-center justify-center sm:justify-start space-x-1.5 ${
               activeSection === 'my-appointments'
                 ? 'bg-[#A00000] text-white shadow-xs'
                 : 'text-slate-600 hover:bg-slate-100'
             }`}
           >
-            <Clock className="w-3.5 h-3.5" />
+            <Clock className="w-3.5 h-3.5 shrink-0" />
             <span>{t('citizen.myAppointments', 'My Appointments')} ({appointments.length})</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveSection('my-complaints')}
+            className={`w-full sm:w-auto px-4 py-2.5 rounded-xl transition cursor-pointer flex items-center justify-center sm:justify-start space-x-1.5 ${
+              activeSection === 'my-complaints'
+                ? 'bg-[#A00000] text-white shadow-xs'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <FileText className="w-3.5 h-3.5 shrink-0" />
+            <span>{t('citizen.myComplaints', 'My Complaints')} ({complaints.length})</span>
           </button>
         </div>
       </section>
@@ -872,8 +1231,8 @@ export const CitizenPortalPage = () => {
 
             {/* Quick My Appointments Glance */}
             <div className="bg-white rounded-3xl p-6 border border-[#E9E2DC] shadow-xs space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                <div className="min-w-0">
                   <h3 className="text-base font-extrabold text-[#252525]">
                     {t('citizen.recentMinisterAppts', 'Recent Minister Appointment Bookings')}
                   </h3>
@@ -882,11 +1241,12 @@ export const CitizenPortalPage = () => {
                   </p>
                 </div>
                 <button
+                  type="button"
                   onClick={() => setActiveSection('book-appointment')}
-                  className="px-3.5 py-1.5 bg-[#A00000] text-white rounded-xl text-xs font-bold hover:bg-[#850000] transition flex items-center space-x-1 cursor-pointer"
+                  className="w-full sm:w-auto px-4 py-2 bg-[#A00000] hover:bg-[#850000] text-white rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1.5 cursor-pointer shadow-xs shrink-0 self-start sm:self-auto min-h-[38px]"
                 >
-                  <PlusCircle className="w-3.5 h-3.5" />
-                  <span>{t('citizen.bookNewAppt', 'Book New Appointment')}</span>
+                  <PlusCircle className="w-3.5 h-3.5 shrink-0" />
+                  <span className="whitespace-nowrap">{t('citizen.bookNewAppt', 'Book New Appointment')}</span>
                 </button>
               </div>
 
@@ -896,10 +1256,12 @@ export const CitizenPortalPage = () => {
                   <p className="text-xs font-bold text-slate-700">{t('citizen.noApptsYet', 'No appointments booked yet.')}</p>
                   <p className="text-[11px] text-slate-500 mt-0.5">{t('citizen.noApptsYetSub', 'Use the appointment form to schedule your first ministerial grievance consultation slot.')}</p>
                   <button
+                    type="button"
                     onClick={() => setActiveSection('book-appointment')}
-                    className="mt-3 inline-block px-4 py-2 bg-[#A00000] text-white text-xs font-bold rounded-xl shadow-xs cursor-pointer"
+                    className="mt-3 inline-flex items-center justify-center w-full sm:w-auto px-5 py-2.5 bg-[#A00000] hover:bg-[#850000] text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer min-h-[40px]"
                   >
-                    {t('citizen.bookAnApptNow', 'Book An Appointment Now')}
+                    <PlusCircle className="w-3.5 h-3.5 mr-1.5 shrink-0" />
+                    <span>{t('citizen.bookAnApptNow', 'Book An Appointment Now')}</span>
                   </button>
                 </div>
               ) : (
@@ -957,12 +1319,13 @@ export const CitizenPortalPage = () => {
                     <PlusCircle className="w-3.5 h-3.5" />
                     <span>{t('citizen.registerNewComplaint', 'Register New Complaint')}</span>
                   </Link>
-                  <Link
-                    to="/citizen/my-complaints"
-                    className="px-3.5 py-1.5 border border-slate-200 rounded-xl text-slate-700 hover:bg-slate-50 text-xs font-bold transition flex items-center space-x-1"
+                  <button
+                    type="button"
+                    onClick={() => setActiveSection('my-complaints')}
+                    className="px-3.5 py-1.5 border border-slate-200 rounded-xl text-slate-700 hover:bg-slate-50 text-xs font-bold transition flex items-center space-x-1 cursor-pointer"
                   >
                     <span>{t('citizen.viewAll', 'View All')} ({complaints.length})</span>
-                  </Link>
+                  </button>
                 </div>
               </div>
 
@@ -1018,7 +1381,7 @@ export const CitizenPortalPage = () => {
                           <div>
                             <span>{t('citizen.jurisdiction', 'Jurisdiction')}: </span>
                             <strong className="text-slate-800">
-                              {c.wardId?.wardName ? `Ward ${c.wardId.wardNumber} - ${c.wardId.wardName}` : (c.wardNumber ? `Ward ${c.wardNumber}` : (user?.assignedWard || 'Not Assigned'))}
+                              {c.wardId?.wardName ? `Ward ${c.wardId.wardNumber} - ${c.wardId.wardName}` : (c.wardNumber ? `Ward ${c.wardNumber}` : (currentUser?.assignedWard || 'Not Assigned'))}
                             </strong>
                             {c.category && (
                               <span className="ml-2 px-1.5 py-0.2 bg-slate-100 text-slate-600 rounded text-[10px]">
@@ -1027,13 +1390,35 @@ export const CitizenPortalPage = () => {
                             )}
                           </div>
 
-                          <Link
-                            to="/citizen/my-complaints"
-                            className="font-bold text-[#A00000] hover:underline flex items-center space-x-1"
-                          >
-                            <span>{t('citizen.trackTimeline', 'Track Timeline & Resolution')}</span>
-                            <ArrowRight className="w-3 h-3" />
-                          </Link>
+                          <div className="flex items-center space-x-2 flex-wrap">
+                            <button
+                              type="button"
+                              onClick={() => handleDownloadComplaintPDF(c)}
+                              disabled={downloadingPdfId === (c._id || c.id)}
+                              className="inline-flex items-center justify-center space-x-1.5 px-3 py-1.5 bg-red-50 hover:bg-red-100 text-[#A00000] border border-red-200 hover:border-red-300 rounded-xl text-xs font-bold transition shadow-2xs cursor-pointer disabled:opacity-50 shrink-0"
+                              title="Download Official Complaint PDF"
+                            >
+                              {downloadingPdfId === (c._id || c.id) ? (
+                                <>
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+                                  <span>Generating...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Download className="w-3.5 h-3.5 shrink-0" />
+                                  <span>Download PDF</span>
+                                </>
+                              )}
+                            </button>
+
+                            <Link
+                              to="/citizen/my-complaints"
+                              className="font-bold text-[#A00000] hover:underline flex items-center space-x-1"
+                            >
+                              <span>{t('citizen.trackTimeline', 'Track Timeline & Resolution')}</span>
+                              <ArrowRight className="w-3 h-3" />
+                            </Link>
+                          </div>
                         </div>
 
                         {/* Completed Success Banner Preview */}
@@ -1695,9 +2080,9 @@ export const CitizenPortalPage = () => {
                 <button
                   type="submit"
                   disabled={bookingLoading}
-                  className="w-full py-3 bg-[#A00000] hover:bg-[#850000] text-white font-bold rounded-xl shadow-md transition flex items-center justify-center space-x-2 text-xs uppercase tracking-wider disabled:opacity-50 cursor-pointer"
+                  className="w-full py-3 px-4 min-h-[44px] bg-[#A00000] hover:bg-[#850000] text-white font-bold rounded-xl shadow-md transition flex items-center justify-center space-x-2 text-xs sm:text-sm uppercase tracking-wider disabled:opacity-50 cursor-pointer"
                 >
-                  <CalendarCheck className="w-4 h-4" />
+                  <CalendarCheck className="w-4 h-4 shrink-0" />
                   <span>{bookingLoading ? t('citizen.submittingAppt', 'Submitting Appointment...') : t('citizen.bookAppointment', 'Book Appointment')}</span>
                 </button>
               </div>
@@ -1718,11 +2103,12 @@ export const CitizenPortalPage = () => {
                 </p>
               </div>
               <button
+                type="button"
                 onClick={() => setActiveSection('book-appointment')}
-                className="px-4 py-2 bg-[#A00000] hover:bg-[#850000] text-white text-xs font-bold rounded-xl transition flex items-center space-x-1.5 cursor-pointer self-start sm:self-auto"
+                className="w-full sm:w-auto px-4 py-2 bg-[#A00000] hover:bg-[#850000] text-white text-xs font-bold rounded-xl transition flex items-center justify-center space-x-1.5 cursor-pointer self-start sm:self-auto shrink-0 min-h-[38px]"
               >
-                <PlusCircle className="w-3.5 h-3.5" />
-                <span>{t('citizen.bookAnotherSlot', 'Book Another Slot')}</span>
+                <PlusCircle className="w-3.5 h-3.5 shrink-0" />
+                <span className="whitespace-nowrap">{t('citizen.bookAnotherSlot', 'Book Another Slot')}</span>
               </button>
             </div>
 
@@ -1736,10 +2122,12 @@ export const CitizenPortalPage = () => {
                   </p>
                 </div>
                 <button
+                  type="button"
                   onClick={() => setActiveSection('book-appointment')}
-                  className="px-5 py-2 bg-[#A00000] text-white text-xs font-bold rounded-xl cursor-pointer"
+                  className="w-full sm:w-auto inline-flex items-center justify-center px-5 py-2.5 bg-[#A00000] hover:bg-[#850000] text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer min-h-[40px]"
                 >
-                  {t('citizen.bookAppointment', 'Book an Appointment')}
+                  <PlusCircle className="w-3.5 h-3.5 mr-1.5 shrink-0" />
+                  <span>{t('citizen.bookAppointment', 'Book an Appointment')}</span>
                 </button>
               </div>
             ) : (
@@ -1904,6 +2292,178 @@ export const CitizenPortalPage = () => {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* ================= 6. MY COMPLAINTS SECTION ================= */}
+        {activeSection === 'my-complaints' && (
+          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#E9E2DC] shadow-xs space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+              <div>
+                <h3 className="text-lg font-extrabold text-[#252525]">
+                  {t('citizen.myComplaints', 'My Registered Complaints & Live Status')}
+                </h3>
+                <p className="text-xs text-slate-500">
+                  {t('citizen.myComplaintsDesc', 'Track all your filed grievances, inspection reports, and download official records')}
+                </p>
+              </div>
+              <Link
+                to="/citizen/register-complaint"
+                className="w-full sm:w-auto px-4 py-2 bg-[#A00000] hover:bg-[#850000] text-white text-xs font-bold rounded-xl transition flex items-center justify-center space-x-1.5 cursor-pointer shadow-xs shrink-0 self-start sm:self-auto min-h-[38px]"
+              >
+                <PlusCircle className="w-3.5 h-3.5 shrink-0" />
+                <span className="whitespace-nowrap">{t('citizen.registerNewComplaint', 'Register New Complaint')}</span>
+              </Link>
+            </div>
+
+            {/* Filter / Search input */}
+            <div className="relative">
+              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                value={complaintSearch}
+                onChange={(e) => setComplaintSearch(e.target.value)}
+                placeholder={t('citizen.trackPlaceholder', 'Filter complaints by ticket ID, title, or category...')}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-3.5 py-2.5 text-xs focus:ring-[#A00000]"
+              />
+            </div>
+
+            {(() => {
+              const filteredComplaints = complaints.filter((c) => {
+                if (!complaintSearch.trim()) return true;
+                const q = complaintSearch.toLowerCase().trim();
+                const code = (c.issueCode || c.complaintId || '').toLowerCase();
+                const title = (c.title || '').toLowerCase();
+                const cat = (c.category || '').toLowerCase();
+                const desc = (c.description || '').toLowerCase();
+                return code.includes(q) || title.includes(q) || cat.includes(q) || desc.includes(q);
+              });
+
+              if (filteredComplaints.length === 0) {
+                return (
+                  <div className="p-12 text-center bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
+                    <FileText className="w-12 h-12 text-slate-400 mx-auto" />
+                    <div>
+                      <h4 className="font-bold text-slate-700 text-sm">
+                        {complaintSearch.trim() ? t('reports.noData', 'No complaints match your search') : t('citizen.noComplaintsYet', 'No complaints registered yet.')}
+                      </h4>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        {complaintSearch.trim() ? 'Try clearing or modifying your search filter.' : t('citizen.noComplaintsYetSub', 'Have an issue in your ward? Register a new complaint for direct field resolution.')}
+                      </p>
+                    </div>
+                    {!complaintSearch.trim() && (
+                      <Link
+                        to="/citizen/register-complaint"
+                        className="w-full sm:w-auto inline-flex items-center justify-center px-5 py-2.5 bg-[#A00000] hover:bg-[#850000] text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer min-h-[40px]"
+                      >
+                        <PlusCircle className="w-3.5 h-3.5 mr-1.5 shrink-0" />
+                        <span>{t('citizen.registerFirstComplaint', 'Register Your First Complaint')}</span>
+                      </Link>
+                    )}
+                  </div>
+                );
+              }
+
+              return (
+                <div className="space-y-4">
+                  {filteredComplaints.map((c) => {
+                    const isCompleted = ['Completed', 'Resolved', 'Closed'].includes(c.status);
+                    const isInProgress = c.status === 'In Progress';
+                    const displayStatus = isCompleted ? 'Completed' : isInProgress ? 'In Progress' : 'Pending';
+
+                    return (
+                      <div
+                        key={c._id || c.id}
+                        className={`p-5 rounded-2xl border transition text-xs space-y-3 ${
+                          isCompleted
+                            ? 'bg-emerald-50/40 border-emerald-300'
+                            : isInProgress
+                            ? 'bg-blue-50/30 border-blue-200'
+                            : 'bg-amber-50/20 border-amber-200'
+                        }`}
+                      >
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100/80 pb-2.5">
+                          <div className="flex items-center space-x-2 flex-wrap">
+                            <span className="font-mono text-xs font-bold text-[#A00000] bg-white border border-red-200 px-2.5 py-0.5 rounded-md shadow-2xs">
+                              {c.issueCode || c.complaintId}
+                            </span>
+                            <StatusBadge status={displayStatus} />
+                            <PriorityBadge priority={c.priority} />
+                          </div>
+                          <span className="text-[11px] text-slate-500">
+                            {t('citizen.registeredOn', 'Registered on')}: {new Date(c.createdAt).toLocaleDateString()}
+                          </span>
+                        </div>
+
+                        <div>
+                          <h4 className="font-bold text-slate-900 text-sm">{c.title}</h4>
+                          <p className="text-xs text-slate-600 mt-1 leading-relaxed">{c.description}</p>
+                        </div>
+
+                        <div className="flex flex-wrap items-center justify-between gap-3 pt-2.5 border-t border-slate-100 text-xs text-slate-500">
+                          <div>
+                            <span>{t('citizen.jurisdiction', 'Jurisdiction')}: </span>
+                            <strong className="text-slate-800">
+                              {c.wardId?.wardName ? `Ward ${c.wardId.wardNumber} - ${c.wardId.wardName}` : (c.wardNumber ? `Ward ${c.wardNumber}` : (currentUser?.assignedWard || 'Not Assigned'))}
+                            </strong>
+                            {c.category && (
+                              <span className="ml-2 px-2 py-0.5 bg-slate-100 text-slate-700 font-semibold rounded text-[10px]">
+                                {c.category}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex items-center space-x-2 flex-wrap">
+                            <button
+                              type="button"
+                              onClick={() => handleDownloadComplaintPDF(c)}
+                              disabled={downloadingPdfId === (c._id || c.id)}
+                              className="inline-flex items-center justify-center space-x-1.5 px-3.5 py-1.5 bg-red-50 hover:bg-red-100 text-[#A00000] border border-red-200 hover:border-red-300 rounded-xl text-xs font-bold transition shadow-2xs cursor-pointer disabled:opacity-50 shrink-0 min-h-[34px]"
+                              title="Download Official Complaint PDF"
+                            >
+                              {downloadingPdfId === (c._id || c.id) ? (
+                                <>
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+                                  <span>Generating...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Download className="w-3.5 h-3.5 shrink-0" />
+                                  <span>Download PDF</span>
+                                </>
+                              )}
+                            </button>
+
+                            <Link
+                              to="/citizen/my-complaints"
+                              className="font-bold text-[#A00000] hover:underline flex items-center space-x-1"
+                            >
+                              <span>{t('citizen.trackTimeline', 'Track Timeline & Resolution')}</span>
+                              <ArrowRight className="w-3 h-3" />
+                            </Link>
+                          </div>
+                        </div>
+
+                        {/* Completed Resolution Details */}
+                        {isCompleted && (
+                          <div className="p-3 rounded-xl bg-emerald-100/70 border border-emerald-300 space-y-1.5 text-emerald-950">
+                            <div className="flex items-center space-x-1.5 font-bold text-xs">
+                              <CheckCircle2 className="w-4 h-4 text-emerald-700 flex-shrink-0" />
+                              <span>{t('citizen.complaintFixedSuccess', 'Your complaint was fixed successfully!')}</span>
+                            </div>
+                            {(c.actionTaken || c.finalReport) && (
+                              <p className="text-[11px] text-slate-700 bg-white/80 p-2 rounded-lg border border-emerald-200 mt-1">
+                                <strong>Action Taken:</strong> {c.actionTaken || c.finalReport}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
           </div>
         )}
       </main>
