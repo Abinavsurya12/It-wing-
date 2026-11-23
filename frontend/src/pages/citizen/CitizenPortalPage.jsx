@@ -40,7 +40,11 @@ import {
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { downloadTamilComplaintPdf } from '../../utils/tamilComplaintPdfGenerator';
+import {
+  downloadComplaintPdf,
+  downloadTamilComplaintPdf,
+  downloadEnglishComplaintPdf,
+} from '../../utils/complaintPdfGenerator';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
 import { useNotification } from '../../context/NotificationContext';
@@ -278,9 +282,9 @@ export const CitizenPortalPage = () => {
   // Download Complaint as PDF
   const [downloadingPdfId, setDownloadingPdfId] = useState(null);
 
-  const handleDownloadComplaintPDF = async (complaint) => {
+  const handleDownloadComplaintPDF = async (complaint, lang = 'ta') => {
     if (!complaint) return;
-    const complaintKey = complaint._id || complaint.id;
+    const complaintKey = `${complaint._id || complaint.id}_${lang}`;
     setDownloadingPdfId(complaintKey);
 
     try {
@@ -298,11 +302,15 @@ export const CitizenPortalPage = () => {
         console.warn('Could not fetch single issue detail, using in-memory complaint data:', fetchErr.message);
       }
 
-      await downloadTamilComplaintPdf(cData, currentUser);
-      notifySuccess(`Downloaded complaint PDF (புகார் நகல்): ${cData.issueCode || cData.complaintId || 'GRI'}`);
+      await downloadComplaintPdf(cData, currentUser, lang);
+      if (lang === 'ta') {
+        notifySuccess(`Downloaded complaint PDF (புகார் நகல் - தமிழ்): ${cData.issueCode || cData.complaintId || 'GRI'}`);
+      } else {
+        notifySuccess(`Downloaded complaint PDF (English): ${cData.issueCode || cData.complaintId || 'GRI'}`);
+      }
     } catch (err) {
       console.error('Error generating complaint PDF:', err);
-      notifyError('Failed to generate complaint PDF. Please try again.');
+      notifyError(lang === 'ta' ? 'Failed to generate Tamil PDF. Please try again.' : 'Failed to generate English PDF. Please try again.');
     } finally {
       setDownloadingPdfId(null);
     }
@@ -1094,22 +1102,44 @@ export const CitizenPortalPage = () => {
                           </div>
 
                           <div className="flex items-center space-x-2 flex-wrap">
+                            {/* 1. Download PDF – தமிழ் */}
                             <button
                               type="button"
-                              onClick={() => handleDownloadComplaintPDF(c)}
-                              disabled={downloadingPdfId === (c._id || c.id)}
+                              onClick={() => handleDownloadComplaintPDF(c, 'ta')}
+                              disabled={downloadingPdfId === `${c._id || c.id}_ta`}
                               className="inline-flex items-center justify-center space-x-1.5 px-3 py-1.5 bg-red-50 hover:bg-red-100 text-[#A00000] border border-red-200 hover:border-red-300 rounded-xl text-xs font-bold transition shadow-2xs cursor-pointer disabled:opacity-50 shrink-0"
-                              title="Download Official Tamil Complaint PDF (புகார் நகல்)"
+                              title="Download Official Tamil Complaint PDF (புகார் நகல் - தமிழ்)"
                             >
-                              {downloadingPdfId === (c._id || c.id) ? (
+                              {downloadingPdfId === `${c._id || c.id}_ta` ? (
                                 <>
                                   <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
-                                  <span>{t('common.generatingPdf', 'உருவாக்குகிறது...')}</span>
+                                  <span>உருவாக்குகிறது...</span>
                                 </>
                               ) : (
                                 <>
                                   <Download className="w-3.5 h-3.5 shrink-0 text-[#A00000]" />
-                                  <span>{t('citizen.downloadTamilPdf', 'Download Tamil PDF')}</span>
+                                  <span>Download PDF – தமிழ்</span>
+                                </>
+                              )}
+                            </button>
+
+                            {/* 2. Download PDF – English */}
+                            <button
+                              type="button"
+                              onClick={() => handleDownloadComplaintPDF(c, 'en')}
+                              disabled={downloadingPdfId === `${c._id || c.id}_en`}
+                              className="inline-flex items-center justify-center space-x-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 hover:border-slate-400 rounded-xl text-xs font-bold transition shadow-2xs cursor-pointer disabled:opacity-50 shrink-0"
+                              title="Download Official English Complaint PDF"
+                            >
+                              {downloadingPdfId === `${c._id || c.id}_en` ? (
+                                <>
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+                                  <span>Generating...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Download className="w-3.5 h-3.5 shrink-0 text-slate-700" />
+                                  <span>Download PDF – English</span>
                                 </>
                               )}
                             </button>
@@ -2117,22 +2147,44 @@ export const CitizenPortalPage = () => {
                           </div>
 
                           <div className="flex items-center space-x-2 flex-wrap">
+                            {/* 1. Download PDF – தமிழ் */}
                             <button
                               type="button"
-                              onClick={() => handleDownloadComplaintPDF(c)}
-                              disabled={downloadingPdfId === (c._id || c.id)}
+                              onClick={() => handleDownloadComplaintPDF(c, 'ta')}
+                              disabled={downloadingPdfId === `${c._id || c.id}_ta`}
                               className="inline-flex items-center justify-center space-x-1.5 px-3.5 py-1.5 bg-red-50 hover:bg-red-100 text-[#A00000] border border-red-200 hover:border-red-300 rounded-xl text-xs font-bold transition shadow-2xs cursor-pointer disabled:opacity-50 shrink-0 min-h-[34px]"
-                              title="Download Official Tamil Complaint PDF (புகார் நகல்)"
+                              title="Download Official Tamil Complaint PDF (புகார் நகல் - தமிழ்)"
                             >
-                              {downloadingPdfId === (c._id || c.id) ? (
+                              {downloadingPdfId === `${c._id || c.id}_ta` ? (
                                 <>
                                   <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
-                                  <span>{t('common.generatingPdf', 'உருவாக்குகிறது...')}</span>
+                                  <span>உருவாக்குகிறது...</span>
                                 </>
                               ) : (
                                 <>
                                   <Download className="w-3.5 h-3.5 shrink-0 text-[#A00000]" />
-                                  <span>{t('citizen.downloadTamilPdf', 'Download Tamil PDF')}</span>
+                                  <span>Download PDF – தமிழ்</span>
+                                </>
+                              )}
+                            </button>
+
+                            {/* 2. Download PDF – English */}
+                            <button
+                              type="button"
+                              onClick={() => handleDownloadComplaintPDF(c, 'en')}
+                              disabled={downloadingPdfId === `${c._id || c.id}_en`}
+                              className="inline-flex items-center justify-center space-x-1.5 px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 hover:border-slate-400 rounded-xl text-xs font-bold transition shadow-2xs cursor-pointer disabled:opacity-50 shrink-0 min-h-[34px]"
+                              title="Download Official English Complaint PDF"
+                            >
+                              {downloadingPdfId === `${c._id || c.id}_en` ? (
+                                <>
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+                                  <span>Generating...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Download className="w-3.5 h-3.5 shrink-0 text-slate-700" />
+                                  <span>Download PDF – English</span>
                                 </>
                               )}
                             </button>

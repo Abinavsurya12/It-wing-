@@ -9,17 +9,101 @@ export const PAGUTHI_OPTIONS = [
   'Pothanur',
   'Kurichi',
   'Sundarapuram',
-  'Malumichampatti',
+  'Malumachampatti',
   'Kinathukadavu Ondriyam',
-  'Thondamuthur Therkku Ondriyam',
-  'Thondamuthur Merkku Ondriyam',
-  'Madukkarai Therkku Ondriyam',
-  'Madukkarai Merkku Ondriyam',
+  'Kinathukadavu Nagaram',
+  'Thondamuthur Therku Ondriyam',
+  'Thondamuthur Merku Ondriyam',
+  'Madukarai Therku Ondriyam',
+  'Madukarai Merku Ondriyam',
   'Madukkarai Nagaram',
   'Vellalur Nagaram',
-  'Othakkalmandapam Peruratchi',
-  'Chettipalayam Peruratchi',
 ];
+
+export const PAGUTHI_VILLAGES_MAP = {
+  'Thondamuthur Therku Ondriyam': [
+    'Perur Chettipalayam'
+  ],
+  'Thondamuthur Merku Ondriyam': [
+    'Theethipalayam',
+    'Madhampatti'
+  ],
+  'Kinathukadavu Ondriyam': [
+    'Vadaputhur',
+    'Solavampalayam',
+    'Sokkanur',
+    'No.10 Muthur',
+    'Kodangipalayam',
+    'Kuthirayampalayam',
+    'Pottayandipurambu'
+  ],
+  'Madukarai Merku Ondriyam': [
+    'Chettipalayam',
+    'Othakalmandapam',
+    'Ettimadai',
+    'Tirumalaipalayam',
+    'Palathurai',
+    'Pichanur',
+    'Mavuthampathy'
+  ],
+  'Madukarai Therku Ondriyam': [
+    'Arisipalayam',
+    'Valukuparai',
+    'Nachipalayam',
+    'Myleripalayam',
+    'Elur'
+  ],
+  'Malumachampatti': [
+    'Seerapalayam',
+    'Malumachampatti'
+  ]
+};
+
+/**
+ * Normalizes Paguthi names across single/double 'k' variations and aliases
+ */
+export const normalizePaguthiName = (name) => {
+  if (!name) return '';
+  const s = String(name).trim();
+  if (/^thondamuthur\s+therk?ku\s+ondriyam$/i.test(s)) return 'Thondamuthur Therku Ondriyam';
+  if (/^thondamuthur\s+merk?ku\s+ondriyam$/i.test(s)) return 'Thondamuthur Merku Ondriyam';
+  if (/^maduk?karai\s+merk?ku\s+ondriyam$/i.test(s)) return 'Madukarai Merku Ondriyam';
+  if (/^maduk?karai\s+therk?ku\s+ondriyam$/i.test(s)) return 'Madukarai Therku Ondriyam';
+  if (/^malum[ia]champatti$/i.test(s)) return 'Malumachampatti';
+  if (/^kinathukadavu\s+ondriyam$/i.test(s)) return 'Kinathukadavu Ondriyam';
+  if (/^kinathukadavu\s+nagaram$/i.test(s)) return 'Kinathukadavu Nagaram';
+  if (/^pothanur$/i.test(s) || /^podanur$/i.test(s)) return 'Pothanur';
+  if (/^kurichi$/i.test(s)) return 'Kurichi';
+  if (/^sundarapuram$/i.test(s)) return 'Sundarapuram';
+  return s;
+};
+
+/**
+ * Returns allowed villages for a given Paguthi
+ */
+export const getVillagesForPaguthi = (paguthi) => {
+  if (!paguthi) return [];
+  const normalized = normalizePaguthiName(paguthi);
+  return PAGUTHI_VILLAGES_MAP[normalized] || [];
+};
+
+/**
+ * Validates if a village is valid for a selected Paguthi
+ */
+export const isVillageValidForPaguthi = (paguthi, village) => {
+  const allowed = getVillagesForPaguthi(paguthi);
+  const cleanVillage = (village || '').trim();
+
+  if (allowed.length === 0) {
+    return cleanVillage === '';
+  }
+
+  if (!cleanVillage) {
+    return false;
+  }
+
+  return allowed.some((v) => v.toLowerCase() === cleanVillage.toLowerCase());
+};
 
 const EXCLUDED_WARDS_FOR_REMAINING = new Set([85, 94, 95, 96, 97, 98, 99, 100]);
 
@@ -39,21 +123,22 @@ for (let i = 1; i <= 100; i++) {
  * - Sundarapuram: ONLY Ward 94, Ward 96 (Count: 2)
  * - Kurichi: ONLY Ward 85, Ward 96, Ward 98 (Count: 3)
  * 
- * Remaining 10 options:
+ * Remaining options:
  * - Ward 1 through Ward 100, excluding 85, 94, 95, 96, 97, 98, 99, 100 (Count: 92)
  */
 export const getWardsForPaguthi = (paguthi) => {
   if (!paguthi) return [];
-  if (paguthi === 'Pothanur' || paguthi === 'Podanur') {
+  const p = normalizePaguthiName(paguthi);
+  if (p === 'Pothanur' || paguthi === 'Podanur') {
     return [95, 99, 100];
   }
-  if (paguthi === 'Sundarapuram') {
+  if (p === 'Sundarapuram') {
     return [94, 96];
   }
-  if (paguthi === 'Kurichi') {
+  if (p === 'Kurichi') {
     return [85, 96, 98];
   }
-  if (paguthi === 'Malumichampatti') {
+  if (p === 'Malumachampatti' || paguthi === 'Malumichampatti') {
     return [95, ...REMAINING_TEN_WARDS];
   }
   return REMAINING_TEN_WARDS;
@@ -73,6 +158,10 @@ export const isWardValidForPaguthi = (paguthi, wardNum) => {
 export default {
   PAGUTHI_LABEL,
   PAGUTHI_OPTIONS,
+  PAGUTHI_VILLAGES_MAP,
+  normalizePaguthiName,
+  getVillagesForPaguthi,
+  isVillageValidForPaguthi,
   getWardsForPaguthi,
   isWardValidForPaguthi,
 };

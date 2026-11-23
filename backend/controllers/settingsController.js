@@ -4,6 +4,7 @@ import AuditLog from '../models/AuditLog.js';
 import District from '../models/District.js';
 import Ward from '../models/Ward.js';
 import Constituency from '../models/Constituency.js';
+import { isVillageValidForPaguthi, getVillagesForPaguthi } from '../utils/paguthiVillageData.js';
 
 // @desc    Get All System Settings & Organization Info
 // @route   GET /api/settings
@@ -207,7 +208,7 @@ export const getWardSecretariesList = async (req, res) => {
         role: { [Op.in]: ['ward_secretary', 'ward', 'ward_officer'] },
         paguthi: { [Op.and]: [{ [Op.ne]: null }, { [Op.ne]: '' }] },
       },
-      attributes: ['id', '_id', 'name', 'phone', 'age', 'paguthi', 'assignedWard', 'wardId', 'username', 'role', 'isActive', 'createdAt', 'lastLogin'],
+      attributes: ['id', '_id', 'name', 'phone', 'age', 'paguthi', 'village', 'assignedWard', 'wardId', 'username', 'role', 'isActive', 'createdAt', 'lastLogin'],
       order: [['createdAt', 'DESC'], ['name', 'ASC']],
     });
 
@@ -217,6 +218,7 @@ export const getWardSecretariesList = async (req, res) => {
         ...s.toJSON(),
         _id: s._id || String(s.id),
         paguthi: s.paguthi === 'Podanur' ? 'Pothanur' : (s.paguthi || ''),
+        village: s.village || '',
       })),
     });
   } catch (error) {
@@ -234,6 +236,7 @@ export const registerWardSecretary = async (req, res) => {
       phone,
       age,
       paguthi,
+      village,
       wardId,
       assignedWard,
       username,
@@ -260,6 +263,14 @@ export const registerWardSecretary = async (req, res) => {
     const cleanPaguthi = (paguthi || '').trim();
     if (!cleanPaguthi) {
       return res.status(400).json({ success: false, message: 'Paguthi selection is required' });
+    }
+
+    const cleanVillage = (village || '').trim();
+    if (!isVillageValidForPaguthi(cleanPaguthi, cleanVillage)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid village "${cleanVillage}" for selected Paguthi "${cleanPaguthi}". Please select a valid village from the list.`,
+      });
     }
 
     const numAge = age ? parseInt(age, 10) : 32;
@@ -390,6 +401,7 @@ export const registerWardSecretary = async (req, res) => {
       wardId: finalWardId,
       constituency: 'Kinathukadavu',
       paguthi: cleanPaguthi,
+      village: cleanVillage,
       isActive: true,
     });
 
@@ -407,7 +419,7 @@ export const registerWardSecretary = async (req, res) => {
       userName: req.user?.name || 'Administrator',
       action: 'REGISTER_WARD_SECRETARY',
       module: 'SETTINGS',
-      details: `Registered Ward Secretary ${newSecretary.name} (@${newSecretary.username}) for ${cleanPaguthi} Ward ${wardDoc.wardNumber}`,
+      details: `Registered Ward Secretary ${newSecretary.name} (@${newSecretary.username}) for ${cleanPaguthi} ${cleanVillage ? `(${cleanVillage}) ` : ''}Ward ${wardDoc.wardNumber}`,
       ipAddress: req.ip || '127.0.0.1',
     });
 
@@ -421,6 +433,7 @@ export const registerWardSecretary = async (req, res) => {
         phone: newSecretary.phone,
         age: newSecretary.age,
         paguthi: newSecretary.paguthi,
+        village: newSecretary.village || '',
         assignedWard: newSecretary.assignedWard,
         wardId: newSecretary.wardId,
         username: newSecretary.username,

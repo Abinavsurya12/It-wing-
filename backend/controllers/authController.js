@@ -4,6 +4,7 @@ import User from '../models/User.js';
 import Ward from '../models/Ward.js';
 import Constituency from '../models/Constituency.js';
 import AuditLog from '../models/AuditLog.js';
+import { isVillageValidForPaguthi } from '../utils/paguthiVillageData.js';
 
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET || 'tvk_default_jwt_secret', {
@@ -118,6 +119,7 @@ export const login = async (req, res) => {
         assignedWard: userWard,
         wardId: user.wardId || null,
         paguthi: userPaguthi,
+        village: user.village || '',
         constituency: userConstituency,
         address: user.address,
         avatarUrl: user.avatarUrl,
@@ -185,6 +187,7 @@ export const registerCitizen = async (req, res) => {
       phone,
       password,
       paguthi,
+      village,
       wardId,
       wardNumber,
       assignedWard,
@@ -218,6 +221,14 @@ export const registerCitizen = async (req, res) => {
     const cleanPaguthi = (paguthi || '').trim();
     if (!cleanPaguthi) {
       return res.status(400).json({ success: false, message: 'Paguthi selection is required' });
+    }
+
+    const cleanVillage = (village || '').trim();
+    if (!isVillageValidForPaguthi(cleanPaguthi, cleanVillage)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid village "${cleanVillage}" for selected Paguthi "${cleanPaguthi}". Please select a valid village from the list.`,
+      });
     }
 
     const rawWard = assignedWard || wardNumber || wardId;
@@ -313,6 +324,7 @@ export const registerCitizen = async (req, res) => {
       assignedWard: finalWardLabel || `Ward ${parsedWardNum}`,
       wardId: finalWardId,
       paguthi: cleanPaguthi,
+      village: cleanVillage,
       isActive: true,
     });
 
@@ -322,7 +334,7 @@ export const registerCitizen = async (req, res) => {
       userName: newUser.name,
       action: 'CITIZEN_REGISTRATION',
       module: 'AUTH',
-      details: `Citizen ${newUser.name} (${newUser.phone}) registered with Paguthi: ${cleanPaguthi}, Ward: ${finalWardLabel}, Constituency: ${resolvedConstituency}`,
+      details: `Citizen ${newUser.name} (${newUser.phone}) registered with Paguthi: ${cleanPaguthi}${cleanVillage ? `, Village: ${cleanVillage}` : ''}, Ward: ${finalWardLabel}, Constituency: ${resolvedConstituency}`,
       ipAddress: req.ip || '127.0.0.1',
     });
 
@@ -340,6 +352,7 @@ export const registerCitizen = async (req, res) => {
         assignedWard: newUser.assignedWard,
         wardId: newUser.wardId,
         paguthi: newUser.paguthi,
+        village: newUser.village || '',
         constituency: newUser.constituency,
         token: generateToken(newUser.id),
       },
@@ -398,6 +411,7 @@ export const getMe = async (req, res) => {
         assignedWard: userWard,
         wardId: user.wardId || null,
         paguthi: userPaguthi,
+        village: user.village || '',
         constituency: userConstituency,
         address: user.address,
         avatarUrl: user.avatarUrl,

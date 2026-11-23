@@ -31,6 +31,8 @@ import AdminPageHeader from '../../components/common/AdminPageHeader';
 import {
   PAGUTHI_LABEL,
   PAGUTHI_OPTIONS,
+  getVillagesForPaguthi,
+  isVillageValidForPaguthi,
   getWardsForPaguthi,
   isWardValidForPaguthi,
 } from '../../utils/paguthiWardData';
@@ -84,6 +86,7 @@ export const SettingsPage = () => {
     phone: '',
     age: '',
     paguthi: '',
+    village: '',
     wardNumber: '',
     wardId: '',
     assignedWard: '',
@@ -91,6 +94,10 @@ export const SettingsPage = () => {
     password: '',
     confirmPassword: '',
   });
+
+  const availableVillagesForSecPaguthi = useMemo(() => {
+    return getVillagesForPaguthi(secForm.paguthi);
+  }, [secForm.paguthi]);
 
   // Dynamic Wards belonging strictly to selected Paguthi (Hook called unconditionally)
   const availableWardsForPaguthi = useMemo(() => {
@@ -176,6 +183,12 @@ export const SettingsPage = () => {
       notifyError(`Please select ${PAGUTHI_LABEL}`);
       return;
     }
+    const villagesForSecP = getVillagesForPaguthi(secForm.paguthi);
+    if (villagesForSecP.length > 0 && !secForm.village) {
+      setSecFormError(`Please select a Village for ${secForm.paguthi}`);
+      notifyError(`Please select a Village for ${secForm.paguthi}`);
+      return;
+    }
     const wardNum = parseInt(String(secForm.wardNumber || secForm.assignedWard || secForm.wardId).replace(/\D+/g, ''), 10);
     const selectedWardItem = availableWardsForPaguthi.find(
       (w) => String(w.wardNumber) === String(wardNum)
@@ -208,6 +221,7 @@ export const SettingsPage = () => {
         phone: cleanPhone,
         age: secForm.age ? parseInt(secForm.age, 10) : 32,
         paguthi: secForm.paguthi,
+        village: secForm.village || '',
         wardId: selectedWardItem ? String(selectedWardItem.wardId) : String(wardNum),
         wardNumber: String(wardNum),
         assignedWard: selectedWardItem ? selectedWardItem.label : `Ward ${wardNum}`,
@@ -225,6 +239,7 @@ export const SettingsPage = () => {
           phone: '',
           age: '',
           paguthi: '',
+          village: '',
           wardNumber: '',
           wardId: '',
           assignedWard: '',
@@ -606,6 +621,7 @@ export const SettingsPage = () => {
                         setSecForm((prev) => ({
                           ...prev,
                           paguthi: selectedPaguthi,
+                          village: '',
                           wardNumber: '',
                           wardId: '',
                           assignedWard: '',
@@ -624,7 +640,46 @@ export const SettingsPage = () => {
                     <span className="text-[10px] text-slate-400 mt-0.5 block">Select administrative jurisdiction under Kinathukadavu</span>
                   </div>
 
-                  {/* 4. Ward Number - DYNAMIC BASED ON PAGUTHI */}
+                  {/* 4. Village - DYNAMIC BASED ON PAGUTHI */}
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">
+                      Village {availableVillagesForSecPaguthi.length > 0 ? '*' : '(Optional / N/A)'}
+                    </label>
+                    <select
+                      required={availableVillagesForSecPaguthi.length > 0}
+                      disabled={!secForm.paguthi || availableVillagesForSecPaguthi.length === 0}
+                      value={secForm.village}
+                      onChange={(e) => {
+                        setSecForm((prev) => ({ ...prev, village: e.target.value }));
+                        setSecFormError('');
+                      }}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700 focus:outline-none focus:border-[#850000] disabled:bg-slate-100 disabled:cursor-not-allowed disabled:text-slate-400"
+                    >
+                      <option value="">
+                        {!secForm.paguthi
+                          ? '-- Select Paguthi First --'
+                          : availableVillagesForSecPaguthi.length === 0
+                          ? '-- Not Applicable for selected Paguthi --'
+                          : '-- Select Village --'}
+                      </option>
+                      {availableVillagesForSecPaguthi.map((v) => (
+                        <option key={v} value={v}>
+                          {v}
+                        </option>
+                      ))}
+                    </select>
+                    {secForm.paguthi && availableVillagesForSecPaguthi.length > 0 ? (
+                      <span className="text-[10px] text-emerald-600 mt-0.5 block font-medium">
+                        {availableVillagesForSecPaguthi.length} village(s) mapped to {secForm.paguthi}
+                      </span>
+                    ) : secForm.paguthi ? (
+                      <span className="text-[10px] text-slate-400 mt-0.5 block">
+                        No specific village list mapped for this Paguthi
+                      </span>
+                    ) : null}
+                  </div>
+
+                  {/* 5. Ward Number - DYNAMIC BASED ON PAGUTHI */}
                   <div>
                     <label className="block font-bold text-slate-700 mb-1">
                       Ward Number *
@@ -858,6 +913,11 @@ export const SettingsPage = () => {
                               <span className="bg-blue-50 text-blue-800 border border-blue-200 px-2 py-0.5 rounded text-[11px] font-bold">
                                 {sec.paguthi || '—'}
                               </span>
+                              {sec.village && (
+                                <span className="ml-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 px-1.5 py-0.5 rounded text-[10px] font-medium">
+                                  {sec.village}
+                                </span>
+                              )}
                             </td>
                             <td className="py-2.5 px-3 font-medium text-slate-800 whitespace-nowrap">
                               <span className="bg-amber-50 text-amber-800 border border-amber-200 px-2 py-0.5 rounded text-[11px] font-bold">

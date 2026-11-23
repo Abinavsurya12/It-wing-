@@ -79,6 +79,10 @@ Issue.init(
       type: DataTypes.STRING(100),
       defaultValue: '',
     },
+    village: {
+      type: DataTypes.STRING(150),
+      defaultValue: '',
+    },
     wardId: {
       type: DataTypes.INTEGER,
       allowNull: true,

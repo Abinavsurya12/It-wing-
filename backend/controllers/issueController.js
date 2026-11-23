@@ -1,6 +1,7 @@
 import * as XLSX from 'xlsx';
 import { Op } from 'sequelize';
 import sequelize from '../config/mysql.js';
+import { isVillageValidForPaguthi } from '../utils/paguthiVillageData.js';
 import {
   Issue,
   IssueActivity,
@@ -78,6 +79,7 @@ export const formatIssue = (issueInstance) => {
 
   return {
     ...raw,
+    village: raw.village || '',
     priority: autoPriority,
     _id: raw._id || String(raw.id),
     beforeImage: beforeImg,
@@ -464,6 +466,17 @@ export const createIssue = async (req, res) => {
     }
 
     const finalPaguthi = (requestedPaguthi || wardDoc?.paguthi || '').trim();
+
+    // Village validation & assignment
+    const cleanVillage = (req.body.village || '').trim();
+    const paguthiForValidation = finalPaguthi || requestedPaguthi;
+    if (paguthiForValidation && !isVillageValidForPaguthi(paguthiForValidation, cleanVillage)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid village "${cleanVillage}" for selected Paguthi "${paguthiForValidation}". Please select a valid village from the list.`,
+      });
+    }
+    req.body.village = cleanVillage;
 
     if (wardDoc) {
       req.body.wardId = wardDoc.id;

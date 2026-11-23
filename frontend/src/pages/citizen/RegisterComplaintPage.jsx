@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -22,10 +22,16 @@ import { useAuth } from '../../context/AuthContext';
 import { useNotification } from '../../context/NotificationContext';
 import LanguageSwitcher from '../../components/common/LanguageSwitcher';
 import Footer from '../../components/layout/Footer';
-import { downloadTamilComplaintPdf } from '../../utils/tamilComplaintPdfGenerator';
+import {
+  downloadComplaintPdf,
+  downloadTamilComplaintPdf,
+  downloadEnglishComplaintPdf,
+} from '../../utils/complaintPdfGenerator';
 import {
   PAGUTHI_LABEL,
   PAGUTHI_OPTIONS,
+  getVillagesForPaguthi,
+  isVillageValidForPaguthi,
   getWardsForPaguthi,
   isWardValidForPaguthi,
 } from '../../utils/paguthiWardData';
@@ -46,21 +52,26 @@ export const RegisterComplaintPage = () => {
     district: 'Coimbatore',
     constituency: 'Kinathukadavu',
     paguthi: user?.paguthi && PAGUTHI_OPTIONS.includes(user.paguthi) ? user.paguthi : '',
+    village: user?.village || '',
     wardNumber: '',
     wardId: '',
     priority: 'Medium',
   });
 
+  const availableVillagesForPaguthi = useMemo(() => {
+    return getVillagesForPaguthi(formData.paguthi);
+  }, [formData.paguthi]);
+
   const [wards, setWards] = useState([]);
   const [loading, setLoading] = useState(false);
   const [submittedCode, setSubmittedCode] = useState('');
   const [submittedComplaint, setSubmittedComplaint] = useState(null);
-  const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [downloadingPdfLang, setDownloadingPdfLang] = useState(null);
 
-  const handleDownloadSubmittedTamilPdf = async () => {
+  const handleDownloadSubmittedPdf = async (lang = 'ta') => {
     if (!submittedComplaint) return;
     try {
-      setDownloadingPdf(true);
+      setDownloadingPdfLang(lang);
       let fullComplaint = submittedComplaint;
       const fetchId = submittedComplaint.id || submittedComplaint._id;
       if (fetchId) {
@@ -73,13 +84,17 @@ export const RegisterComplaintPage = () => {
           console.warn('Using submitted complaint object for PDF:', fetchErr.message);
         }
       }
-      await downloadTamilComplaintPdf(fullComplaint, user);
-      notifySuccess('Tamil complaint PDF downloaded successfully! (புகார் ஒப்புகைச் சீட்டு பதிவிறக்கம் செய்யப்பட்டது)');
+      await downloadComplaintPdf(fullComplaint, user, lang);
+      if (lang === 'ta') {
+        notifySuccess('Tamil complaint PDF downloaded successfully! (புகார் ஒப்புகைச் சீட்டு பதிவிறக்கம் செய்யப்பட்டது)');
+      } else {
+        notifySuccess('English complaint PDF downloaded successfully!');
+      }
     } catch (err) {
-      console.error('Failed to download Tamil complaint PDF:', err);
-      notifyError('Failed to generate Tamil PDF. Please try again.');
+      console.error('Failed to download complaint PDF:', err);
+      notifyError(lang === 'ta' ? 'Failed to generate Tamil PDF. Please try again.' : 'Failed to generate English PDF. Please try again.');
     } finally {
-      setDownloadingPdf(false);
+      setDownloadingPdfLang(null);
     }
   };
 
@@ -161,6 +176,12 @@ export const RegisterComplaintPage = () => {
       return;
     }
 
+    const villagesForCP = getVillagesForPaguthi(formData.paguthi);
+    if (villagesForCP.length > 0 && !formData.village) {
+      notifyError(`Please select a Village for ${formData.paguthi}`);
+      return;
+    }
+
     if (!formData.wardNumber) {
       notifyError('Please select a Ward Number');
       return;
@@ -238,16 +259,17 @@ export const RegisterComplaintPage = () => {
                 {submittedCode}
               </div>
 
-              {/* Immediate Tamil PDF Download Button */}
-              <div className="pt-1">
+              {/* Immediate Bilingual PDF Download Options */}
+              <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+                {/* 1. Download PDF – தமிழ் */}
                 <button
                   type="button"
-                  onClick={handleDownloadSubmittedTamilPdf}
-                  disabled={downloadingPdf}
-                  className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 px-6 py-3 bg-[#A00000] hover:bg-[#850000] text-white rounded-xl text-xs font-bold transition shadow-md cursor-pointer disabled:opacity-50"
-                  title="Download Official Tamil Complaint PDF (புகார் நகல்)"
+                  onClick={() => handleDownloadSubmittedPdf('ta')}
+                  disabled={Boolean(downloadingPdfLang)}
+                  className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 px-5 py-2.5 bg-[#A00000] hover:bg-[#850000] text-white rounded-xl text-xs font-bold transition shadow-md cursor-pointer disabled:opacity-50"
+                  title="Download Complaint Acknowledgement Slip in Tamil (புகார் ஒப்புகைச் சீட்டு - தமிழ்)"
                 >
-                  {downloadingPdf ? (
+                  {downloadingPdfLang === 'ta' ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin shrink-0" />
                       <span>{t('common.generatingPdf', 'PDF உருவாக்கப்படுகிறது...')}</span>
@@ -255,7 +277,28 @@ export const RegisterComplaintPage = () => {
                   ) : (
                     <>
                       <Download className="w-4 h-4 shrink-0 text-[#FFD32A]" />
-                      <span>{t('citizen.downloadTamilPdf', 'Download Tamil PDF (புகார் நகல் பதிவிறக்கம்)')}</span>
+                      <span>Download PDF – தமிழ்</span>
+                    </>
+                  )}
+                </button>
+
+                {/* 2. Download PDF – English */}
+                <button
+                  type="button"
+                  onClick={() => handleDownloadSubmittedPdf('en')}
+                  disabled={Boolean(downloadingPdfLang)}
+                  className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 px-5 py-2.5 bg-slate-900 hover:bg-black text-white rounded-xl text-xs font-bold transition shadow-md cursor-pointer disabled:opacity-50"
+                  title="Download Complaint Acknowledgement Slip in English"
+                >
+                  {downloadingPdfLang === 'en' ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                      <span>Generating English PDF...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-4 h-4 shrink-0 text-[#FFD32A]" />
+                      <span>Download PDF – English</span>
                     </>
                   )}
                 </button>
@@ -340,6 +383,7 @@ export const RegisterComplaintPage = () => {
                         setFormData((prev) => ({
                           ...prev,
                           paguthi: newPaguthi,
+                          village: '',
                           wardNumber: '',
                           wardId: '',
                         }));
@@ -355,7 +399,46 @@ export const RegisterComplaintPage = () => {
                     </select>
                   </div>
 
-                  {/* 4. Municipal Ward (Dynamic based on selected Paguthi) */}
+                  {/* 4. Village - DYNAMIC BASED ON PAGUTHI */}
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">
+                      Village {availableVillagesForPaguthi.length > 0 ? '*' : '(Optional / N/A)'}
+                    </label>
+                    <select
+                      value={formData.village}
+                      required={availableVillagesForPaguthi.length > 0}
+                      disabled={!formData.paguthi || availableVillagesForPaguthi.length === 0}
+                      onChange={(e) => {
+                        setFormData((prev) => ({
+                          ...prev,
+                          village: e.target.value,
+                        }));
+                      }}
+                      className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#A00000] focus:border-[#A00000] disabled:bg-slate-100 disabled:cursor-not-allowed disabled:text-slate-400"
+                    >
+                      <option value="">
+                        {!formData.paguthi
+                          ? '-- Select Paguthi First --'
+                          : availableVillagesForPaguthi.length === 0
+                          ? '-- Not Applicable for selected Paguthi --'
+                          : '-- Select Village --'}
+                      </option>
+                      {availableVillagesForPaguthi.map((v) => (
+                        <option key={v} value={v}>
+                          {v}
+                        </option>
+                      ))}
+                    </select>
+                    {formData.paguthi && availableVillagesForPaguthi.length > 0 && (
+                      <span className="text-[10px] text-emerald-600 mt-0.5 block font-medium">
+                        {availableVillagesForPaguthi.length} village(s) mapped to {formData.paguthi}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* 5. Municipal Ward (Dynamic based on selected Paguthi) */}
                   <div>
                     <label className="block font-bold text-slate-700 mb-1">Ward Number *</label>
                     <select
@@ -385,25 +468,26 @@ export const RegisterComplaintPage = () => {
                       ))}
                     </select>
                   </div>
-                </div>
-              </div>
 
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">{t('citizen.complaintCategory', 'Issue Category')} *</label>
-                <select
-                  value={formData.category}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs focus:ring-[#A00000]"
-                >
-                  <option value="Drinking Water">Drinking Water</option>
-                  <option value="Street Lighting">Street Lighting</option>
-                  <option value="Road Infrastructure">Road Infrastructure</option>
-                  <option value="Sanitation / Drainage">Sanitation / Drainage</option>
-                  <option value="Public Health">Public Health</option>
-                  <option value="Electricity / TANGEDCO">Electricity / TANGEDCO</option>
-                  <option value="Public Transport">Public Transport</option>
-                  <option value="Other">Other Issues</option>
-                </select>
+                  {/* 6. Complaint Category */}
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">{t('citizen.complaintCategory', 'Issue Category')} *</label>
+                    <select
+                      value={formData.category}
+                      onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs focus:ring-[#A00000]"
+                    >
+                      <option value="Drinking Water">Drinking Water</option>
+                      <option value="Street Lighting">Street Lighting</option>
+                      <option value="Road Infrastructure">Road Infrastructure</option>
+                      <option value="Sanitation / Drainage">Sanitation / Drainage</option>
+                      <option value="Public Health">Public Health</option>
+                      <option value="Electricity / TANGEDCO">Electricity / TANGEDCO</option>
+                      <option value="Public Transport">Public Transport</option>
+                      <option value="Other">Other Issues</option>
+                    </select>
+                  </div>
+                </div>
               </div>
 
               <div>

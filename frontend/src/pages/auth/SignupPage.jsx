@@ -11,6 +11,7 @@ import {
   Building,
   MapPin,
   Landmark,
+  Home,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import api from '../../services/api';
@@ -22,6 +23,8 @@ import vickyAnaImg from '../../assets/vicky ana.png';
 import {
   PAGUTHI_LABEL,
   PAGUTHI_OPTIONS,
+  getVillagesForPaguthi,
+  isVillageValidForPaguthi,
   getWardsForPaguthi,
 } from '../../utils/paguthiWardData';
 
@@ -34,6 +37,7 @@ export const SignupPage = () => {
   const [name, setName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [paguthi, setPaguthi] = useState('');
+  const [village, setVillage] = useState('');
   const [wardNumber, setWardNumber] = useState('');
   const [wardId, setWardId] = useState('');
   const [assignedWard, setAssignedWard] = useState('');
@@ -107,10 +111,16 @@ export const SignupPage = () => {
     return combined.sort((a, b) => a.wardNumber - b.wardNumber);
   }, [paguthi, dbWards]);
 
+  // Dynamic Villages belonging to selected Paguthi
+  const availableVillagesForPaguthi = useMemo(() => {
+    return getVillagesForPaguthi(paguthi);
+  }, [paguthi]);
+
   // Handle Paguthi selection & reset ward
   const handlePaguthiChange = (e) => {
     const selectedP = e.target.value;
     setPaguthi(selectedP);
+    setVillage('');
     setWardNumber('');
     setWardId('');
     setAssignedWard('');
@@ -158,6 +168,11 @@ export const SignupPage = () => {
       return;
     }
 
+    if (availableVillagesForPaguthi.length > 0 && !village) {
+      setErrorMessage(`Please select a Village for ${paguthi}`);
+      return;
+    }
+
     if (!wardNumber) {
       setErrorMessage('Please select your Ward');
       return;
@@ -175,6 +190,7 @@ export const SignupPage = () => {
         phoneNumber: cleanPhone,
         password,
         paguthi,
+        village: village || '',
         wardId,
         wardNumber,
         assignedWard,
@@ -380,7 +396,45 @@ export const SignupPage = () => {
                   </div>
                 </div>
 
-                {/* FIELD 4: WARD NUMBER */}
+                {/* FIELD 4: VILLAGE (DYNAMIC BASED ON PAGUTHI) */}
+                <div>
+                  <label className="block text-[11px] font-bold text-[#252525] mb-1 tracking-wider uppercase">
+                    Village {availableVillagesForPaguthi.length > 0 ? '*' : '(Optional / N/A)'}
+                  </label>
+                  <div className="relative">
+                    <Home className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                    <select
+                      required={availableVillagesForPaguthi.length > 0}
+                      disabled={!paguthi || availableVillagesForPaguthi.length === 0}
+                      value={village}
+                      onChange={(e) => {
+                        setVillage(e.target.value);
+                        setErrorMessage('');
+                      }}
+                      className="w-full bg-white border border-[#E9E2DC] rounded-xl pl-10 pr-3.5 py-2.5 text-xs sm:text-sm text-[#252525] focus:outline-none focus:border-[#B00000] focus:ring-2 focus:ring-[#B00000]/20 transition disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed"
+                    >
+                      <option value="">
+                        {!paguthi
+                          ? '-- Select Paguthi First --'
+                          : availableVillagesForPaguthi.length === 0
+                          ? '-- Not Applicable for selected Paguthi --'
+                          : '-- Select Village --'}
+                      </option>
+                      {availableVillagesForPaguthi.map((v) => (
+                        <option key={v} value={v}>
+                          {v}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  {paguthi && availableVillagesForPaguthi.length > 0 ? (
+                    <p className="text-[10px] text-emerald-600 mt-1 font-medium">
+                      {availableVillagesForPaguthi.length} village(s) mapped to {paguthi}
+                    </p>
+                  ) : null}
+                </div>
+
+                {/* FIELD 5: WARD NUMBER */}
                 <div>
                   <label className="block text-[11px] font-bold text-[#252525] mb-1 tracking-wider uppercase">
                     Ward *
