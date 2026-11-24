@@ -4,7 +4,7 @@ import AuditLog from '../models/AuditLog.js';
 import District from '../models/District.js';
 import Ward from '../models/Ward.js';
 import Constituency from '../models/Constituency.js';
-import { isVillageValidForPaguthi, getVillagesForPaguthi } from '../utils/paguthiVillageData.js';
+import { isVillageValidForPaguthi, getVillagesForPaguthi, getCanonicalTargetPaguthis } from '../utils/paguthiVillageData.js';
 
 // @desc    Get All System Settings & Organization Info
 // @route   GET /api/settings
@@ -275,7 +275,7 @@ export const registerWardSecretary = async (req, res) => {
 
     const numAge = age ? parseInt(age, 10) : 32;
 
-    if (!assignedWard && !wardId) {
+    if (!assignedWard && !wardId && !req.body.wardNumber) {
       return res.status(400).json({ success: false, message: 'Ward selection is required' });
     }
 
@@ -295,8 +295,8 @@ export const registerWardSecretary = async (req, res) => {
     let wardDoc = null;
     const rawWard = assignedWard || req.body.wardNumber || wardId;
     const parsedWardNum = rawWard ? parseInt(String(rawWard).replace(/\D+/g, ''), 10) : null;
-    const canonicalPaguthi = (cleanPaguthi === 'Podanur') ? 'Pothanur' : cleanPaguthi;
-    const paguthiFilter = (canonicalPaguthi === 'Pothanur') ? ['Pothanur', 'Podanur'] : [canonicalPaguthi];
+    const paguthiFilter = getCanonicalTargetPaguthis(cleanPaguthi);
+    const canonicalPaguthi = paguthiFilter[0] || cleanPaguthi;
 
     // Check by wardId if provided, but ONLY if it belongs to this paguthi!
     if (wardId) {

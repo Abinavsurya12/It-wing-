@@ -77,7 +77,14 @@ export const PAGUTHI_VILLAGES_MAP = {
   ],
   'Madukkarai Nagaram': [],
   'Vellalur Nagaram': [],
-  'Malumachampatti': [],
+  'Malumachampatti': [
+    'Seerapalayam',
+    'Malumachampatti'
+  ],
+  'Malumichampatti': [
+    'Seerapalayam',
+    'Malumachampatti'
+  ],
   'Pothanur': [],
   'Kurichi': [],
   'Sundarapuram': []
@@ -134,6 +141,30 @@ export const isVillageValidForPaguthi = (paguthi, village) => {
   return allowed.some((v) => v.toLowerCase() === cleanVillage.toLowerCase());
 };
 
+export const getCanonicalTargetPaguthis = (pName) => {
+  const norm = normalizePaguthiName(pName);
+  if (norm === 'Pothanur' || pName === 'Podanur') return ['Pothanur', 'Podanur'];
+  if (norm === 'Kurichi') return ['Kurichi'];
+  if (norm === 'Sundarapuram') return ['Sundarapuram'];
+  if (norm === 'Malumachampatti') return ['Malumachampatti', 'Malumichampatti'];
+  if (norm === 'Thondamuthur Therkku Ondriyam' || norm === 'Thondamuthur Therku Ondriyam') {
+    return ['Thondamuthur Therkku Ondriyam', 'Thondamuthur Therku Ondriyam'];
+  }
+  if (norm === 'Thondamuthur Merkku Ondriyam' || norm === 'Thondamuthur Merku Ondriyam') {
+    return ['Thondamuthur Merkku Ondriyam', 'Thondamuthur Merku Ondriyam'];
+  }
+  if (norm === 'Madukkarai Therkku Ondriyam' || norm === 'Madukarai Therku Ondriyam') {
+    return ['Madukkarai Therkku Ondriyam', 'Madukarai Therku Ondriyam', 'Madukkarai Therku Ondriyam'];
+  }
+  if (norm === 'Madukkarai Merkku Ondriyam' || norm === 'Madukarai Merku Ondriyam') {
+    return ['Madukkarai Merkku Ondriyam', 'Madukarai Merku Ondriyam', 'Madukkarai Merku Ondriyam'];
+  }
+  if (norm === 'Kinathukadavu Ondriyam') return ['Kinathukadavu Ondriyam'];
+  if (norm === 'Madukkarai Nagaram') return ['Madukkarai Nagaram'];
+  if (norm === 'Vellalur Nagaram') return ['Vellalur Nagaram'];
+  return [norm || pName];
+};
+
 export default {
   PAGUTHI_LABEL,
   PAGUTHI_OPTIONS,
@@ -141,4 +172,5 @@ export default {
   normalizePaguthiName,
   getVillagesForPaguthi,
   isVillageValidForPaguthi,
+  getCanonicalTargetPaguthis,
 };

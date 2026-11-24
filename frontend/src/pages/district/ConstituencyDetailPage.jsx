@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import api from '../../services/api';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
+import { getVillagesForPaguthi } from '../../utils/paguthiWardData';
 
 export const ConstituencyDetailPage = () => {
   const { id } = useParams();
@@ -45,11 +46,58 @@ export const ConstituencyDetailPage = () => {
 
   const { constituency, paguthis = [], wards = [], issues = [], members = [] } = data;
 
-  const displayPaguthis = (Array.isArray(paguthis) ? paguthis : []).map((p) => {
-    const rawName = typeof p === 'string' ? p : (p?.name || '');
-    const cleanName = rawName === 'Podanur' ? 'Pothanur' : rawName;
-    return typeof p === 'string' ? { name: cleanName } : { ...p, name: cleanName };
-  });
+  const KINATHUKADAVU_PAGUTHIS_ORDER = [
+    'Thondamuthur Therkku Ondriyam',
+    'Thondamuthur Merkku Ondriyam',
+    'Madukkarai Therkku Ondriyam',
+    'Madukkarai Merkku Ondriyam',
+    'Madukkarai Nagaram',
+    'Vellalur Nagaram',
+    'Kinathukadavu Ondriyam',
+    'Malumachampatti',
+    'Pothanur',
+    'Kurichi',
+    'Sundarapuram',
+  ];
+
+  const rawPaguthisList = Array.isArray(paguthis) ? paguthis : [];
+  const isKinathukadavu = constituency?.name?.toLowerCase().includes('kinathu') || constituency?.code === 'KKD';
+
+  const displayPaguthis = isKinathukadavu
+    ? KINATHUKADAVU_PAGUTHIS_ORDER.map((pName) => {
+        const found = rawPaguthisList.find((p) => {
+          const rawName = typeof p === 'string' ? p : (p?.name || '');
+          const cleanName = rawName === 'Podanur' ? 'Pothanur' : rawName;
+          return cleanName === pName;
+        });
+
+        if (found && typeof found === 'object') {
+          return { ...found, name: pName };
+        }
+
+        const paguthiWards = wards.filter(
+          (w) => w.paguthi === pName || (pName === 'Pothanur' && w.paguthi === 'Podanur')
+        );
+        const paguthiIssues = issues.filter(
+          (i) => i.paguthi === pName || (pName === 'Pothanur' && i.paguthi === 'Podanur')
+        );
+
+        return {
+          name: pName,
+          totalVillages: getVillagesForPaguthi(pName).length,
+          totalWards: paguthiWards.length,
+          registeredSecretaries: paguthiWards.filter((w) => w.wardSecretaryRegistrationStatus === 'Registered').length,
+          totalComplaints: paguthiIssues.length,
+          pendingComplaints: paguthiIssues.filter((i) => ['Pending', 'Assigned', 'Under Review'].includes(i.status)).length,
+          inProgressComplaints: paguthiIssues.filter((i) => i.status === 'In Progress').length,
+          completedComplaints: paguthiIssues.filter((i) => ['Completed', 'Resolved', 'Closed'].includes(i.status)).length,
+        };
+      })
+    : rawPaguthisList.map((p) => {
+        const rawName = typeof p === 'string' ? p : (p?.name || '');
+        const cleanName = rawName === 'Podanur' ? 'Pothanur' : rawName;
+        return typeof p === 'string' ? { name: cleanName } : { ...p, name: cleanName };
+      });
 
   const constituencyDisplayName = isTa && constituency.tamilName ? constituency.tamilName : constituency.name;
 
@@ -95,23 +143,11 @@ export const ConstituencyDetailPage = () => {
           </p>
 
           {/* Actual database statistics */}
-          <div className="grid grid-cols-1 min-[420px]:grid-cols-3 gap-2.5 sm:gap-4 mt-5 sm:mt-6 pt-5 sm:pt-6 border-t border-white/20 max-w-xl">
-            <div className="bg-black/20 p-2.5 rounded-xl border border-white/10">
+          <div className="flex flex-wrap gap-2.5 sm:gap-4 mt-5 sm:mt-6 pt-5 sm:pt-6 border-t border-white/20 max-w-xl">
+            <div className="bg-black/20 px-4 py-2.5 rounded-xl border border-white/10 min-w-[140px]">
               <p className="text-[11px] text-red-200">{t('constituency.totalPaguthi', 'Total Paguthi')}</p>
               <p className="text-xl sm:text-2xl font-black text-[#FFD32A] mt-0.5">
                 {displayPaguthis.length}
-              </p>
-            </div>
-            <div className="bg-black/20 p-2.5 rounded-xl border border-white/10">
-              <p className="text-[11px] text-red-200">{t('constituency.totalWards', 'Total Wards')}</p>
-              <p className="text-xl sm:text-2xl font-black text-white mt-0.5">
-                {wards.length}
-              </p>
-            </div>
-            <div className="bg-black/20 p-2.5 rounded-xl border border-white/10">
-              <p className="text-[11px] text-red-200">{t('constituency.totalMembers', 'Total Members')}</p>
-              <p className="text-xl sm:text-2xl font-black text-white mt-0.5">
-                {members.length}
               </p>
             </div>
           </div>
@@ -161,6 +197,10 @@ export const ConstituencyDetailPage = () => {
                       <span className="text-xs font-bold text-[#A00000] bg-red-50 px-2.5 py-0.5 rounded-full border border-red-200">
                         {p.totalVillages} {p.totalVillages === 1 ? 'Village' : 'Villages'}
                       </span>
+                    ) : ['Pothanur', 'Kurichi', 'Sundarapuram'].includes(p.name) ? (
+                      <span className="text-xs font-bold text-[#A00000] bg-red-50 px-2.5 py-0.5 rounded-full border border-red-200">
+                        Municipal
+                      </span>
                     ) : (
                       <span className="text-xs font-bold text-slate-600 bg-slate-100 px-2.5 py-0.5 rounded-full border border-slate-200">
                         Town / Nagaram
@@ -179,13 +219,7 @@ export const ConstituencyDetailPage = () => {
                         {p.totalVillages !== undefined && p.totalVillages > 0 ? 'Total Villages' : t('constituency.totalWards', 'Total Wards')}
                       </span>
                       <strong className="text-slate-900 font-bold text-sm">
-                        {p.name === 'Pothanur'
-                          ? '3 Wards'
-                          : p.name === 'Kurichi'
-                          ? '3 Wards'
-                          : p.name === 'Sundarapuram'
-                          ? '2 Wards'
-                          : p.totalVillages !== undefined && p.totalVillages > 0
+                        {p.totalVillages !== undefined && p.totalVillages > 0
                           ? `${p.totalVillages} ${p.totalVillages === 1 ? 'Village' : 'Villages'}`
                           : `${p.totalWards || 0} ${p.totalWards === 1 ? 'Ward' : 'Wards'}`}
                       </strong>

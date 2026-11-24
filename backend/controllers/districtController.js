@@ -210,12 +210,7 @@ export const getConstituencyById = async (req, res) => {
         });
         const pWardIds = pWards.map((w) => w.id);
 
-        let totalWards = pWards.length;
-        if (isKinathukadavu) {
-          if (pName === 'Pothanur') totalWards = 3;
-          else if (pName === 'Kurichi') totalWards = 3;
-          else if (pName === 'Sundarapuram') totalWards = 2;
-        }
+        const totalWards = pWards.length;
 
         const registeredSecretaries = await User.count({
           where: {
@@ -340,34 +335,11 @@ export const getPaguthiDetails = async (req, res) => {
       }
     }
 
-    // Paguthi-to-Ward mapping for municipal administrative jurisdictions
-    const PAGUTHI_WARD_MAP = {
-      Pothanur: [95, 99, 100],
-      Podanur: [95, 99, 100],
-      Kurichi: [85, 96, 98],
-      Sundarapuram: [94],
-      Malumichampatti: [95],
-    };
-
-    let wardWhere = {
-      [Op.or]: [
-        { constituencyId: constituency.id, paguthi: { [Op.in]: targetPaguthis } },
-        { paguthi: { [Op.in]: targetPaguthis } },
-      ],
-    };
-
-    if (PAGUTHI_WARD_MAP[canonicalPaguthiName]) {
-      wardWhere = {
-        [Op.or]: [
-          { paguthi: { [Op.in]: targetPaguthis } },
-          { wardNumber: { [Op.in]: PAGUTHI_WARD_MAP[canonicalPaguthiName] } },
-        ],
-      };
-    }
-
-    // Find all wards for this paguthi
+    // Find all wards for this paguthi dynamically from MySQL
     const allPaguthiWards = await Ward.findAll({
-      where: wardWhere,
+      where: {
+        paguthi: { [Op.in]: targetPaguthis },
+      },
       order: [['wardNumber', 'ASC']],
     });
 
@@ -376,6 +348,7 @@ export const getPaguthiDetails = async (req, res) => {
     // Helper to test if a ward belongs to a village
     const isWardInVillage = (w, vName) => {
       if (w.village && w.village.toLowerCase() === vName.toLowerCase()) return true;
+      if (!w.village && w.wardName && w.wardName.toLowerCase().includes(vName.toLowerCase())) return true;
       if (mappedVillages.length === 1 && mappedVillages[0].toLowerCase() === vName.toLowerCase()) return true;
       return false;
     };

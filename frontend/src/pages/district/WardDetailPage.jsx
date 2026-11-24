@@ -58,6 +58,9 @@ export const WardDetailPage = () => {
 
   const constituencyName = ward.constituencyId?.name || 'Kinathukadavu';
   const paguthiName = ward.paguthi || 'Pothanur';
+  const isMunicipalCleanWard =
+    ['Pothanur', 'Podanur', 'Kurichi', 'Sundarapuram'].includes(paguthiName) ||
+    [85, 94, 95, 96, 98, 99, 100].includes(Number(ward.wardNumber));
 
   const downloadWardReportExcel = () => {
     const rows = issues.map((i) => ({
@@ -67,7 +70,9 @@ export const WardDetailPage = () => {
       'Category': i.category || 'General',
       'Description': i.description || i.title || '-',
       'Paguthi': i.paguthi || paguthiName,
-      'Assigned Ward': `Ward ${ward.wardNumber}${ward.wardName ? ' - ' + ward.wardName : ''}`,
+      'Assigned Ward': isMunicipalCleanWard
+        ? `Ward ${ward.wardNumber}`
+        : `Ward ${ward.wardNumber}${ward.wardName ? ' - ' + ward.wardName : ''}`,
       'Registration Date': i.createdAt ? new Date(i.createdAt).toLocaleDateString('en-IN') : '-',
       'Status': i.status || 'Pending',
       'Assigned Ward Secretary': i.assignedWardSecretary?.name || ward.wardSecretary || 'Not Assigned',
@@ -126,11 +131,14 @@ export const WardDetailPage = () => {
           </div>
 
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-            {t('district.wardLabel', 'Ward')} {ward.wardNumber} - {isTa && ward.tamilName ? ward.tamilName : ward.wardName}
+            {t('district.wardLabel', 'Ward')} {ward.wardNumber}
+            {!isMunicipalCleanWard && (isTa && ward.tamilName ? ` - ${ward.tamilName}` : ward.wardName ? ` - ${ward.wardName}` : '')}
           </h1>
 
           <p className="text-xs sm:text-sm text-red-100 max-w-2xl mt-2 leading-relaxed font-medium">
-            {ward.areaCoverage || t('ward.subtitle', 'Comprehensive municipal ward territory coverage, cadre mobilization, and citizen grievance redressal.')}
+            {!isMunicipalCleanWard && ward.areaCoverage
+              ? ward.areaCoverage
+              : t('ward.subtitle', 'Comprehensive municipal ward territory coverage, cadre mobilization, and citizen grievance redressal.')}
           </p>
 
           <div className="mt-5 pt-4 border-t border-white/20 flex flex-wrap gap-3 text-xs">
@@ -215,7 +223,11 @@ export const WardDetailPage = () => {
               </div>
               <div className="py-2.5 flex justify-between">
                 <span className="text-slate-500">{t('district.wardLabel', 'Ward')} {t('common.name', 'Name')}:</span>
-                <strong className="text-slate-900 font-bold">{isTa && ward.tamilName ? ward.tamilName : ward.wardName}</strong>
+                <strong className="text-slate-900 font-bold">
+                  {isMunicipalCleanWard
+                    ? `${t('district.wardLabel', 'Ward')} ${ward.wardNumber}`
+                    : (isTa && ward.tamilName ? ward.tamilName : ward.wardName)}
+                </strong>
               </div>
               <div className="py-2.5 flex justify-between">
                 <span className="text-slate-500">{t('constituency.paguthiAdminTitle', 'Paguthi Administration')}:</span>
@@ -231,7 +243,11 @@ export const WardDetailPage = () => {
               </div>
               <div className="py-2.5 flex justify-between">
                 <span className="text-slate-500">{t('district.areaCoverageLabel', 'Area Coverage')}:</span>
-                <strong className="text-slate-900 font-medium text-right max-w-xs">{ward.areaCoverage}</strong>
+                <strong className="text-slate-900 font-medium text-right max-w-xs">
+                  {isMunicipalCleanWard
+                    ? `${t('district.wardLabel', 'Ward')} ${ward.wardNumber} Jurisdiction`
+                    : (ward.areaCoverage || '-')}
+                </strong>
               </div>
             </div>
           </div>
@@ -385,7 +401,9 @@ export const WardDetailPage = () => {
                     const category = i.category || 'General';
                     const description = i.description || i.title || '-';
                     const complaintPaguthi = i.paguthi || paguthiName;
-                    const assignedWardLabel = `Ward ${ward.wardNumber}${ward.wardName ? ' - ' + ward.wardName : ''}`;
+                    const assignedWardLabel = isMunicipalCleanWard
+                      ? `Ward ${ward.wardNumber}`
+                      : `Ward ${ward.wardNumber}${ward.wardName ? ' - ' + ward.wardName : ''}`;
                     const regDate = i.createdAt
                       ? new Date(i.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
                       : '-';
@@ -416,7 +434,7 @@ export const WardDetailPage = () => {
                         <td className="py-3 px-3">
                           <p className="font-bold text-[#A00000]">{complaintPaguthi}</p>
                           <p className="text-[11px] text-slate-500">
-                            {i.village ? `${i.village} • ` : ''}{assignedWardLabel}
+                            {!isMunicipalCleanWard && i.village ? `${i.village} • ` : ''}{assignedWardLabel}
                           </p>
                         </td>
                         <td className="py-3 px-3 text-slate-600 whitespace-nowrap font-medium">

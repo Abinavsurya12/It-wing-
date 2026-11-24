@@ -186,7 +186,7 @@ export const seedMySQLDatabase = async () => {
       { name: 'Singanallur', tamilName: 'சிங்காநல்லூர்', code: 'SGL', zone: 'East Zone', totalWards: 10, totalPaguthi: 2, paguthis: ['Singanallur', 'Peelamedu'] },
       { name: 'Kavundampalayam', tamilName: 'கவுண்டம்பாளையம்', code: 'KVP', zone: 'West Zone', totalWards: 10, totalPaguthi: 2, paguthis: ['Kavundampalayam', 'Thudiyalur'] },
       { name: 'Thondamuthur', tamilName: 'தொண்டாமுத்தூர்', code: 'TDM', zone: 'West Zone', totalWards: 9, totalPaguthi: 2, paguthis: ['Thondamuthur', 'Vadavalli'] },
-      { name: 'Kinathukadavu', tamilName: 'கிணத்துக்கடவு', code: 'KKD', zone: 'South Zone', totalWards: 8, totalPaguthi: 4, paguthis: ['Pothanur', 'Kurichi', 'Sundarapuram', 'Malumichampatti'] },
+      { name: 'Kinathukadavu', tamilName: 'கிணத்துக்கடவு', code: 'KKD', zone: 'South Zone', totalWards: 8, totalPaguthi: 4, paguthis: ['Pothanur', 'Kurichi', 'Sundarapuram', 'Malumachampatti'] },
       { name: 'Pollachi', tamilName: 'பொள்ளாச்சி', code: 'POL', zone: 'South Zone', totalWards: 10, totalPaguthi: 3, paguthis: ['Pollachi Town', 'Mahalingapuram', 'Achipatti'] },
       { name: 'Valparai', tamilName: 'வால்பாறை', code: 'VLP', zone: 'South Zone', totalWards: 7, totalPaguthi: 2, paguthis: ['Valparai Town', 'Stanmore'] },
       { name: 'Sulur', tamilName: 'சூலூர்', code: 'SLR', zone: 'East Zone', totalWards: 9, totalPaguthi: 2, paguthis: ['Sulur', 'Kangeyampalayam'] },
@@ -231,7 +231,7 @@ export const seedMySQLDatabase = async () => {
       { constituencyId: kinathuConst.id, paguthi: 'Pothanur', wardNumber: 99, wardName: 'Pothanur Junction', tamilName: 'போத்தனூர் சந்திப்பு', zone: 'South Zone', officeBearer: 'R. Velusamy', wardSecretary: 'R. Velusamy', contactNumber: '9842100099', population: 38000, areaCoverage: 'Railway Colony, Subbiah Layout' },
       { constituencyId: kinathuConst.id, paguthi: 'Pothanur', wardNumber: 100, wardName: 'Pothanur Ward 100', tamilName: 'போத்தனூர் வார்டு 100', zone: 'South Zone', officeBearer: 'R. Velusamy', wardSecretary: 'R. Velusamy', contactNumber: '9842100010', population: 35000, areaCoverage: 'Pillaiyar Kovil St, Market Area' },
       { constituencyId: kinathuConst.id, paguthi: 'Sundarapuram', wardNumber: 94, wardName: 'Sundarapuram East', tamilName: 'சுந்தராபுரம் கிழக்கு', zone: 'South Zone', officeBearer: 'S. Thirumoorthy', wardSecretary: 'S. Thirumoorthy', contactNumber: '9842100094', population: 32000, areaCoverage: 'Chettipalayam Pirivu, Othakkalmandapam Link' },
-      { constituencyId: kinathuConst.id, paguthi: 'Malumichampatti', wardNumber: 95, wardName: 'Malumichampatti South', tamilName: 'மலுமிச்சம்பட்டி தெற்கு', zone: 'South Zone', officeBearer: 'N. Arumugam', wardSecretary: 'N. Arumugam', contactNumber: '9842100095', population: 29000, areaCoverage: 'Bodipalayam, Arasur Link, Bharathi Nagar' },
+      { constituencyId: kinathuConst.id, paguthi: 'Malumachampatti', village: 'Malumachampatti', wardNumber: 95, wardName: 'Malumichampatti South', tamilName: 'மலுமிச்சம்பட்டி தெற்கு', zone: 'South Zone', officeBearer: 'N. Arumugam', wardSecretary: 'N. Arumugam', contactNumber: '9842100095', population: 29000, areaCoverage: 'Bodipalayam, Arasur Link, Bharathi Nagar' },
     ];
 
     const wardDocs = [];
@@ -264,6 +264,7 @@ export const seedMySQLDatabase = async () => {
         existing = await Ward.create(w);
       } else {
         existing.paguthi = w.paguthi;
+        if (w.village) existing.village = w.village;
         existing.wardSecretary = w.wardSecretary;
         existing.constituencyId = w.constituencyId;
         existing.wardSecretaryId = wardSecUser ? wardSecUser.id : (w.wardNumber === 72 && wardUser ? wardUser.id : existing.wardSecretaryId);

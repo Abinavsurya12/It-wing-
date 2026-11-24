@@ -1,7 +1,7 @@
 import * as XLSX from 'xlsx';
 import { Op } from 'sequelize';
 import sequelize from '../config/mysql.js';
-import { isVillageValidForPaguthi } from '../utils/paguthiVillageData.js';
+import { isVillageValidForPaguthi, getCanonicalTargetPaguthis } from '../utils/paguthiVillageData.js';
 import {
   Issue,
   IssueActivity,
@@ -165,6 +165,23 @@ export const getIssues = async (req, res) => {
         if (req.user.id) citizenOrs.push({ userId: req.user.id });
         if (req.user.phone) citizenOrs.push({ citizenMobile: req.user.phone });
         if (citizenOrs.length > 0) whereConditions.push({ [Op.or]: citizenOrs });
+      } else if (req.user.role === 'paguthi_seyalaalar') {
+        const userPaguthi = req.user.paguthi || '';
+        if (userPaguthi) {
+          const normPaguthi = userPaguthi === 'Podanur' ? 'Pothanur' : userPaguthi;
+          const targetPaguthis = (normPaguthi === 'Pothanur') ? ['Pothanur', 'Podanur'] : [normPaguthi];
+          const pWards = await Ward.findAll({
+            where: { paguthi: { [Op.in]: targetPaguthis } },
+            attributes: ['id'],
+          });
+          const pWardIds = pWards.map((w) => w.id);
+          whereConditions.push({
+            [Op.or]: [
+              { paguthi: { [Op.in]: targetPaguthis } },
+              ...(pWardIds.length > 0 ? [{ wardId: { [Op.in]: pWardIds } }] : []),
+            ],
+          });
+        }
       }
     }
 
@@ -372,6 +389,19 @@ export const getIssueById = async (req, res) => {
       }
     }
 
+    // Strict Data Filtering: Paguthi Seyalaalar can only view complaints in their assigned Paguthi / Ondriyam / Nagaram
+    if (req.user?.role === 'paguthi_seyalaalar') {
+      const userPaguthi = req.user.paguthi || '';
+      const allowed = userPaguthi === 'Podanur' ? 'Pothanur' : userPaguthi;
+      const issuePaguthi = issue.paguthi === 'Podanur' ? 'Pothanur' : (issue.paguthi || issue.ward?.paguthi || '');
+      if (allowed && issuePaguthi && allowed.toLowerCase() !== issuePaguthi.toLowerCase()) {
+        return res.status(403).json({
+          success: false,
+          message: `Access denied. You can only view complaints in your assigned jurisdiction (${allowed}).`,
+        });
+      }
+    }
+
     // Strict Data Filtering: Citizen / User can ONLY view and download their own complaints
     if (['citizen', 'user'].includes(req.user?.role)) {
       const isOwnerById = issue.userId && (Number(issue.userId) === Number(req.user.id) || String(issue.userId) === String(req.user._id));
@@ -436,10 +466,11 @@ export const createIssue = async (req, res) => {
 
     if (requestedPaguthi && parsedWardNum && !isNaN(parsedWardNum)) {
       // 1. Strictly look for a ward with both wardNumber and paguthi
+      const targetPaguthis = getCanonicalTargetPaguthis(requestedPaguthi);
       wardDoc = await Ward.findOne({
         where: {
           wardNumber: parsedWardNum,
-          paguthi: requestedPaguthi,
+          paguthi: { [Op.in]: targetPaguthis },
         },
       });
 
@@ -803,6 +834,19 @@ export const addIssueActivity = async (req, res) => {
       }
     }
 
+    // Strict Data Filtering: Paguthi Seyalaalar can only view complaints in their assigned Paguthi / Ondriyam / Nagaram
+    if (req.user?.role === 'paguthi_seyalaalar') {
+      const userPaguthi = req.user.paguthi || '';
+      const allowed = userPaguthi === 'Podanur' ? 'Pothanur' : userPaguthi;
+      const issuePaguthi = issue.paguthi === 'Podanur' ? 'Pothanur' : (issue.paguthi || issue.ward?.paguthi || '');
+      if (allowed && issuePaguthi && allowed.toLowerCase() !== issuePaguthi.toLowerCase()) {
+        return res.status(403).json({
+          success: false,
+          message: `Access denied. You can only view complaints in your assigned jurisdiction (${allowed}).`,
+        });
+      }
+    }
+
     // Strict Data Filtering: Citizen / User can ONLY view and download their own complaints
     if (['citizen', 'user'].includes(req.user?.role)) {
       const isOwnerById = issue.userId && (Number(issue.userId) === Number(req.user.id) || String(issue.userId) === String(req.user._id));
@@ -876,6 +920,19 @@ export const deleteIssue = async (req, res) => {
         return res.status(403).json({
           success: false,
           message: 'Access denied. You can only view complaints in your assigned municipal ward and paguthi.',
+        });
+      }
+    }
+
+    // Strict Data Filtering: Paguthi Seyalaalar can only view complaints in their assigned Paguthi / Ondriyam / Nagaram
+    if (req.user?.role === 'paguthi_seyalaalar') {
+      const userPaguthi = req.user.paguthi || '';
+      const allowed = userPaguthi === 'Podanur' ? 'Pothanur' : userPaguthi;
+      const issuePaguthi = issue.paguthi === 'Podanur' ? 'Pothanur' : (issue.paguthi || issue.ward?.paguthi || '');
+      if (allowed && issuePaguthi && allowed.toLowerCase() !== issuePaguthi.toLowerCase()) {
+        return res.status(403).json({
+          success: false,
+          message: `Access denied. You can only view complaints in your assigned jurisdiction (${allowed}).`,
         });
       }
     }

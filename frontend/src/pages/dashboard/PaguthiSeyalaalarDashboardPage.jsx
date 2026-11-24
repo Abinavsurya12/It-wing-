@@ -20,6 +20,7 @@ import {
   Calendar,
   Layers,
   Activity,
+  RefreshCw,
   X,
   ExternalLink,
 } from 'lucide-react';
@@ -44,6 +45,7 @@ export const PaguthiSeyalaalarDashboardPage = () => {
 
   // View state: 'card' (single card dashboard view) or 'detail' (deep-dive Paguthi details & ward directory)
   const [viewMode, setViewMode] = useState('card');
+  const [selectedVillage, setSelectedVillage] = useState(null);
 
   // Selected ward for deep-dive complaint view
   const [selectedWardForComplaints, setSelectedWardForComplaints] = useState(null);
@@ -51,11 +53,14 @@ export const PaguthiSeyalaalarDashboardPage = () => {
   const [wardSearchQuery, setWardSearchQuery] = useState('');
 
   // Fetch live database dashboard data
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = async (v = selectedVillage) => {
     try {
       setLoading(true);
       setError(null);
-      const res = await api.get('/paguthi-seyalaalar/dashboard');
+      const url = v
+        ? `/paguthi-seyalaalar/dashboard?village=${encodeURIComponent(v)}`
+        : '/paguthi-seyalaalar/dashboard';
+      const res = await api.get(url);
       if (res.data.success) {
         setData(res.data.data);
       } else {
@@ -69,9 +74,37 @@ export const PaguthiSeyalaalarDashboardPage = () => {
     }
   };
 
+  const handleSelectVillage = (vName) => {
+    setSelectedVillage(vName);
+    setWardSearchQuery('');
+    setComplaintStatusFilter('all');
+    fetchDashboardData(vName);
+  };
+
+  const handleBackToVillages = () => {
+    setSelectedVillage(null);
+    setWardSearchQuery('');
+    setComplaintStatusFilter('all');
+    fetchDashboardData(null);
+  };
+
+  const handleBackToCard = () => {
+    setViewMode('card');
+    setSelectedVillage(null);
+    setWardSearchQuery('');
+    setComplaintStatusFilter('all');
+    fetchDashboardData(null);
+  };
+
   useEffect(() => {
-    fetchDashboardData();
-  }, []);
+    fetchDashboardData(selectedVillage);
+
+    const handleWindowFocus = () => {
+      fetchDashboardData(selectedVillage);
+    };
+    window.addEventListener('focus', handleWindowFocus);
+    return () => window.removeEventListener('focus', handleWindowFocus);
+  }, [selectedVillage]);
 
   const handleLogout = () => {
     logout();
@@ -110,10 +143,52 @@ export const PaguthiSeyalaalarDashboardPage = () => {
     );
   }
 
-  const { paguthi, stats, wards = [], allComplaints = [] } = data;
+  const { paguthi, stats, wards = [], allComplaints = [], hasVillages = false, villages = [] } = data;
+
+  const isMunicipalCleanWard = ['Pothanur', 'Podanur', 'Kurichi', 'Sundarapuram'].includes(paguthi);
+
+  let displayWards = Array.isArray(wards) ? [...wards] : [];
+
+  // Pothanur: Ensure only ONE Ward 95 card is displayed
+  if (['Pothanur', 'Podanur'].includes(paguthi)) {
+    const ward95List = displayWards.filter((w) => Number(w.wardNumber) === 95);
+    if (ward95List.length > 1) {
+      const pothanurWard95 = ward95List.find((w) => ['Pothanur', 'Podanur'].includes(w.paguthi)) || ward95List[0];
+      const otherWard95 = ward95List.find((w) => w !== pothanurWard95);
+
+      const mergedComplaints = (pothanurWard95.complaints && pothanurWard95.complaints.length > 0)
+        ? pothanurWard95.complaints
+        : (otherWard95?.complaints || []);
+
+      const mergedWard95 = {
+        ...pothanurWard95,
+        wardSecretary: (pothanurWard95.wardSecretary && pothanurWard95.wardSecretary !== 'Not Assigned')
+          ? pothanurWard95.wardSecretary
+          : (otherWard95?.wardSecretary || pothanurWard95.wardSecretary || 'Not Assigned'),
+        hasAssignedSecretary: Boolean(
+          pothanurWard95.hasAssignedSecretary || otherWard95?.hasAssignedSecretary
+        ),
+        contactNumber: pothanurWard95.contactNumber || otherWard95?.contactNumber || null,
+        stats: {
+          totalComplaints: Math.max(Number(pothanurWard95.stats?.totalComplaints) || 0, Number(otherWard95?.stats?.totalComplaints) || 0),
+          pendingComplaints: Math.max(Number(pothanurWard95.stats?.pendingComplaints) || 0, Number(otherWard95?.stats?.pendingComplaints) || 0),
+          inProgressComplaints: Math.max(Number(pothanurWard95.stats?.inProgressComplaints) || 0, Number(otherWard95?.stats?.inProgressComplaints) || 0),
+          resolvedComplaints: Math.max(Number(pothanurWard95.stats?.resolvedComplaints) || 0, Number(otherWard95?.stats?.resolvedComplaints) || 0),
+        },
+        complaints: mergedComplaints,
+      };
+
+      displayWards = displayWards.filter((w) => Number(w.wardNumber) !== 95);
+      displayWards.push(mergedWard95);
+    }
+  }
+
+  displayWards.sort((a, b) => (Number(a.wardNumber) || 0) - (Number(b.wardNumber) || 0));
+
+  const totalWardsCount = stats?.totalWards ?? displayWards.length;
 
   // Filter wards by search query
-  const filteredWards = wards.filter((w) => {
+  const filteredWards = displayWards.filter((w) => {
     if (!wardSearchQuery.trim()) return true;
     const q = wardSearchQuery.toLowerCase();
     return (
@@ -155,17 +230,28 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                 {t('header.systemTitle', 'TVK Digital Governance CRM')}
               </span>
               <span className="hidden sm:inline-block px-2 py-0.5 rounded-full text-[9.5px] lg:text-[10px] font-extrabold bg-[#FFD32A] text-[#850000] uppercase tracking-wider flex-shrink-0">
-                Paguthi Seyalaalar
+                Paguthi / Ondriyam / Nagaram
               </span>
             </div>
             <p className="text-[10px] sm:text-[11px] font-semibold text-[#FFD32A] truncate">
-              {paguthi} Paguthi • Kinathukadavu Assembly Constituency
+              {paguthi} • Kinathukadavu Assembly Constituency
             </p>
           </div>
         </div>
 
-        {/* Right Action: Language + User Profile + Logout */}
+        {/* Right Action: Language + Refresh + User Profile + Logout */}
         <div className="flex items-center space-x-1.5 sm:space-x-2.5 flex-shrink-0">
+          <button
+            type="button"
+            onClick={() => fetchDashboardData(selectedVillage)}
+            disabled={loading}
+            title="Refresh live data from database"
+            className="px-2.5 sm:px-3 py-1.5 bg-black/30 hover:bg-black/50 text-white border border-white/20 rounded-xl text-xs font-bold transition flex items-center space-x-1 cursor-pointer shadow-xs disabled:opacity-50"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 text-[#FFD32A] ${loading ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">Refresh</span>
+          </button>
+
           <LanguageSwitcher />
 
           <div className="hidden md:flex items-center space-x-2 bg-black/25 px-2.5 py-1 rounded-xl border border-white/10 text-white text-xs">
@@ -226,15 +312,17 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                   <div className="w-full text-center space-y-2 sm:space-y-2.5 pt-1 px-1">
                     <div className="inline-flex items-center space-x-2 bg-black/40 backdrop-blur-md px-3.5 py-1 rounded-full border border-white/20 text-xs font-semibold shadow-xs">
                       <span className="w-2 h-2 rounded-full bg-[#FFD32A] animate-pulse"></span>
-                      <span className="text-[#FFD32A] font-bold">Paguthi Seyalaalar Jurisdiction</span>
+                      <span className="text-[#FFD32A] font-bold">
+                        {hasVillages ? 'Ondriyam Jurisdiction' : paguthi.includes('Nagaram') ? 'Nagaram Jurisdiction' : 'Paguthi Jurisdiction'}
+                      </span>
                     </div>
 
                     <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight drop-shadow-md text-white">
-                      Welcome, <span className="text-[#FFD32A]">{user?.name || `${paguthi} Paguthi Seyalaalar`}</span>
+                      Welcome, <span className="text-[#FFD32A]">{user?.name || `${paguthi} Seyalaalar`}</span>
                     </h1>
 
                     <p className="text-xs sm:text-sm text-white/95 max-w-xl mx-auto font-medium leading-relaxed drop-shadow-xs">
-                      You are authenticated to manage and monitor localized public grievances, cadre coordination, and municipal ward governance for <strong className="text-white font-bold">{paguthi} Paguthi</strong>. Click your designated Paguthi card below to inspect live database counts, ward directories, and registered complaints.
+                      You are authenticated to manage and monitor localized public grievances, cadre coordination, and municipal ward governance for <strong className="text-white font-bold">{paguthi}</strong>. Click your designated card below to inspect live database counts, ward directories, and registered complaints.
                     </p>
                   </div>
 
@@ -272,15 +360,17 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                   <div className="w-full md:w-auto md:max-w-xl lg:max-w-2xl text-center space-y-2.5 sm:space-y-3.5 my-auto py-6 lg:py-8">
                     <div className="inline-flex items-center space-x-2 bg-black/40 backdrop-blur-md px-3.5 py-1 rounded-full border border-white/20 text-xs font-semibold shadow-xs">
                       <span className="w-2 h-2 rounded-full bg-[#FFD32A] animate-pulse"></span>
-                      <span className="text-[#FFD32A] font-bold">Paguthi Seyalaalar Jurisdiction</span>
+                      <span className="text-[#FFD32A] font-bold">
+                        {hasVillages ? 'Ondriyam Jurisdiction' : paguthi.includes('Nagaram') ? 'Nagaram Jurisdiction' : 'Paguthi Jurisdiction'}
+                      </span>
                     </div>
 
                     <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-extrabold tracking-tight drop-shadow-md text-white">
-                      Welcome, <span className="text-[#FFD32A]">{user?.name || `${paguthi} Paguthi Seyalaalar`}</span>
+                      Welcome, <span className="text-[#FFD32A]">{user?.name || `${paguthi} Seyalaalar`}</span>
                     </h1>
 
                     <p className="text-xs sm:text-sm lg:text-base text-white/95 max-w-2xl mx-auto font-medium leading-relaxed drop-shadow-xs">
-                      You are authenticated to manage and monitor localized public grievances, cadre coordination, and municipal ward governance for <strong className="text-white font-bold">{paguthi} Paguthi</strong>. Click your designated Paguthi card below to inspect live database counts, ward directories, and registered complaints.
+                      You are authenticated to manage and monitor localized public grievances, cadre coordination, and municipal ward governance for <strong className="text-white font-bold">{paguthi}</strong>. Click your designated card below to inspect live database counts, ward directories, and registered complaints.
                     </p>
                   </div>
 
@@ -302,18 +392,18 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                 <div>
                   <h2 className="text-base sm:text-lg font-extrabold text-slate-900 flex items-center space-x-2">
                     <FolderTree className="w-4 h-4 sm:w-5 sm:h-5 text-[#850000]" />
-                    <span>Your Assigned Paguthi Administration</span>
+                    <span>Your Assigned Jurisdiction Administration</span>
                   </h2>
                   <p className="text-xs text-slate-500">
                     Live dynamic database card scoped strictly to your account
                   </p>
                 </div>
                 <span className="text-[11px] sm:text-xs font-bold text-[#850000] bg-red-50 border border-red-200 px-2.5 py-0.5 rounded-full self-start sm:self-auto">
-                  1 Paguthi Assigned
+                  1 Assigned Jurisdiction
                 </span>
               </div>
 
-              {/* The Single Paguthi Card - Matching Admin Dashboard Paguthi Card Design */}
+              {/* The Single Card - Scoped Strictly to Authenticated User */}
               <div className="max-w-md w-full">
                 <div className="bg-white rounded-2xl border border-[#E9E2DC] shadow-xs hover:shadow-xl hover:-translate-y-1 hover:border-[#850000] transition-all duration-200 flex flex-col justify-between overflow-hidden relative group">
                   {/* Top Red-Gold Tricolor Accent Bar */}
@@ -326,33 +416,56 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                         <MapPin className="w-5 h-5 text-[#850000]" />
                       </div>
                       <span className="text-[9.5px] sm:text-[10px] font-extrabold uppercase px-2 sm:px-2.5 py-0.5 rounded-full bg-red-50 text-[#850000] border border-red-200">
-                        PAGUTHI JURISDICTION
+                        {hasVillages ? 'ONDRIYAM JURISDICTION' : paguthi.includes('Nagaram') ? 'NAGARAM JURISDICTION' : 'PAGUTHI JURISDICTION'}
                       </span>
                     </div>
 
-                    {/* Paguthi Title */}
+                    {/* Paguthi / Ondriyam / Nagaram Title */}
                     <h3 className="text-xl sm:text-2xl font-black text-slate-900 mt-3 sm:mt-4 group-hover:text-[#850000] transition tracking-tight">
                       {paguthi}
                     </h3>
 
                     {/* Live Database Statistics Counts */}
                     <div className="grid grid-cols-2 gap-2 sm:gap-2.5 mt-4 sm:mt-5 pt-3 sm:pt-4 border-t border-slate-100 text-xs">
-                      <div className="bg-[#FFF8F0] p-2.5 sm:p-3 rounded-xl border border-[#FFE5A3]/50">
-                        <span className="text-[10px] sm:text-[10.5px] text-slate-500 font-semibold block uppercase tracking-wider">
-                          Total Wards
-                        </span>
-                        <strong className="text-slate-900 font-black text-base sm:text-lg text-[#850000]">
-                          {stats.totalWards}
-                        </strong>
-                      </div>
-                      <div className="bg-emerald-50 p-2.5 sm:p-3 rounded-xl border border-emerald-200/60">
-                        <span className="text-[10px] sm:text-[10.5px] text-emerald-700 font-semibold block uppercase tracking-wider">
-                          Registered Secs
-                        </span>
-                        <strong className="text-emerald-900 font-black text-base sm:text-lg">
-                          {stats.registeredSecretaries}
-                        </strong>
-                      </div>
+                      {hasVillages ? (
+                        <>
+                          <div className="bg-[#FFF8F0] p-2.5 sm:p-3 rounded-xl border border-[#FFE5A3]/50">
+                            <span className="text-[10px] sm:text-[10.5px] text-slate-500 font-semibold block uppercase tracking-wider">
+                              Total Villages
+                            </span>
+                            <strong className="text-slate-900 font-black text-base sm:text-lg text-[#850000]">
+                              {stats?.totalVillages ?? villages.length ?? 0}
+                            </strong>
+                          </div>
+                          <div className="bg-emerald-50 p-2.5 sm:p-3 rounded-xl border border-emerald-200/60">
+                            <span className="text-[10px] sm:text-[10.5px] text-emerald-700 font-semibold block uppercase tracking-wider">
+                              Total Wards
+                            </span>
+                            <strong className="text-emerald-900 font-black text-base sm:text-lg">
+                              {totalWardsCount}
+                            </strong>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="bg-[#FFF8F0] p-2.5 sm:p-3 rounded-xl border border-[#FFE5A3]/50">
+                            <span className="text-[10px] sm:text-[10.5px] text-slate-500 font-semibold block uppercase tracking-wider">
+                              Total Wards
+                            </span>
+                            <strong className="text-slate-900 font-black text-base sm:text-lg text-[#850000]">
+                              {totalWardsCount}
+                            </strong>
+                          </div>
+                          <div className="bg-emerald-50 p-2.5 sm:p-3 rounded-xl border border-emerald-200/60">
+                            <span className="text-[10px] sm:text-[10.5px] text-emerald-700 font-semibold block uppercase tracking-wider">
+                              Registered Secs
+                            </span>
+                            <strong className="text-emerald-900 font-black text-base sm:text-lg">
+                              {stats?.registeredSecretaries ?? stats?.totalWardSecretaries ?? 0}
+                            </strong>
+                          </div>
+                        </>
+                      )}
 
                       {/* Complaints Summary */}
                       <div className="col-span-2 bg-slate-50 p-2.5 sm:p-3 rounded-xl border border-slate-200 space-y-1.5 text-[11px]">
@@ -360,17 +473,17 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                           <span className="text-slate-600 font-bold uppercase text-[10px] tracking-wider">
                             Total Complaints:
                           </span>
-                          <span className="font-extrabold text-[#850000] text-sm">{stats.totalComplaints}</span>
+                          <span className="font-extrabold text-[#850000] text-sm">{stats?.totalComplaints ?? stats?.totalIssues ?? 0}</span>
                         </div>
                         <div className="grid grid-cols-3 gap-1 text-[10px] sm:text-[10.5px] text-slate-500 pt-1.5 border-t border-slate-200">
                           <div className="truncate">
-                            Pending: <strong className="text-amber-700 font-bold">{stats.pendingComplaints}</strong>
+                            Pending: <strong className="text-amber-700 font-bold">{stats?.pendingComplaints ?? stats?.pendingIssues ?? 0}</strong>
                           </div>
                           <div className="text-center truncate">
-                            In Prog: <strong className="text-sky-700 font-bold">{stats.inProgressComplaints}</strong>
+                            In Prog: <strong className="text-sky-700 font-bold">{stats?.inProgressComplaints ?? stats?.inProgressIssues ?? 0}</strong>
                           </div>
                           <div className="text-right truncate">
-                            Done: <strong className="text-emerald-700 font-bold">{stats.resolvedComplaints}</strong>
+                            Done: <strong className="text-emerald-700 font-bold">{stats?.resolvedComplaints ?? stats?.resolvedIssues ?? 0}</strong>
                           </div>
                         </div>
                       </div>
@@ -384,7 +497,9 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                       onClick={() => setViewMode('detail')}
                       className="w-full py-2.5 px-3 sm:px-4 bg-[#850000] hover:bg-[#A00000] text-white text-xs sm:text-sm font-bold rounded-xl transition shadow-xs flex items-center justify-center space-x-1.5 sm:space-x-2 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#850000]/40"
                     >
-                      <span className="truncate">Open Paguthi Details & Ward Directory</span>
+                      <span className="truncate">
+                        {hasVillages ? 'Open Ondriyam Details & Villages' : paguthi.includes('Nagaram') ? 'Open Nagaram Details & Ward Directory' : 'Open Paguthi Details & Ward Directory'}
+                      </span>
                       <ChevronRight className="w-4 h-4 flex-shrink-0" />
                     </button>
                   </div>
@@ -401,23 +516,49 @@ export const PaguthiSeyalaalarDashboardPage = () => {
             <div className="flex flex-wrap items-center justify-between gap-2.5">
               <div className="flex items-center space-x-2 text-xs text-slate-500 font-medium">
                 <button
-                  onClick={() => setViewMode('card')}
+                  onClick={handleBackToCard}
                   className="hover:text-[#850000] transition cursor-pointer"
                 >
                   Dashboard
                 </button>
                 <span>&gt;</span>
-                <span className="text-[#850000] font-bold">{paguthi} Paguthi</span>
+                {selectedVillage ? (
+                  <>
+                    <button
+                      onClick={handleBackToVillages}
+                      className="hover:text-[#850000] transition cursor-pointer"
+                    >
+                      {paguthi}
+                    </button>
+                    <span>&gt;</span>
+                    <span className="text-[#850000] font-bold">{selectedVillage} Village</span>
+                  </>
+                ) : (
+                  <span className="text-[#850000] font-bold">
+                    {paguthi} {hasVillages ? 'Ondriyam' : paguthi.includes('Nagaram') ? 'Nagaram' : 'Paguthi'}
+                  </span>
+                )}
               </div>
 
-              <button
-                type="button"
-                onClick={() => setViewMode('card')}
-                className="inline-flex items-center text-xs font-bold text-slate-700 hover:text-[#850000] transition space-x-1.5 cursor-pointer bg-white px-2.5 sm:px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs"
-              >
-                <ArrowLeft className="w-3.5 h-3.5" />
-                <span>Back to Single Card View</span>
-              </button>
+              {selectedVillage ? (
+                <button
+                  type="button"
+                  onClick={handleBackToVillages}
+                  className="inline-flex items-center text-xs font-bold text-slate-700 hover:text-[#850000] transition space-x-1.5 cursor-pointer bg-white px-2.5 sm:px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span>Back to Villages</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleBackToCard}
+                  className="inline-flex items-center text-xs font-bold text-slate-700 hover:text-[#850000] transition space-x-1.5 cursor-pointer bg-white px-2.5 sm:px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span>Back to Single Card View</span>
+                </button>
+              )}
             </div>
 
             {/* Hero Header Banner (Deep Red & Golden Yellow Theme) */}
@@ -432,10 +573,25 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                 </div>
 
                 <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight">
-                  {paguthi} <span className="text-[#FFD32A]">Paguthi Administration</span>
+                  {selectedVillage ? (
+                    <>
+                      {selectedVillage} <span className="text-[#FFD32A]">Village Administration</span>
+                    </>
+                  ) : (
+                    <>
+                      {paguthi}{' '}
+                      <span className="text-[#FFD32A]">
+                        {hasVillages ? 'Ondriyam Administration' : paguthi.includes('Nagaram') ? 'Nagaram Administration' : 'Paguthi Administration'}
+                      </span>
+                    </>
+                  )}
                 </h1>
                 <p className="text-xs sm:text-sm text-red-100 max-w-2xl mt-1.5 leading-relaxed font-medium">
-                  Live administrative hierarchy covers all {stats.totalWards} municipal wards, verified Ward Secretaries, localized citizen petitions, and ground-level resolution status.
+                  {selectedVillage
+                    ? `Live administrative hierarchy under ${paguthi} covering ${totalWardsCount} municipal wards, verified Ward Secretaries, localized citizen petitions, and ground-level resolution status.`
+                    : hasVillages
+                    ? `Live administrative hierarchy covers all ${villages.length} constituent villages, ${totalWardsCount} municipal wards, active cadres, and ground-level resolution status.`
+                    : `Live administrative hierarchy covers all ${totalWardsCount} municipal wards, verified Ward Secretaries, localized citizen petitions, and ground-level resolution status.`}
                 </p>
               </div>
 
@@ -444,15 +600,26 @@ export const PaguthiSeyalaalarDashboardPage = () => {
 
             {/* ================= TASK 3: DYNAMIC SUMMARY METRICS CARDS ================= */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-3">
-              {/* Card 1: Total Wards */}
-              <div className="bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-[#E9E2DC] shadow-2xs">
-                <div className="flex items-center justify-between text-slate-500 mb-1">
-                  <span className="text-[9.5px] sm:text-[10px] font-bold uppercase tracking-wider truncate">Total Wards</span>
-                  <Building className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#850000] flex-shrink-0" />
+              {/* Card 1: Total Villages or Total Wards */}
+              {hasVillages && !selectedVillage ? (
+                <div className="bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-[#E9E2DC] shadow-2xs">
+                  <div className="flex items-center justify-between text-slate-500 mb-1">
+                    <span className="text-[9.5px] sm:text-[10px] font-bold uppercase tracking-wider truncate">Villages</span>
+                    <FolderTree className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#850000] flex-shrink-0" />
+                  </div>
+                  <strong className="text-xl sm:text-2xl font-black text-slate-900 block">{stats?.totalVillages ?? villages.length ?? 0}</strong>
+                  <span className="text-[9.5px] sm:text-[10px] text-slate-500 font-medium">Constituent Villages</span>
                 </div>
-                <strong className="text-xl sm:text-2xl font-black text-slate-900 block">{stats.totalWards}</strong>
-                <span className="text-[9.5px] sm:text-[10px] text-slate-500 font-medium">Database Wards</span>
-              </div>
+              ) : (
+                <div className="bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-[#E9E2DC] shadow-2xs">
+                  <div className="flex items-center justify-between text-slate-500 mb-1">
+                    <span className="text-[9.5px] sm:text-[10px] font-bold uppercase tracking-wider truncate">Total Wards</span>
+                    <Building className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#850000] flex-shrink-0" />
+                  </div>
+                  <strong className="text-xl sm:text-2xl font-black text-slate-900 block">{totalWardsCount}</strong>
+                  <span className="text-[9.5px] sm:text-[10px] text-slate-500 font-medium">Database Wards</span>
+                </div>
+              )}
 
               {/* Card 2: Total Ward Secretaries */}
               <div className="bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-[#E9E2DC] shadow-2xs">
@@ -460,7 +627,7 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                   <span className="text-[9.5px] sm:text-[10px] font-bold uppercase tracking-wider truncate">Ward Secs</span>
                   <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600 flex-shrink-0" />
                 </div>
-                <strong className="text-xl sm:text-2xl font-black text-emerald-700 block">{stats.registeredSecretaries}</strong>
+                <strong className="text-xl sm:text-2xl font-black text-emerald-700 block">{stats?.registeredSecretaries ?? stats?.totalWardSecretaries ?? 0}</strong>
                 <span className="text-[9.5px] sm:text-[10px] text-slate-500 font-medium">Active Cadres</span>
               </div>
 
@@ -470,7 +637,7 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                   <span className="text-[9.5px] sm:text-[10px] font-bold uppercase tracking-wider truncate">Total Issues</span>
                   <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#850000] flex-shrink-0" />
                 </div>
-                <strong className="text-xl sm:text-2xl font-black text-[#850000] block">{stats.totalComplaints}</strong>
+                <strong className="text-xl sm:text-2xl font-black text-[#850000] block">{stats?.totalComplaints ?? stats?.totalIssues ?? 0}</strong>
                 <span className="text-[9.5px] sm:text-[10px] text-slate-500 font-medium">Registered</span>
               </div>
 
@@ -480,7 +647,7 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                   <span className="text-[9.5px] sm:text-[10px] font-bold uppercase tracking-wider truncate">Pending</span>
                   <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-600 flex-shrink-0" />
                 </div>
-                <strong className="text-xl sm:text-2xl font-black text-amber-700 block">{stats.pendingComplaints}</strong>
+                <strong className="text-xl sm:text-2xl font-black text-amber-700 block">{stats?.pendingComplaints ?? stats?.pendingIssues ?? 0}</strong>
                 <span className="text-[9.5px] sm:text-[10px] text-slate-500 font-medium">Needs Action</span>
               </div>
 
@@ -490,7 +657,7 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                   <span className="text-[9.5px] sm:text-[10px] font-bold uppercase tracking-wider truncate">In Progress</span>
                   <Activity className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-sky-600 flex-shrink-0" />
                 </div>
-                <strong className="text-xl sm:text-2xl font-black text-sky-700 block">{stats.inProgressComplaints}</strong>
+                <strong className="text-xl sm:text-2xl font-black text-sky-700 block">{stats?.inProgressComplaints ?? stats?.inProgressIssues ?? 0}</strong>
                 <span className="text-[9.5px] sm:text-[10px] text-slate-500 font-medium">Work Ongoing</span>
               </div>
 
@@ -500,82 +667,59 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                   <span className="text-[9.5px] sm:text-[10px] font-bold uppercase tracking-wider truncate">Resolved</span>
                   <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600 flex-shrink-0" />
                 </div>
-                <strong className="text-xl sm:text-2xl font-black text-emerald-700 block">{stats.resolvedComplaints}</strong>
+                <strong className="text-xl sm:text-2xl font-black text-emerald-700 block">{stats?.resolvedComplaints ?? stats?.resolvedIssues ?? 0}</strong>
                 <span className="text-[9.5px] sm:text-[10px] text-slate-500 font-medium">Completed</span>
               </div>
             </div>
 
-            {/* ================= TASK 4: COMPLETE WARD DIRECTORY ================= */}
-            <div className="space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div>
-                  <h2 className="text-base sm:text-lg font-extrabold text-slate-900 flex items-center space-x-2">
-                    <Building className="w-4 h-4 sm:w-5 sm:h-5 text-[#850000]" />
-                    <span>Municipal Ward Directory & Governance</span>
-                  </h2>
-                  <p className="text-xs text-slate-500">
-                    Live directory of all {wards.length} wards belonging to {paguthi} Paguthi with assigned secretaries and complaint status
-                  </p>
+            {/* ================= VILLAGE CARDS SECTION (WHEN ONDRIYAM HAS VILLAGES & NONE CURRENTLY SELECTED) ================= */}
+            {hasVillages && !selectedVillage ? (
+              <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <h2 className="text-base sm:text-lg font-extrabold text-slate-900 flex items-center space-x-2">
+                      <FolderTree className="w-4 h-4 sm:w-5 sm:h-5 text-[#850000]" />
+                      <span>Constituent Village Directory ({villages.length} Villages)</span>
+                    </h2>
+                    <p className="text-xs text-slate-500">
+                      Select any village to inspect municipal ward governance, assigned secretaries, and citizen grievance reports
+                    </p>
+                  </div>
                 </div>
 
-                {/* Ward search filter */}
-                <div className="relative max-w-xs w-full">
-                  <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                  <input
-                    type="text"
-                    value={wardSearchQuery}
-                    onChange={(e) => setWardSearchQuery(e.target.value)}
-                    placeholder="Search ward number, name, secretary..."
-                    className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-3 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#850000]/20 focus:border-[#850000] transition"
-                  />
-                </div>
-              </div>
-
-              {/* Grid of Wards */}
-              {filteredWards.length === 0 ? (
-                <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 text-center text-slate-500 text-xs">
-                  No wards found matching "{wardSearchQuery}".
-                </div>
-              ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5 sm:gap-4">
-                  {filteredWards.map((w) => (
+                  {villages.map((v) => (
                     <div
-                      key={w.id}
+                      key={v.name}
                       className="bg-white rounded-2xl border border-[#E9E2DC] shadow-2xs hover:shadow-md hover:border-[#850000] transition flex flex-col justify-between overflow-hidden relative"
                     >
-                      {/* Top Accent line */}
                       <div className="h-1 bg-gradient-to-r from-[#850000] via-[#FFD32A] to-[#850000]" />
 
                       <div className="p-3.5 sm:p-4 space-y-3">
-                        {/* Ward Number & Zone Badge */}
                         <div className="flex items-start justify-between">
                           <span className="px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-black bg-red-50 text-[#850000] border border-red-200">
-                            Ward {w.wardNumber}
+                            Village
                           </span>
                           <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                            {w.zone || 'South Zone'}
+                            {v.totalWards} {v.totalWards === 1 ? 'Ward' : 'Wards'}
                           </span>
                         </div>
 
-                        {/* Ward Name */}
                         <div>
-                          <h3 className="text-sm sm:text-base font-extrabold text-slate-900 leading-snug break-words">
-                            {w.wardName}
+                          <h3 className="text-sm sm:text-base font-extrabold text-slate-900 leading-snug">
+                            {v.name}
                           </h3>
-                          {w.tamilName && (
-                            <p className="text-[11px] text-slate-500 font-semibold mt-0.5 break-words">
-                              {w.tamilName}
-                            </p>
-                          )}
+                          <p className="text-[11px] text-slate-500 font-medium mt-0.5">
+                            Part of {paguthi}
+                          </p>
                         </div>
 
-                        {/* Assigned Ward Secretary Info (Task 4) */}
                         <div className="bg-slate-50 rounded-xl p-2.5 border border-slate-200 space-y-1.5 text-xs">
                           <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-1 text-[11px]">
                             <span className="text-slate-500 font-medium">Secretary:</span>
-                            {w.hasAssignedSecretary && w.wardSecretary && w.wardSecretary !== 'Not Assigned' ? (
+                            {v.wardSecretary && v.wardSecretary !== 'Not Assigned' ? (
                               <span className="font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 text-[10.5px] truncate max-w-[160px]">
-                                {w.wardSecretary}
+                                {v.wardSecretary}
                               </span>
                             ) : (
                               <span className="font-bold text-slate-500 bg-slate-200 px-2 py-0.5 rounded-full text-[10.5px]">
@@ -589,64 +733,200 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                               <Phone className="w-3 h-3 text-slate-400 flex-shrink-0" /> Contact:
                             </span>
                             <span className="font-semibold text-slate-700 font-mono text-[10.5px]">
-                              {w.contactNumber || 'Not Available'}
+                              {v.contactNumber || 'Not Available'}
                             </span>
                           </div>
                         </div>
 
-                        {/* Ward Complaint Statistics */}
+                        {/* Village Grievance stats */}
                         <div className="grid grid-cols-3 gap-1.5 text-center text-[10px] pt-1">
                           <div className="bg-amber-50 p-1.5 rounded-lg border border-amber-200/60">
                             <span className="text-amber-800 block font-semibold truncate">Pending</span>
                             <strong className="text-amber-900 font-black text-xs">
-                              {w.stats.pendingComplaints}
+                              {v.pendingComplaints}
                             </strong>
                           </div>
                           <div className="bg-sky-50 p-1.5 rounded-lg border border-sky-200/60">
                             <span className="text-sky-800 block font-semibold truncate">In Prog</span>
                             <strong className="text-sky-900 font-black text-xs">
-                              {w.stats.inProgressComplaints}
+                              {v.inProgressComplaints}
                             </strong>
                           </div>
                           <div className="bg-emerald-50 p-1.5 rounded-lg border border-emerald-200/60">
                             <span className="text-emerald-800 block font-semibold truncate">Done</span>
                             <strong className="text-emerald-900 font-black text-xs">
-                              {w.stats.resolvedComplaints}
+                              {v.completedComplaints}
                             </strong>
                           </div>
                         </div>
                       </div>
 
-                      {/* Card Action Button: Click opens Ward Complaints (Task 4 & 5) */}
                       <div className="p-3.5 sm:p-4 pt-0">
                         <button
                           type="button"
-                          onClick={() => {
-                            setSelectedWardForComplaints(w);
-                            setComplaintStatusFilter('all');
-                          }}
-                          className="w-full py-2 px-3 bg-[#FFF8F0] hover:bg-[#850000] hover:text-white text-[#850000] border border-[#FFE5A3] hover:border-[#850000] text-xs font-bold rounded-xl transition flex items-center justify-center space-x-1.5 cursor-pointer"
+                          onClick={() => handleSelectVillage(v.name)}
+                          className="w-full py-2 px-3 bg-[#850000] hover:bg-[#A00000] text-white text-xs font-bold rounded-xl transition flex items-center justify-center space-x-1.5 cursor-pointer shadow-xs"
                         >
-                          <span>View Complaints ({w.stats.totalComplaints})</span>
+                          <span>Open Village Wards ({v.totalWards})</span>
                           <ChevronRight className="w-3.5 h-3.5 flex-shrink-0" />
                         </button>
                       </div>
                     </div>
                   ))}
                 </div>
-              )}
-            </div>
+              </div>
+            ) : (
+              /* ================= WARD DIRECTORY SECTION (WHEN VILLAGE SELECTED OR PAGUTHI HAS NO VILLAGES) ================= */
+              <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <h2 className="text-base sm:text-lg font-extrabold text-slate-900 flex items-center space-x-2">
+                      <Building className="w-4 h-4 sm:w-5 sm:h-5 text-[#850000]" />
+                      <span>{selectedVillage ? `${selectedVillage} Village Ward Directory` : 'Municipal Ward Directory & Governance'}</span>
+                    </h2>
+                    <p className="text-xs text-slate-500">
+                      Live directory of all {displayWards.length} wards belonging to {selectedVillage || paguthi} with assigned secretaries and complaint status
+                    </p>
+                  </div>
 
-            {/* ================= TASK 5: ALL PAGUTHI COMPLAINTS SECTION ================= */}
+                  {/* Ward search filter */}
+                  <div className="relative max-w-xs w-full">
+                    <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="text"
+                      value={wardSearchQuery}
+                      onChange={(e) => setWardSearchQuery(e.target.value)}
+                      placeholder="Search ward number, name, secretary..."
+                      className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-3 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#850000]/20 focus:border-[#850000] transition"
+                    />
+                  </div>
+                </div>
+
+                {/* Grid of Wards */}
+                {filteredWards.length === 0 ? (
+                  <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 text-center text-slate-500 text-xs">
+                    No wards found matching "{wardSearchQuery}".
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5 sm:gap-4">
+                    {filteredWards.map((w) => (
+                      <div
+                        key={w.id}
+                        className="bg-white rounded-2xl border border-[#E9E2DC] shadow-2xs hover:shadow-md hover:border-[#850000] transition flex flex-col justify-between overflow-hidden relative"
+                      >
+                        {/* Top Accent line */}
+                        <div className="h-1 bg-gradient-to-r from-[#850000] via-[#FFD32A] to-[#850000]" />
+
+                        <div className="p-3.5 sm:p-4 space-y-3">
+                          {/* Ward Number & Zone Badge */}
+                          <div className="flex items-start justify-between">
+                            <span className="px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-black bg-red-50 text-[#850000] border border-red-200">
+                              Ward {w.wardNumber}
+                            </span>
+                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                              {w.zone || 'South Zone'}
+                            </span>
+                          </div>
+
+                          {/* Ward Name */}
+                          {isMunicipalCleanWard ? (
+                            <div className="pb-1">
+                              <h3 className="text-sm sm:text-base font-extrabold text-slate-900 leading-snug">
+                                Ward {w.wardNumber}
+                              </h3>
+                            </div>
+                          ) : (
+                            <div>
+                              <h3 className="text-sm sm:text-base font-extrabold text-slate-900 leading-snug break-words">
+                                {w.wardName}
+                              </h3>
+                              {w.tamilName && (
+                                <p className="text-[11px] text-slate-500 font-semibold mt-0.5 break-words">
+                                  {w.tamilName}
+                                </p>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Assigned Ward Secretary Info (Task 4) */}
+                          <div className="bg-slate-50 rounded-xl p-2.5 border border-slate-200 space-y-1.5 text-xs">
+                            <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-1 text-[11px]">
+                              <span className="text-slate-500 font-medium">Secretary:</span>
+                              {w.hasAssignedSecretary && w.wardSecretary && w.wardSecretary !== 'Not Assigned' ? (
+                                <span className="font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 text-[10.5px] truncate max-w-[160px]">
+                                  {w.wardSecretary}
+                                </span>
+                              ) : (
+                                <span className="font-bold text-slate-500 bg-slate-200 px-2 py-0.5 rounded-full text-[10.5px]">
+                                  Not Assigned
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-1 text-[11px]">
+                              <span className="text-slate-500 font-medium flex items-center gap-1">
+                                <Phone className="w-3 h-3 text-slate-400 flex-shrink-0" /> Contact:
+                              </span>
+                              <span className="font-semibold text-slate-700 font-mono text-[10.5px]">
+                                {w.contactNumber || 'Not Available'}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Ward Complaint Statistics */}
+                          <div className="grid grid-cols-3 gap-1.5 text-center text-[10px] pt-1">
+                            <div className="bg-amber-50 p-1.5 rounded-lg border border-amber-200/60">
+                              <span className="text-amber-800 block font-semibold truncate">Pending</span>
+                              <strong className="text-amber-900 font-black text-xs">
+                                {w.stats.pendingComplaints}
+                              </strong>
+                            </div>
+                            <div className="bg-sky-50 p-1.5 rounded-lg border border-sky-200/60">
+                              <span className="text-sky-800 block font-semibold truncate">In Prog</span>
+                              <strong className="text-sky-900 font-black text-xs">
+                                {w.stats.inProgressComplaints}
+                              </strong>
+                            </div>
+                            <div className="bg-emerald-50 p-1.5 rounded-lg border border-emerald-200/60">
+                              <span className="text-emerald-800 block font-semibold truncate">Done</span>
+                              <strong className="text-emerald-900 font-black text-xs">
+                                {w.stats.resolvedComplaints}
+                              </strong>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Card Action Button: Click opens Ward Complaints (Task 4 & 5) */}
+                        <div className="p-3.5 sm:p-4 pt-0">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedWardForComplaints(w);
+                              setComplaintStatusFilter('all');
+                            }}
+                            className="w-full py-2 px-3 bg-[#FFF8F0] hover:bg-[#850000] hover:text-white text-[#850000] border border-[#FFE5A3] hover:border-[#850000] text-xs font-bold rounded-xl transition flex items-center justify-center space-x-1.5 cursor-pointer"
+                          >
+                            <span>View Complaints ({w.stats.totalComplaints})</span>
+                            <ChevronRight className="w-3.5 h-3.5 flex-shrink-0" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ================= TASK 5: ALL COMPLAINTS SECTION ================= */}
             <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 border border-[#E9E2DC] shadow-xs space-y-4 sm:space-y-5">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                   <h2 className="text-base sm:text-lg font-extrabold text-slate-900 flex items-center space-x-2">
                     <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-[#850000]" />
-                    <span>Complete Grievance Tracking Repository ({paguthi} Paguthi)</span>
+                    <span>Complete Grievance Tracking Repository ({selectedVillage ? `${selectedVillage} Village` : `${paguthi} ${hasVillages ? 'Ondriyam' : paguthi.includes('Nagaram') ? 'Nagaram' : 'Paguthi'}`})</span>
                   </h2>
                   <p className="text-xs text-slate-500">
-                    Live grievance records received across all {paguthi} wards from citizen portal
+                    Live grievance records received across {selectedVillage ? `${selectedVillage} Village wards` : `all ${paguthi} wards`} from citizen portal
                   </p>
                 </div>
 
@@ -831,13 +1111,14 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                 <div className="min-w-0 pr-2">
                   <div className="flex flex-wrap items-center gap-1.5 text-xs">
                     <span className="font-mono bg-black/40 px-2 py-0.5 rounded border border-[#FFD32A]/30 text-[#FFD32A]">
-                      {paguthi} Paguthi
+                      {selectedVillage ? `${selectedVillage} • ` : ''}{paguthi}
                     </span>
                     <span className="text-white/80">•</span>
                     <span className="text-white/90 font-semibold">{selectedWardForComplaints.zone}</span>
                   </div>
                   <h3 className="text-base sm:text-xl lg:text-2xl font-black mt-1 break-words">
-                    Ward {selectedWardForComplaints.wardNumber} - {selectedWardForComplaints.wardName}
+                    Ward {selectedWardForComplaints.wardNumber}
+                    {!isMunicipalCleanWard && selectedWardForComplaints.wardName ? ` - ${selectedWardForComplaints.wardName}` : ''}
                   </h3>
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5 text-xs text-red-100">
                     <div>
@@ -958,7 +1239,7 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                           </div>
                           <div>
                             <span className="text-slate-400 block text-[10px] uppercase font-bold">Paguthi & Ward</span>
-                            <strong className="text-[#850000]">{paguthi}</strong> •{' '}
+                            <strong className="text-[#850000]">{selectedVillage || paguthi}</strong> •{' '}
                             <span className="text-slate-700">Ward {selectedWardForComplaints.wardNumber}</span>
                           </div>
                           <div>

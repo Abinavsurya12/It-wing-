@@ -135,6 +135,59 @@ export const PaguthiDetailPage = () => {
   const { constituency, paguthi, stats, wards = [], issues = [], hasVillages = false, villages = [] } = data;
   const constituencyDisplayName = isTa && constituency.tamilName ? constituency.tamilName : constituency.name;
 
+  const isMunicipalCleanWard = ['Pothanur', 'Podanur', 'Kurichi', 'Sundarapuram'].includes(paguthi || paguthiName);
+
+  let displayWards = Array.isArray(wards) ? [...wards] : [];
+
+  // Pothanur: Ensure only ONE Ward 95 card is displayed
+  if (['Pothanur', 'Podanur'].includes(paguthi || paguthiName)) {
+    const ward95List = displayWards.filter((w) => Number(w.wardNumber) === 95);
+    if (ward95List.length > 1) {
+      const pothanurWard95 = ward95List.find((w) => ['Pothanur', 'Podanur'].includes(w.paguthi)) || ward95List[0];
+      const otherWard95 = ward95List.find((w) => w !== pothanurWard95);
+
+      const mergedWard95 = {
+        ...pothanurWard95,
+        wardSecretary: (pothanurWard95.wardSecretary && pothanurWard95.wardSecretary !== 'Not Assigned')
+          ? pothanurWard95.wardSecretary
+          : (otherWard95?.wardSecretary || pothanurWard95.wardSecretary || 'Not Assigned'),
+        wardSecretaryRegistrationStatus: (pothanurWard95.wardSecretaryRegistrationStatus === 'Registered')
+          ? 'Registered'
+          : (otherWard95?.wardSecretaryRegistrationStatus || pothanurWard95.wardSecretaryRegistrationStatus || 'Not Assigned'),
+        contactNumber: pothanurWard95.contactNumber || otherWard95?.contactNumber || null,
+        totalComplaints: Math.max(Number(pothanurWard95.totalComplaints) || 0, Number(otherWard95?.totalComplaints) || 0),
+        newComplaints: Math.max(Number(pothanurWard95.newComplaints) || 0, Number(otherWard95?.newComplaints) || 0),
+        pendingComplaints: Math.max(Number(pothanurWard95.pendingComplaints) || 0, Number(otherWard95?.pendingComplaints) || 0),
+        inProgressComplaints: Math.max(Number(pothanurWard95.inProgressComplaints) || 0, Number(otherWard95?.inProgressComplaints) || 0),
+        completedComplaints: Math.max(Number(pothanurWard95.completedComplaints) || 0, Number(otherWard95?.completedComplaints) || 0),
+      };
+
+      displayWards = displayWards.filter((w) => Number(w.wardNumber) !== 95);
+      displayWards.push(mergedWard95);
+    }
+  }
+
+  if ((paguthi || paguthiName) === 'Sundarapuram') {
+    const has96 = displayWards.some((w) => Number(w.wardNumber) === 96);
+    if (!has96) {
+      displayWards.push({
+        id: 'ward-96-sundarapuram',
+        wardNumber: 96,
+        wardName: 'Ward 96',
+        paguthi: 'Sundarapuram',
+        wardSecretary: 'Not Assigned',
+        wardSecretaryRegistrationStatus: 'Not Assigned',
+        contactNumber: null,
+        totalComplaints: 0,
+        newComplaints: 0,
+        pendingComplaints: 0,
+        inProgressComplaints: 0,
+        completedComplaints: 0,
+      });
+    }
+  }
+  displayWards.sort((a, b) => (Number(a.wardNumber) || 0) - (Number(b.wardNumber) || 0));
+
   return (
     <div className="space-y-6 font-sans">
       {/* ================= BREADCRUMB NAVIGATION ================= */}
@@ -391,7 +444,7 @@ export const PaguthiDetailPage = () => {
           </div>
 
           {/* WARD CARDS GRID */}
-          {wards.length === 0 ? (
+          {displayWards.length === 0 ? (
             <div className="bg-white rounded-3xl p-8 text-center border border-slate-200">
               <p className="text-slate-500 text-sm">
                 No municipal wards currently mapped to {selectedVillage || paguthi}.
@@ -409,7 +462,7 @@ export const PaguthiDetailPage = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {wards.map((w) => (
+              {displayWards.map((w) => (
                 <div
                   key={w._id || w.id}
                   onClick={() => navigate(`/admin/district/wards/${w._id || w.id}?tab=complaints`)}
@@ -418,20 +471,30 @@ export const PaguthiDetailPage = () => {
                   <div className="h-1 bg-[#A00000]"></div>
 
                   <div className="p-5">
-                    <div className="flex items-center justify-between">
-                      <span className="font-extrabold text-xs text-[#A00000] bg-[#FFF0F0] border border-red-200 px-2.5 py-0.5 rounded-lg">
-                        {t('district.wardLabel', 'Ward')} {w.wardNumber}
-                      </span>
-                      <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
-                        {selectedVillage || w.village || paguthi}
-                      </span>
-                    </div>
+                    {isMunicipalCleanWard ? (
+                      <div className="pb-1">
+                        <h3 className="text-lg font-black text-slate-900 group-hover:text-[#A00000] transition">
+                          {t('district.wardLabel', 'Ward')} {w.wardNumber}
+                        </h3>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex items-center justify-between">
+                          <span className="font-extrabold text-xs text-[#A00000] bg-[#FFF0F0] border border-red-200 px-2.5 py-0.5 rounded-lg">
+                            {t('district.wardLabel', 'Ward')} {w.wardNumber}
+                          </span>
+                          <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
+                            {selectedVillage || w.village || paguthi}
+                          </span>
+                        </div>
 
-                    <h3 className="text-base font-extrabold text-slate-900 mt-2 group-hover:text-[#A00000] transition">
-                      {w.wardName}
-                    </h3>
-                    {w.tamilName && (
-                      <p className="text-xs text-slate-500 font-medium">{w.tamilName}</p>
+                        <h3 className="text-base font-extrabold text-slate-900 mt-2 group-hover:text-[#A00000] transition">
+                          {w.wardName}
+                        </h3>
+                        {w.tamilName && (
+                          <p className="text-xs text-slate-500 font-medium">{w.tamilName}</p>
+                        )}
+                      </>
                     )}
 
                     <div className="mt-3.5 space-y-1.5 text-xs text-slate-600 border-t border-slate-100 pt-3">
@@ -464,7 +527,7 @@ export const PaguthiDetailPage = () => {
                           <span className="text-slate-400 font-mono text-[11px]">Not Available</span>
                         </div>
                       )}
-                      {w.areaCoverage && (
+                      {!isMunicipalCleanWard && w.areaCoverage && (
                         <p className="text-[11px] text-slate-400 line-clamp-1 pt-1">
                           {w.areaCoverage}
                         </p>
@@ -575,7 +638,7 @@ export const PaguthiDetailPage = () => {
                         <span className="font-bold text-slate-800">
                           Ward {iss.wardNumber || iss.ward?.wardNumber || '-'}
                         </span>
-                        {iss.village ? (
+                        {!isMunicipalCleanWard && iss.village ? (
                           <div className="text-[10px] text-amber-700 font-semibold">{iss.village}</div>
                         ) : null}
                       </td>

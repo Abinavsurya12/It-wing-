@@ -55,10 +55,52 @@ export const DistrictPage = () => {
     category: 'Assembly Constituency',
     tamilName: 'கிணத்துக்கடவு',
     code: 'KKD',
-    totalPaguthi: 12,
-    wardCount: 8,
-    memberCount: 15,
+    totalPaguthi: 11,
+    wardCount: 6,
+    memberCount: 0,
   };
+
+  // 1. Identify Kinathukadavu wards from live MySQL data
+  const kinathuConstituencyId = kinathukadavu?.id || kinathukadavu?._id;
+  const kinathuWards = wards.filter((w) => {
+    const cId = w.constituencyId?._id || w.constituencyId?.id || w.constituencyId;
+    if (kinathuConstituencyId && (cId === kinathuConstituencyId || Number(cId) === Number(kinathuConstituencyId))) {
+      return true;
+    }
+    const paguthi = typeof w.paguthi === 'string' ? w.paguthi : '';
+    const kinathuPaguthiNames = [
+      'Pothanur', 'Podanur', 'Kurichi', 'Sundarapuram',
+      'Malumichampatti', 'Malumachampatti', 'Kinathukadavu Ondriyam',
+      'Madukkarai Nagaram', 'Vellalur Nagaram',
+      'Thondamuthur Therkku Ondriyam', 'Thondamuthur Merkku Ondriyam',
+      'Madukkarai Therkku Ondriyam', 'Madukkarai Merkku Ondriyam'
+    ];
+    return kinathuPaguthiNames.includes(paguthi);
+  });
+
+  // 2. Compute actual Total Ward count from live MySQL data avoiding duplicates
+  const uniqueKinathuWardNumbers = new Set(
+    kinathuWards
+      .map((w) => (w.wardNumber !== undefined && w.wardNumber !== null ? String(w.wardNumber).trim() : null))
+      .filter(Boolean)
+  );
+  const totalLiveWards = uniqueKinathuWardNumbers.size > 0 ? uniqueKinathuWardNumbers.size : kinathuWards.length;
+
+  // 3. Compute actual Total Paguthi count from live MySQL data (combining local bodies and municipal paguthis)
+  const kinathuPaguthisSet = new Set();
+  if (Array.isArray(kinathukadavu?.paguthis)) {
+    kinathukadavu.paguthis.forEach((p) => {
+      const name = typeof p === 'string' ? p : p?.name;
+      if (name) kinathuPaguthisSet.add(name === 'Podanur' ? 'Pothanur' : (name === 'Malumichampatti' ? 'Malumachampatti' : name));
+    });
+  }
+  kinathuWards.forEach((w) => {
+    if (w.paguthi) {
+      const name = w.paguthi === 'Podanur' ? 'Pothanur' : (w.paguthi === 'Malumichampatti' ? 'Malumachampatti' : w.paguthi);
+      kinathuPaguthisSet.add(name);
+    }
+  });
+  const totalLivePaguthis = kinathuPaguthisSet.size > 0 ? kinathuPaguthisSet.size : (kinathukadavu.totalPaguthi || 11);
 
   return (
     <div className="space-y-6">
@@ -77,10 +119,10 @@ export const DistrictPage = () => {
           },
           {
             label: t('district.statTotalPaguthi', 'Total Paguthi'),
-            value: `${kinathukadavu.totalPaguthi || 0} ${t('common.paguthi', 'Paguthi')}`,
+            value: `${totalLivePaguthis} ${t('common.paguthi', 'Paguthi')}`,
             highlight: true,
           },
-          { label: t('district.statTotalWards', 'Total Wards'), value: wards.length },
+          { label: t('district.statTotalWards', 'Total Wards'), value: totalLiveWards },
           { label: t('district.statActiveMembers', 'Active TVK Members'), value: districtData?.stats?.totalMembers || 0 },
         ]}
       />
@@ -116,7 +158,7 @@ export const DistrictPage = () => {
                     {kinathukadavu.code || 'KKD'}
                   </span>
                   <span className="text-[11px] font-bold text-[#FFD32A] bg-black/85 px-2.5 py-1 rounded-md shadow-xs">
-                    {kinathukadavu.totalPaguthi || 0} {t('common.paguthi', 'Paguthi')}
+                    {totalLivePaguthis} {t('common.paguthi', 'Paguthi')}
                   </span>
                   <span className="text-[11px] font-semibold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-md">
                     {kinathukadavu.zone || 'South Zone'}
@@ -142,23 +184,17 @@ export const DistrictPage = () => {
                 </p>
 
                 {/* Key Statistics Counts from Database */}
-                <div className="grid grid-cols-1 min-[420px]:grid-cols-3 gap-2.5 sm:gap-3 mt-4 pt-4 border-t border-[#E9E2DC] text-xs">
+                <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-2.5 sm:gap-3 mt-4 pt-4 border-t border-[#E9E2DC] text-xs">
                   <div className="bg-[#FFF8F0] p-3 rounded-2xl border border-[#FFE5A3]/70">
                     <span className="text-slate-500 block text-[10px] uppercase font-bold tracking-wider">{t('district.statTotalPaguthi', 'Total Paguthi')}</span>
                     <strong className="text-slate-900 font-extrabold text-base sm:text-lg text-[#A00000]">
-                      {kinathukadavu.totalPaguthi || 8}
+                      {totalLivePaguthis}
                     </strong>
                   </div>
                   <div className="bg-[#FFF8F0] p-3 rounded-2xl border border-[#FFE5A3]/70">
                     <span className="text-slate-500 block text-[10px] uppercase font-bold tracking-wider">{t('district.statTotalWards', 'Total Wards')}</span>
                     <strong className="text-slate-900 font-extrabold text-base sm:text-lg">
-                      {kinathukadavu.wardCount || kinathukadavu.totalWards || 0}
-                    </strong>
-                  </div>
-                  <div className="bg-[#FFF8F0] p-3 rounded-2xl border border-[#FFE5A3]/70">
-                    <span className="text-slate-500 block text-[10px] uppercase font-bold tracking-wider">{t('district.statActiveMembers', 'Total Members')}</span>
-                    <strong className="text-slate-900 font-extrabold text-base sm:text-lg">
-                      {kinathukadavu.memberCount || 0}
+                      {totalLiveWards}
                     </strong>
                   </div>
                 </div>
@@ -173,140 +209,6 @@ export const DistrictPage = () => {
                 >
                   <span className="tracking-wide">{t('district.openThoguthi', 'Open Thoguthi')}</span>
                   <ChevronRight className="w-4 h-4 text-[#FFD32A] group-hover/btn:translate-x-1 transition-transform" />
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Existing Municipal Paguthi Cards (Pothanur, Kurichi, Sundarapuram) */}
-        <div className="mt-8 space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-base font-extrabold text-[#252525] flex items-center gap-2">
-                <Building2 className="w-4 h-4 text-[#A00000]" />
-                <span>Municipal Paguthi Administration</span>
-              </h3>
-              <p className="text-xs text-slate-500">
-                Direct access to municipal zone paguthis and municipal ward administration
-              </p>
-            </div>
-            <span className="text-xs font-bold text-[#A00000] bg-red-50 border border-red-200 px-3 py-0.5 rounded-full">
-              3 Municipal Paguthis
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            {/* Pothanur Card - 3 Wards */}
-            <div className="bg-white rounded-2xl border border-[#E9E2DC] shadow-xs hover:shadow-lg hover:-translate-y-1 hover:border-[#A00000] transition-all duration-200 flex flex-col justify-between overflow-hidden relative group">
-              <div className="h-1.5 bg-gradient-to-r from-[#A00000] via-[#FFD32A] to-[#850000]"></div>
-              <div className="p-5">
-                <div className="flex items-start justify-between">
-                  <div className="w-10 h-10 rounded-xl bg-[#FFF8F0] border border-[#FFE5A3] flex items-center justify-center text-[#A00000] shadow-xs group-hover:scale-105 transition">
-                    <Building2 className="w-5 h-5" />
-                  </div>
-                  <span className="text-xs font-bold text-[#A00000] bg-red-50 px-2.5 py-0.5 rounded-full border border-red-200">
-                    Municipal
-                  </span>
-                </div>
-                <h4 className="text-base font-extrabold text-slate-900 mt-3 group-hover:text-[#A00000] transition">
-                  Pothanur
-                </h4>
-                <div className="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-slate-100 text-xs">
-                  <div className="bg-[#FFF8F0] p-2 rounded-xl border border-[#FFE5A3]/40">
-                    <span className="text-[10.5px] text-slate-500 block">Total Wards</span>
-                    <strong className="text-slate-900 font-bold text-sm">3 Wards</strong>
-                  </div>
-                  <div className="bg-emerald-50 p-2 rounded-xl border border-emerald-200/50">
-                    <span className="text-[10.5px] text-emerald-700 block">Jurisdiction</span>
-                    <strong className="text-emerald-900 font-bold text-sm">Ward 95, 99, 100</strong>
-                  </div>
-                </div>
-              </div>
-              <div className="p-4 pt-0">
-                <button
-                  type="button"
-                  onClick={() => navigate(`/admin/district/constituencies/${kinathukadavu._id}/paguthi/Pothanur`)}
-                  className="w-full py-2 px-3 bg-[#A00000] hover:bg-[#850000] text-white text-xs font-bold rounded-xl transition shadow-xs flex items-center justify-center space-x-1.5 cursor-pointer"
-                >
-                  <span>Open Paguthi</span>
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-
-            {/* Kurichi Card - 3 Wards */}
-            <div className="bg-white rounded-2xl border border-[#E9E2DC] shadow-xs hover:shadow-lg hover:-translate-y-1 hover:border-[#A00000] transition-all duration-200 flex flex-col justify-between overflow-hidden relative group">
-              <div className="h-1.5 bg-gradient-to-r from-[#A00000] via-[#FFD32A] to-[#850000]"></div>
-              <div className="p-5">
-                <div className="flex items-start justify-between">
-                  <div className="w-10 h-10 rounded-xl bg-[#FFF8F0] border border-[#FFE5A3] flex items-center justify-center text-[#A00000] shadow-xs group-hover:scale-105 transition">
-                    <Building2 className="w-5 h-5" />
-                  </div>
-                  <span className="text-xs font-bold text-[#A00000] bg-red-50 px-2.5 py-0.5 rounded-full border border-red-200">
-                    Municipal
-                  </span>
-                </div>
-                <h4 className="text-base font-extrabold text-slate-900 mt-3 group-hover:text-[#A00000] transition">
-                  Kurichi
-                </h4>
-                <div className="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-slate-100 text-xs">
-                  <div className="bg-[#FFF8F0] p-2 rounded-xl border border-[#FFE5A3]/40">
-                    <span className="text-[10.5px] text-slate-500 block">Total Wards</span>
-                    <strong className="text-slate-900 font-bold text-sm">3 Wards</strong>
-                  </div>
-                  <div className="bg-emerald-50 p-2 rounded-xl border border-emerald-200/50">
-                    <span className="text-[10.5px] text-emerald-700 block">Jurisdiction</span>
-                    <strong className="text-emerald-900 font-bold text-sm">Ward 85, 96, 98</strong>
-                  </div>
-                </div>
-              </div>
-              <div className="p-4 pt-0">
-                <button
-                  type="button"
-                  onClick={() => navigate(`/admin/district/constituencies/${kinathukadavu._id}/paguthi/Kurichi`)}
-                  className="w-full py-2 px-3 bg-[#A00000] hover:bg-[#850000] text-white text-xs font-bold rounded-xl transition shadow-xs flex items-center justify-center space-x-1.5 cursor-pointer"
-                >
-                  <span>Open Paguthi</span>
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-
-            {/* Sundarapuram Card - 2 Wards */}
-            <div className="bg-white rounded-2xl border border-[#E9E2DC] shadow-xs hover:shadow-lg hover:-translate-y-1 hover:border-[#A00000] transition-all duration-200 flex flex-col justify-between overflow-hidden relative group">
-              <div className="h-1.5 bg-gradient-to-r from-[#A00000] via-[#FFD32A] to-[#850000]"></div>
-              <div className="p-5">
-                <div className="flex items-start justify-between">
-                  <div className="w-10 h-10 rounded-xl bg-[#FFF8F0] border border-[#FFE5A3] flex items-center justify-center text-[#A00000] shadow-xs group-hover:scale-105 transition">
-                    <Building2 className="w-5 h-5" />
-                  </div>
-                  <span className="text-xs font-bold text-[#A00000] bg-red-50 px-2.5 py-0.5 rounded-full border border-red-200">
-                    Municipal
-                  </span>
-                </div>
-                <h4 className="text-base font-extrabold text-slate-900 mt-3 group-hover:text-[#A00000] transition">
-                  Sundarapuram
-                </h4>
-                <div className="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-slate-100 text-xs">
-                  <div className="bg-[#FFF8F0] p-2 rounded-xl border border-[#FFE5A3]/40">
-                    <span className="text-[10.5px] text-slate-500 block">Total Wards</span>
-                    <strong className="text-slate-900 font-bold text-sm">2 Wards</strong>
-                  </div>
-                  <div className="bg-emerald-50 p-2 rounded-xl border border-emerald-200/50">
-                    <span className="text-[10.5px] text-emerald-700 block">Jurisdiction</span>
-                    <strong className="text-emerald-900 font-bold text-sm">Ward 94</strong>
-                  </div>
-                </div>
-              </div>
-              <div className="p-4 pt-0">
-                <button
-                  type="button"
-                  onClick={() => navigate(`/admin/district/constituencies/${kinathukadavu._id}/paguthi/Sundarapuram`)}
-                  className="w-full py-2 px-3 bg-[#A00000] hover:bg-[#850000] text-white text-xs font-bold rounded-xl transition shadow-xs flex items-center justify-center space-x-1.5 cursor-pointer"
-                >
-                  <span>Open Paguthi</span>
-                  <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
             </div>

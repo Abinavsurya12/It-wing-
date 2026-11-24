@@ -77,7 +77,14 @@ export const PAGUTHI_VILLAGES_MAP = {
   ],
   'Madukkarai Nagaram': [],
   'Vellalur Nagaram': [],
-  'Malumachampatti': [],
+  'Malumachampatti': [
+    'Seerapalayam',
+    'Malumachampatti'
+  ],
+  'Malumichampatti': [
+    'Seerapalayam',
+    'Malumachampatti'
+  ],
   'Pothanur': [],
   'Kurichi': [],
   'Sundarapuram': []
