@@ -157,6 +157,15 @@ export const ConstituencyDetailPage = () => {
                     <div className="w-10 h-10 rounded-xl bg-[#FFF8F0] border border-[#FFE5A3] flex items-center justify-center text-[#A00000] shadow-xs group-hover:scale-105 transition">
                       <MapPin className="w-5 h-5" />
                     </div>
+                    {p.totalVillages > 0 ? (
+                      <span className="text-xs font-bold text-[#A00000] bg-red-50 px-2.5 py-0.5 rounded-full border border-red-200">
+                        {p.totalVillages} {p.totalVillages === 1 ? 'Village' : 'Villages'}
+                      </span>
+                    ) : (
+                      <span className="text-xs font-bold text-slate-600 bg-slate-100 px-2.5 py-0.5 rounded-full border border-slate-200">
+                        Town / Nagaram
+                      </span>
+                    )}
                   </div>
 
                   <h3 className="text-base font-extrabold text-slate-900 mt-3 group-hover:text-[#A00000] transition">
@@ -166,7 +175,9 @@ export const ConstituencyDetailPage = () => {
                   {/* Key Statistics Counts */}
                   <div className="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-slate-100 text-xs">
                     <div className="bg-[#FFF8F0] p-2 rounded-xl border border-[#FFE5A3]/40">
-                      <span className="text-[10.5px] text-slate-500 block">{t('constituency.totalWards', 'Total Wards')}</span>
+                      <span className="text-[10.5px] text-slate-500 block">
+                        {p.totalVillages !== undefined && p.totalVillages > 0 ? 'Total Villages' : t('constituency.totalWards', 'Total Wards')}
+                      </span>
                       <strong className="text-slate-900 font-bold text-sm">
                         {p.name === 'Pothanur'
                           ? '3 Wards'
@@ -174,6 +185,8 @@ export const ConstituencyDetailPage = () => {
                           ? '3 Wards'
                           : p.name === 'Sundarapuram'
                           ? '2 Wards'
+                          : p.totalVillages !== undefined && p.totalVillages > 0
+                          ? `${p.totalVillages} ${p.totalVillages === 1 ? 'Village' : 'Villages'}`
                           : `${p.totalWards || 0} ${p.totalWards === 1 ? 'Ward' : 'Wards'}`}
                       </strong>
                     </div>

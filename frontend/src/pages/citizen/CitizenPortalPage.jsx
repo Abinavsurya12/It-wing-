@@ -86,6 +86,7 @@ export const CitizenPortalPage = () => {
   const currentUser = profile || user;
   const assignedWardDisplay = currentUser?.assignedWard?.trim() || 'Not Assigned';
   const paguthiDisplay = currentUser?.paguthi?.trim() || 'Not Assigned';
+  const villageDisplay = currentUser?.village?.trim() || '';
   const constituencyDisplay = currentUser?.constituency?.trim() || 'Not Assigned';
 
   // Appointment Form state
@@ -788,6 +789,12 @@ export const CitizenPortalPage = () => {
               <span className="text-[10px] text-slate-500 block">Paguthi</span>
               <strong className="text-[#A00000] font-bold text-[11px]">{paguthiDisplay}</strong>
             </div>
+            {villageDisplay ? (
+              <div className="bg-[#FFF8F0] p-2 rounded-xl border border-[#FFE5A3]/50">
+                <span className="text-[10px] text-slate-500 block">Village</span>
+                <strong className="text-slate-900 font-bold text-[11px]">{villageDisplay}</strong>
+              </div>
+            ) : null}
             <div className="bg-[#FFF8F0] p-2 rounded-xl border border-[#FFE5A3]/50">
               <span className="text-[10px] text-slate-500 block">Constituency</span>
               <strong className="text-slate-900 font-bold text-[11px]">{constituencyDisplay}</strong>

@@ -369,6 +369,7 @@ export const WardDetailPage = () => {
                     <th className="py-3 px-3">Complaint ID</th>
                     <th className="py-3 px-3">Citizen Info</th>
                     <th className="py-3 px-3">Category</th>
+                    <th className="py-3 px-3">Priority</th>
                     <th className="py-3 px-3">Grievance Description</th>
                     <th className="py-3 px-3">Paguthi & Ward</th>
                     <th className="py-3 px-3">Registration Date</th>
@@ -404,6 +405,9 @@ export const WardDetailPage = () => {
                             {category}
                           </span>
                         </td>
+                        <td className="py-3 px-3 whitespace-nowrap">
+                          <PriorityBadge priority={i.priority || 'Medium'} />
+                        </td>
                         <td className="py-3 px-3 max-w-xs">
                           <p className="font-medium text-slate-800 line-clamp-2 leading-relaxed" title={description}>
                             {description}
@@ -411,7 +415,9 @@ export const WardDetailPage = () => {
                         </td>
                         <td className="py-3 px-3">
                           <p className="font-bold text-[#A00000]">{complaintPaguthi}</p>
-                          <p className="text-[11px] text-slate-500">{assignedWardLabel}</p>
+                          <p className="text-[11px] text-slate-500">
+                            {i.village ? `${i.village} • ` : ''}{assignedWardLabel}
+                          </p>
                         </td>
                         <td className="py-3 px-3 text-slate-600 whitespace-nowrap font-medium">
                           {regDate}

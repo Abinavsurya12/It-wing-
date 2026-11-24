@@ -6,36 +6,56 @@
 export const PAGUTHI_LABEL = 'Paguthi / Ondriyam / Nagaram / Peruratchi';
 
 export const PAGUTHI_OPTIONS = [
+  'Thondamuthur Therkku Ondriyam',
+  'Thondamuthur Merkku Ondriyam',
+  'Madukkarai Therkku Ondriyam',
+  'Madukkarai Merkku Ondriyam',
+  'Madukkarai Nagaram',
+  'Vellalur Nagaram',
+  'Kinathukadavu Ondriyam',
+  'Malumachampatti',
   'Pothanur',
   'Kurichi',
   'Sundarapuram',
-  'Malumachampatti',
-  'Kinathukadavu Ondriyam',
-  'Kinathukadavu Nagaram',
-  'Thondamuthur Therku Ondriyam',
-  'Thondamuthur Merku Ondriyam',
-  'Madukarai Therku Ondriyam',
-  'Madukarai Merku Ondriyam',
-  'Madukkarai Nagaram',
-  'Vellalur Nagaram',
 ];
 
 export const PAGUTHI_VILLAGES_MAP = {
+  'Thondamuthur Therkku Ondriyam': [
+    'Perur Chettipalayam'
+  ],
   'Thondamuthur Therku Ondriyam': [
     'Perur Chettipalayam'
+  ],
+  'Thondamuthur Merkku Ondriyam': [
+    'Theethipalayam',
+    'Madhampatti'
   ],
   'Thondamuthur Merku Ondriyam': [
     'Theethipalayam',
     'Madhampatti'
   ],
-  'Kinathukadavu Ondriyam': [
-    'Vadaputhur',
-    'Solavampalayam',
-    'Sokkanur',
-    'No.10 Muthur',
-    'Kodangipalayam',
-    'Kuthirayampalayam',
-    'Pottayandipurambu'
+  'Madukkarai Therkku Ondriyam': [
+    'Arisipalayam',
+    'Valukuparai',
+    'Nachipalayam',
+    'Myleripalayam',
+    'Elur'
+  ],
+  'Madukarai Therku Ondriyam': [
+    'Arisipalayam',
+    'Valukuparai',
+    'Nachipalayam',
+    'Myleripalayam',
+    'Elur'
+  ],
+  'Madukkarai Merkku Ondriyam': [
+    'Chettipalayam',
+    'Othakalmandapam',
+    'Ettimadai',
+    'Tirumalaipalayam',
+    'Palathurai',
+    'Pichanur',
+    'Mavuthampathy'
   ],
   'Madukarai Merku Ondriyam': [
     'Chettipalayam',
@@ -46,17 +66,21 @@ export const PAGUTHI_VILLAGES_MAP = {
     'Pichanur',
     'Mavuthampathy'
   ],
-  'Madukarai Therku Ondriyam': [
-    'Arisipalayam',
-    'Valukuparai',
-    'Nachipalayam',
-    'Myleripalayam',
-    'Elur'
+  'Kinathukadavu Ondriyam': [
+    'Vadaputhur',
+    'Solavampalayam',
+    'Sokkanur',
+    'No.10 Muthur',
+    'Kodangipalayam',
+    'Kuthirayampalayam',
+    'Pottayandipurambu'
   ],
-  'Malumachampatti': [
-    'Seerapalayam',
-    'Malumachampatti'
-  ]
+  'Madukkarai Nagaram': [],
+  'Vellalur Nagaram': [],
+  'Malumachampatti': [],
+  'Pothanur': [],
+  'Kurichi': [],
+  'Sundarapuram': []
 };
 
 /**
@@ -65,13 +89,14 @@ export const PAGUTHI_VILLAGES_MAP = {
 export const normalizePaguthiName = (name) => {
   if (!name) return '';
   const s = String(name).trim();
-  if (/^thondamuthur\s+therk?ku\s+ondriyam$/i.test(s)) return 'Thondamuthur Therku Ondriyam';
-  if (/^thondamuthur\s+merk?ku\s+ondriyam$/i.test(s)) return 'Thondamuthur Merku Ondriyam';
-  if (/^maduk?karai\s+merk?ku\s+ondriyam$/i.test(s)) return 'Madukarai Merku Ondriyam';
-  if (/^maduk?karai\s+therk?ku\s+ondriyam$/i.test(s)) return 'Madukarai Therku Ondriyam';
+  if (/^thondamuthur\s+therk?ku\s+ondriyam$/i.test(s)) return 'Thondamuthur Therkku Ondriyam';
+  if (/^thondamuthur\s+merk?ku\s+ondriyam$/i.test(s)) return 'Thondamuthur Merkku Ondriyam';
+  if (/^maduk?karai\s+merk?ku\s+ondriyam$/i.test(s)) return 'Madukkarai Merkku Ondriyam';
+  if (/^maduk?karai\s+therk?ku\s+ondriyam$/i.test(s)) return 'Madukkarai Therkku Ondriyam';
   if (/^malum[ia]champatti$/i.test(s)) return 'Malumachampatti';
   if (/^kinathukadavu\s+ondriyam$/i.test(s)) return 'Kinathukadavu Ondriyam';
-  if (/^kinathukadavu\s+nagaram$/i.test(s)) return 'Kinathukadavu Nagaram';
+  if (/^maduk?karai\s+nagaram$/i.test(s)) return 'Madukkarai Nagaram';
+  if (/^vellalur\s+nagaram$/i.test(s)) return 'Vellalur Nagaram';
   if (/^pothanur$/i.test(s) || /^podanur$/i.test(s)) return 'Pothanur';
   if (/^kurichi$/i.test(s)) return 'Kurichi';
   if (/^sundarapuram$/i.test(s)) return 'Sundarapuram';

@@ -1,10 +1,58 @@
 import { Op } from 'sequelize';
-import District from '../models/District.js';
-import Constituency from '../models/Constituency.js';
-import Ward from '../models/Ward.js';
-import Issue from '../models/Issue.js';
-import Member from '../models/Member.js';
-import User from '../models/User.js';
+import {
+  District,
+  Constituency,
+  Ward,
+  Issue,
+  Member,
+  User,
+} from '../models/index.js';
+import {
+  PAGUTHI_VILLAGES_MAP,
+  getVillagesForPaguthi,
+  normalizePaguthiName,
+} from '../utils/paguthiVillageData.js';
+
+export const KINATHUKADAVU_LOCAL_BODIES = [
+  'Thondamuthur Therkku Ondriyam',
+  'Thondamuthur Merkku Ondriyam',
+  'Madukkarai Therkku Ondriyam',
+  'Madukkarai Merkku Ondriyam',
+  'Madukkarai Nagaram',
+  'Vellalur Nagaram',
+  'Kinathukadavu Ondriyam',
+  'Malumachampatti',
+];
+
+export const MUNICIPAL_PAGUTHIS = [
+  'Pothanur',
+  'Kurichi',
+  'Sundarapuram',
+];
+
+export const getCanonicalTargetPaguthis = (pName) => {
+  const norm = normalizePaguthiName(pName);
+  if (norm === 'Pothanur' || pName === 'Podanur') return ['Pothanur', 'Podanur'];
+  if (norm === 'Kurichi') return ['Kurichi'];
+  if (norm === 'Sundarapuram') return ['Sundarapuram'];
+  if (norm === 'Malumachampatti') return ['Malumachampatti', 'Malumichampatti'];
+  if (norm === 'Thondamuthur Therkku Ondriyam' || norm === 'Thondamuthur Therku Ondriyam') {
+    return ['Thondamuthur Therkku Ondriyam', 'Thondamuthur Therku Ondriyam'];
+  }
+  if (norm === 'Thondamuthur Merkku Ondriyam' || norm === 'Thondamuthur Merku Ondriyam') {
+    return ['Thondamuthur Merkku Ondriyam', 'Thondamuthur Merku Ondriyam'];
+  }
+  if (norm === 'Madukkarai Therkku Ondriyam' || norm === 'Madukarai Therku Ondriyam') {
+    return ['Madukkarai Therkku Ondriyam', 'Madukarai Therku Ondriyam', 'Madukkarai Therku Ondriyam'];
+  }
+  if (norm === 'Madukkarai Merkku Ondriyam' || norm === 'Madukarai Merku Ondriyam') {
+    return ['Madukkarai Merkku Ondriyam', 'Madukarai Merku Ondriyam', 'Madukkarai Merku Ondriyam'];
+  }
+  if (norm === 'Kinathukadavu Ondriyam') return ['Kinathukadavu Ondriyam'];
+  if (norm === 'Madukkarai Nagaram') return ['Madukkarai Nagaram'];
+  if (norm === 'Vellalur Nagaram') return ['Vellalur Nagaram'];
+  return [pName];
+};
 
 // @desc    Get District Overview
 // @route   GET /api/districts
@@ -45,22 +93,6 @@ export const getDistrictOverview = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
-
-const KINATHUKADAVU_LOCAL_BODIES = [
-  'Pothanur',
-  'Kurichi',
-  'Sundarapuram',
-  'Malumichampatti',
-  'Thondamuthur Therkku Ondriyam',
-  'Thondamuthur Merkku Ondriyam',
-  'Madukkarai Therkku Ondriyam',
-  'Madukkarai Merkku Ondriyam',
-  'Madukkarai Nagaram',
-  'Vellalur Nagaram',
-  'Othakkalmandapam Peruratchi',
-  'Chettipalayam Peruratchi',
-  'Kinathukadavu Ondriyam',
-];
 
 // @desc    Get all constituencies
 // @route   GET /api/constituencies
@@ -167,7 +199,7 @@ export const getConstituencyById = async (req, res) => {
     // Calculate actual live statistics for each Paguthi from MySQL
     const paguthiCards = await Promise.all(
       paguthiNames.map(async (pName) => {
-        const pFilter = (pName === 'Pothanur' || pName === 'Podanur') ? ['Pothanur', 'Podanur'] : [pName];
+        const pFilter = getCanonicalTargetPaguthis(pName);
         const pWards = await Ward.findAll({
           where: {
             [Op.or]: [
@@ -241,9 +273,13 @@ export const getConstituencyById = async (req, res) => {
           },
         });
 
+        const mappedVillages = getVillagesForPaguthi(pName) || [];
+
         return {
           name: pName,
           totalWards,
+          totalVillages: mappedVillages.length,
+          villages: mappedVillages,
           registeredSecretaries,
           totalMembers,
           totalComplaints,
@@ -276,21 +312,21 @@ export const getConstituencyById = async (req, res) => {
   }
 };
 
-// @desc    Get Paguthi Details (Inside Paguthi with Ward Administration)
+// @desc    Get Paguthi Details (Inside Paguthi with Village & Ward Administration)
 // @route   GET /api/districts/constituencies/:id/paguthi/:paguthiName
 // @access  Private
 export const getPaguthiDetails = async (req, res) => {
   try {
     const { id, paguthiName } = req.params;
+    const requestedVillage = req.query.village ? String(req.query.village).trim() : null;
+
     const constituency = await Constituency.findById(id);
     if (!constituency) {
       return res.status(404).json({ success: false, message: 'Constituency not found' });
     }
 
-    const targetPaguthis = (paguthiName === 'Pothanur' || paguthiName === 'Podanur')
-      ? ['Pothanur', 'Podanur']
-      : [paguthiName];
-    const canonicalPaguthiName = (paguthiName === 'Podanur') ? 'Pothanur' : paguthiName;
+    const targetPaguthis = getCanonicalTargetPaguthis(paguthiName);
+    const canonicalPaguthiName = targetPaguthis[0];
 
     // Strict Paguthi boundary enforcement for Paguthi Seyalaalar
     if (req.user && req.user.role === 'paguthi_seyalaalar') {
@@ -311,7 +347,6 @@ export const getPaguthiDetails = async (req, res) => {
       Kurichi: [85, 96, 98],
       Sundarapuram: [94],
       Malumichampatti: [95],
-      'Kinathukadavu Ondriyam': [2, 4],
     };
 
     let wardWhere = {
@@ -331,77 +366,107 @@ export const getPaguthiDetails = async (req, res) => {
     }
 
     // Find all wards for this paguthi
-    const wards = await Ward.findAll({
+    const allPaguthiWards = await Ward.findAll({
       where: wardWhere,
       order: [['wardNumber', 'ASC']],
     });
 
-    const wardIds = wards.map((w) => w.id);
+    const mappedVillages = getVillagesForPaguthi(canonicalPaguthiName) || [];
 
-    const totalWards = wards.length;
-    const registeredSecretaries = await User.count({
-      where: {
-        role: { [Op.in]: ['ward_secretary', 'ward', 'ward_officer'] },
-        isActive: true,
-        [Op.or]: [
-          { paguthi: { [Op.in]: targetPaguthis } },
-          ...(wardIds.length > 0 ? [{ wardId: { [Op.in]: wardIds } }] : []),
-        ],
-      },
-    });
-
-    const totalMembers = await Member.count({
-      where: {
-        [Op.or]: [
-          ...(wardIds.length > 0 ? [{ wardId: { [Op.in]: wardIds } }] : []),
-          { paguthi: { [Op.in]: targetPaguthis } },
-        ],
-      },
-    });
-
-    const paguthiIssueWhere = {
-      [Op.or]: [
-        ...(wardIds.length > 0 ? [{ wardId: { [Op.in]: wardIds } }] : []),
-        { paguthi: { [Op.in]: targetPaguthis } },
-      ],
+    // Helper to test if a ward belongs to a village
+    const isWardInVillage = (w, vName) => {
+      if (w.village && w.village.toLowerCase() === vName.toLowerCase()) return true;
+      if (mappedVillages.length === 1 && mappedVillages[0].toLowerCase() === vName.toLowerCase()) return true;
+      return false;
     };
 
-    const totalComplaints = await Issue.count({ where: paguthiIssueWhere });
-    const newComplaints = await Issue.count({
-      where: {
-        ...paguthiIssueWhere,
-        status: 'New',
-      },
-    });
-    const pendingComplaints = await Issue.count({
-      where: {
-        ...paguthiIssueWhere,
-        status: { [Op.in]: ['Pending', 'Assigned', 'Under Review'] },
-      },
-    });
-    const inProgressComplaints = await Issue.count({
-      where: {
-        ...paguthiIssueWhere,
-        status: 'In Progress',
-      },
-    });
-    const completedComplaints = await Issue.count({
-      where: {
-        ...paguthiIssueWhere,
-        status: { [Op.in]: ['Completed', 'Resolved', 'Closed'] },
-      },
-    });
-    const unassignedComplaints = await Issue.count({
-      where: {
-        ...paguthiIssueWhere,
-        assignedWardSecretaryId: null,
-      },
-    });
+    // Calculate Village cards with live DB data if paguthi has mapped villages
+    const villageCards = await Promise.all(
+      mappedVillages.map(async (vName) => {
+        const vWards = allPaguthiWards.filter((w) => isWardInVillage(w, vName));
+        const vWardIds = vWards.map((w) => w.id);
+        const vWardNumbers = vWards.map((w) => String(w.wardNumber));
 
-    // Augment each ward with its actual live stats and active registered secretary
+        // Active Ward Secretary for this village
+        const vSecretaryUser = await User.findOne({
+          where: {
+            role: { [Op.in]: ['ward_secretary', 'ward', 'ward_officer'] },
+            isActive: true,
+            [Op.or]: [
+              {
+                [Op.and]: [
+                  { paguthi: { [Op.in]: targetPaguthis } },
+                  { village: vName },
+                ],
+              },
+              ...(vWardIds.length > 0 ? [{ wardId: { [Op.in]: vWardIds } }] : []),
+            ],
+          },
+          order: [['id', 'DESC']],
+          attributes: ['id', '_id', 'name', 'phone', 'assignedWard', 'village', 'paguthi'],
+        });
+
+        const vIssueWhere = {
+          [Op.or]: [
+            {
+              [Op.and]: [
+                { paguthi: { [Op.in]: targetPaguthis } },
+                { village: vName },
+              ],
+            },
+            ...(vWardIds.length > 0 ? [{ wardId: { [Op.in]: vWardIds } }] : []),
+            ...(vWardNumbers.length > 0 && targetPaguthis.length > 0
+              ? [
+                  {
+                    [Op.and]: [
+                      { paguthi: { [Op.in]: targetPaguthis } },
+                      { wardNumber: { [Op.in]: vWardNumbers } },
+                      { [Op.or]: [{ village: vName }, { village: '' }, { village: null }] },
+                    ],
+                  },
+                ]
+              : []),
+          ],
+        };
+
+        const vTotalComplaints = await Issue.count({ where: vIssueWhere });
+        const vNewComplaints = await Issue.count({ where: { ...vIssueWhere, status: 'New' } });
+        const vPendingComplaints = await Issue.count({
+          where: { ...vIssueWhere, status: { [Op.in]: ['Pending', 'Assigned', 'Under Review'] } },
+        });
+        const vInProgressComplaints = await Issue.count({
+          where: { ...vIssueWhere, status: 'In Progress' },
+        });
+        const vCompletedComplaints = await Issue.count({
+          where: { ...vIssueWhere, status: { [Op.in]: ['Completed', 'Resolved', 'Closed'] } },
+        });
+
+        return {
+          name: vName,
+          paguthi: canonicalPaguthiName,
+          totalWards: vWards.length,
+          registeredSecretaries: vSecretaryUser ? 1 : 0,
+          wardSecretary: vSecretaryUser ? vSecretaryUser.name.replace(/\s*\([^)]*Secretary[^)]*\)/i, '').trim() : 'Not Assigned',
+          contactNumber: vSecretaryUser ? (vSecretaryUser.phone || null) : null,
+          totalComplaints: vTotalComplaints,
+          newComplaints: vNewComplaints,
+          pendingComplaints: vPendingComplaints,
+          inProgressComplaints: vInProgressComplaints,
+          completedComplaints: vCompletedComplaints,
+        };
+      })
+    );
+
+    // Determine wards to display:
+    // If requestedVillage is specified, filter to that village's wards!
+    let displayWards = allPaguthiWards;
+    if (requestedVillage) {
+      displayWards = allPaguthiWards.filter((w) => isWardInVillage(w, requestedVillage));
+    }
+
+    // Augment display wards with live stats and active registered secretary
     const augmentedWards = await Promise.all(
-      wards.map(async (w) => {
-        // Query active secretary for this ward strictly from users table (source of truth: Ward Secretary Registration)
+      displayWards.map(async (w) => {
         const wardPaguthis = (w.paguthi === 'Pothanur' || w.paguthi === 'Podanur')
           ? ['Pothanur', 'Podanur']
           : (w.paguthi ? [w.paguthi] : targetPaguthis);
@@ -412,6 +477,26 @@ export const getPaguthiDetails = async (req, res) => {
             isActive: true,
             [Op.or]: [
               { wardId: w.id },
+              ...(w.village
+                ? [
+                    {
+                      [Op.and]: [
+                        { paguthi: { [Op.in]: wardPaguthis } },
+                        { village: w.village },
+                        {
+                          [Op.or]: [
+                            { assignedWard: String(w.wardNumber) },
+                            { assignedWard: `Ward ${w.wardNumber}` },
+                            { assignedWard: `Ward ${w.wardNumber} - ${w.wardName}` },
+                            { assignedWard: { [Op.like]: `Ward ${w.wardNumber} - %` } },
+                            { assignedWard: { [Op.like]: `Ward ${w.wardNumber} %` } },
+                            { assignedWard: { [Op.like]: `%Ward ${w.wardNumber}%` } },
+                          ],
+                        },
+                      ],
+                    },
+                  ]
+                : []),
               ...(wardPaguthis.length > 0
                 ? [
                     {
@@ -439,7 +524,7 @@ export const getPaguthiDetails = async (req, res) => {
             ],
           },
           order: [['id', 'DESC']],
-          attributes: ['id', '_id', 'name', 'username', 'phone', 'email', 'isActive', 'paguthi', 'assignedWard'],
+          attributes: ['id', '_id', 'name', 'username', 'phone', 'email', 'isActive', 'paguthi', 'village', 'assignedWard'],
         });
 
         const cleanSecName = secretaryUser
@@ -494,6 +579,7 @@ export const getPaguthiDetails = async (req, res) => {
 
         return {
           ...w.toObject(),
+          village: w.village || (requestedVillage || ''),
           wardSecretary: cleanSecName,
           contactNumber: cleanPhone,
           assignedWard: secretaryUser?.assignedWard || `Ward ${w.wardNumber}${w.wardName ? ` - ${w.wardName}` : ''}`,
@@ -510,12 +596,55 @@ export const getPaguthiDetails = async (req, res) => {
       })
     );
 
-    // Fetch complaints specifically belonging to this Paguthi
+    // Filter complaints: if requestedVillage is given, filter to village complaints
+    let paguthiIssueWhere = {
+      [Op.or]: [
+        ...(allPaguthiWards.map(w => w.id).length > 0 ? [{ wardId: { [Op.in]: allPaguthiWards.map(w => w.id) } }] : []),
+        { paguthi: { [Op.in]: targetPaguthis } },
+      ],
+    };
+
+    if (requestedVillage) {
+      const vWardIds = displayWards.map(w => w.id);
+      paguthiIssueWhere = {
+        [Op.or]: [
+          {
+            [Op.and]: [
+              { paguthi: { [Op.in]: targetPaguthis } },
+              { village: requestedVillage },
+            ],
+          },
+          ...(vWardIds.length > 0 ? [{ wardId: { [Op.in]: vWardIds } }] : []),
+        ],
+      };
+    }
+
+    let totalWards = augmentedWards.length;
+    if (!requestedVillage) {
+      if (canonicalPaguthiName === 'Pothanur') totalWards = 3;
+      else if (canonicalPaguthiName === 'Kurichi') totalWards = 3;
+      else if (canonicalPaguthiName === 'Sundarapuram') totalWards = 2;
+    }
+
+    const totalComplaints = await Issue.count({ where: paguthiIssueWhere });
+    const newComplaints = await Issue.count({ where: { ...paguthiIssueWhere, status: 'New' } });
+    const pendingComplaints = await Issue.count({
+      where: { ...paguthiIssueWhere, status: { [Op.in]: ['Pending', 'Assigned', 'Under Review'] } },
+    });
+    const inProgressComplaints = await Issue.count({
+      where: { ...paguthiIssueWhere, status: 'In Progress' },
+    });
+    const completedComplaints = await Issue.count({
+      where: { ...paguthiIssueWhere, status: { [Op.in]: ['Completed', 'Resolved', 'Closed'] } },
+    });
+    const registeredSecretaries = augmentedWards.filter(w => w.wardSecretaryRegistrationStatus === 'Registered').length;
+
+    // Fetch complaints specifically belonging to this Paguthi / Village
     const paguthiIssues = await Issue.findAll({
       where: paguthiIssueWhere,
       include: [
         { model: User, as: 'assignedWardSecretary', attributes: ['id', '_id', 'name', 'username', 'phone'] },
-        { model: Ward, as: 'ward', attributes: ['id', '_id', 'wardNumber', 'wardName', 'paguthi'] },
+        { model: Ward, as: 'ward', attributes: ['id', '_id', 'wardNumber', 'wardName', 'paguthi', 'village'] },
       ],
       order: [['createdAt', 'DESC']],
       limit: 50,
@@ -526,17 +655,19 @@ export const getPaguthiDetails = async (req, res) => {
       data: {
         constituency,
         paguthi: canonicalPaguthiName,
+        hasVillages: mappedVillages.length > 0,
+        villages: villageCards,
+        selectedVillage: requestedVillage,
         stats: {
           totalWards,
+          totalVillages: mappedVillages.length,
           registeredSecretaries,
-          totalMembers,
           totalComplaints,
           newComplaints,
           pendingComplaints,
           inProgressComplaints,
           completedComplaints,
           resolvedComplaints: completedComplaints,
-          unassignedComplaints,
         },
         wards: augmentedWards,
         issues: paguthiIssues,

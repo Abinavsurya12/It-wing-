@@ -410,6 +410,9 @@ export const registerWardSecretary = async (req, res) => {
       wardDoc.wardSecretary = newSecretary.name;
       wardDoc.wardSecretaryId = newSecretary.id;
       wardDoc.contactNumber = cleanPhone;
+      if (cleanVillage) {
+        wardDoc.village = cleanVillage;
+      }
       await wardDoc.save();
     }
 
