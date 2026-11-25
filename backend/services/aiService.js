@@ -90,204 +90,501 @@ Tamilaga Vettri Kazhagam (TVK), Coimbatore.`;
 
 // Grounded Chatbot Knowledge Engine that queries live MySQL data via Sequelize
 export const processChatbotQuery = async (queryText) => {
-  const q = queryText.toLowerCase();
+  const q = String(queryText || '').toLowerCase().trim();
 
-  // Gather live CRM DB context from MySQL
-  const totalIssues = await Issue.count();
-  const resolvedIssues = await Issue.count({ where: { status: 'Resolved' } });
-  const pendingIssues = await Issue.count({ where: { status: 'Pending' } });
-  const inProgressIssues = await Issue.count({
-    where: { status: { [Op.in]: ['In Progress', 'Under Review'] } },
-  });
-  const totalMembers = await Member.count();
-  const maleMembers = await Member.count({ where: { gender: 'Male' } });
-  const femaleMembers = await Member.count({ where: { gender: 'Female' } });
-  const officeBearers = await Member.count({ where: { isOfficeBearer: true } });
-  const totalWards = await Ward.count();
-  const totalProjects = await Project.count();
-  const totalOfficers = await DepartmentOfficer.count();
-
-  // Top ward with highest issues
-  let topWard = 'No grievances recorded yet';
-  try {
-    const wardCounts = await Issue.findAll({
-      attributes: [
-        'wardId',
-        [sequelize.fn('COUNT', sequelize.col('Issue.id')), 'issueCount'],
-      ],
-      include: [
-        {
-          model: Ward,
-          as: 'ward',
-          attributes: ['id', 'wardNumber', 'wardName', 'zone'],
-        },
-      ],
-      group: ['wardId', 'ward.id', 'ward.wardNumber', 'ward.wardName', 'ward.zone'],
-      order: [[sequelize.literal('issueCount'), 'DESC']],
-      limit: 1,
-    });
-    if (wardCounts.length > 0 && wardCounts[0].ward) {
-      const w = wardCounts[0].ward;
-      const count = wardCounts[0].get('issueCount');
-      topWard = `Ward ${w.wardNumber} (${w.wardName}) with ${count} total complaints`;
-    }
-  } catch (err) {
-    console.warn('topWard query note:', err.message);
-  }
-
-  // Department with most pending issues
-  let topDept = 'None';
-  try {
-    const deptCounts = await Issue.findAll({
-      attributes: [
-        'assignedDepartment',
-        [sequelize.fn('COUNT', sequelize.col('id')), 'pendingCount'],
-      ],
-      where: { status: 'Pending' },
-      group: ['assignedDepartment'],
-      order: [[sequelize.literal('pendingCount'), 'DESC']],
-      limit: 1,
-    });
-    if (deptCounts.length > 0 && deptCounts[0].assignedDepartment) {
-      topDept = `${deptCounts[0].assignedDepartment} (${deptCounts[0].get('pendingCount')} pending cases)`;
-    }
-  } catch (err) {
-    console.warn('topDept query note:', err.message);
-  }
-
-  // Category breakdown
-  let topCategories = 'Sanitation, Water Supply, Road Maintenance';
-  try {
-    const categoryCounts = await Issue.findAll({
-      attributes: [
-        'category',
-        [sequelize.fn('COUNT', sequelize.col('id')), 'categoryCount'],
-      ],
-      group: ['category'],
-      order: [[sequelize.literal('categoryCount'), 'DESC']],
-      limit: 4,
-    });
-    if (categoryCounts.length > 0) {
-      topCategories = categoryCounts
-        .map((c) => `${c.category}: ${c.get('categoryCount')}`)
-        .join(', ');
-    }
-  } catch (err) {
-    console.warn('categoryCounts query note:', err.message);
-  }
-
-  const contextData = `
-CRM Live Database Context (MySQL):
-- Total Grievances: ${totalIssues}
-- Resolved Grievances: ${resolvedIssues} (Resolution Rate: ${totalIssues > 0 ? Math.round((resolvedIssues / totalIssues) * 100) : 0}%)
-- Pending Grievances: ${pendingIssues}
-- In-Progress Grievances: ${inProgressIssues}
-- Total TVK Members: ${totalMembers} (Male: ${maleMembers}, Female: ${femaleMembers}, Office Bearers: ${officeBearers})
-- Total Municipal Wards: ${totalWards}
-- Total Active Projects: ${totalProjects}
-- Department Officers: ${totalOfficers}
-- Ward with Highest Issues: ${topWard}
-- Department with Most Pending Issues: ${topDept}
-- Major Grievance Categories: ${topCategories}
-`;
-
-  const apiKey = process.env.AI_API_KEY || process.env.GEMINI_API_KEY;
-
-  if (apiKey) {
+  // QUESTION 1: Which ward has the highest number of issues?
+  if (
+    q.includes('highest number of issues') ||
+    (q.includes('ward') && (q.includes('highest') || q.includes('most issues') || q.includes('high issues')))
+  ) {
     try {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [
-              {
-                parts: [
-                  {
-                    text: `You are TVK AI BOT, the intelligent assistant for the TVK Digital Governance CRM of Coimbatore District.
-Use the following verified, real-time database context to answer the user query accurately, politely, and authoritatively.
-If asked in Tamil, answer in Tamil. If asked in English, answer in English.
+      const issues = await Issue.findAll({
+        attributes: ['id', 'wardId', 'wardNumber', 'wardName'],
+        raw: true,
+      });
 
-${contextData}
-
-User Question: "${queryText}"`,
-                  },
-                ],
-              },
-            ],
-            generationConfig: {
-              temperature: 0.3,
-              maxOutputTokens: 600,
-            },
-          }),
-        }
-      );
-
-      const data = await response.json();
-      if (data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
+      if (!issues || issues.length === 0) {
         return {
-          text: data.candidates[0].content.parts[0].text,
-          context: { totalIssues, resolvedIssues, pendingIssues, totalMembers },
+          text: 'No matching records found. There are currently no grievances recorded in the database.',
+          suggestedActions: [
+            'What is the total number of members?',
+            'How many grievances are pending?',
+            'Show the executive summary',
+          ],
         };
       }
+
+      // Fetch all wards for accurate wardName mapping
+      const wards = await Ward.findAll({
+        attributes: ['id', 'wardNumber', 'wardName'],
+        raw: true,
+      });
+      const wardMapById = new Map();
+      const wardMapByNum = new Map();
+      wards.forEach((w) => {
+        if (w.id) wardMapById.set(w.id, w);
+        if (w.wardNumber) wardMapByNum.set(w.wardNumber, w);
+      });
+
+      // Count complaints per ward
+      const countsByWard = {};
+      issues.forEach((iss) => {
+        const wDoc = (iss.wardId && wardMapById.get(iss.wardId)) || (iss.wardNumber && wardMapByNum.get(iss.wardNumber));
+        const num = wDoc?.wardNumber || iss.wardNumber || (iss.wardId ? `ID-${iss.wardId}` : 'General');
+        const name = wDoc?.wardName || iss.wardName || '';
+        const key = String(num);
+        if (!countsByWard[key]) {
+          countsByWard[key] = {
+            wardNumber: num,
+            wardName: name,
+            count: 0,
+          };
+        }
+        countsByWard[key].count += 1;
+        if (!countsByWard[key].wardName && name) {
+          countsByWard[key].wardName = name;
+        }
+      });
+
+      const sortedWards = Object.values(countsByWard).sort((a, b) => b.count - a.count);
+
+      const maxCount = sortedWards[0]?.count || 0;
+      if (maxCount === 0) {
+        return {
+          text: 'No matching records found. All recorded wards currently have 0 complaints.',
+          suggestedActions: ['Show the executive summary'],
+        };
+      }
+
+      // Handle ties: Find all wards with the highest count
+      const topWards = sortedWards.filter((w) => w.count === maxCount);
+      const topWardNames = topWards
+        .map((w) => {
+          const nameStr = w.wardName ? ` (${w.wardName})` : '';
+          return `Ward ${w.wardNumber}${nameStr}`;
+        })
+        .join(', ');
+
+      const headerLine =
+        topWards.length > 1
+          ? `Highest Issues Wards (Tied): ${topWardNames}`
+          : `Highest Issues Ward: ${topWardNames}`;
+
+      // List other wards in descending order (up to 8)
+      const otherWardsList = sortedWards.slice(0, 8).map((w) => {
+        const nameStr = w.wardName ? ` (${w.wardName})` : '';
+        return `- Ward ${w.wardNumber}${nameStr} – ${w.count} complaints`;
+      });
+
+      const responseText = `${headerLine}\n\nTotal Issues: ${maxCount}\n\nOther Ward Analysis:\n${otherWardsList.join('\n')}`;
+
+      return {
+        text: responseText,
+        suggestedActions: [
+          'How many grievances are pending?',
+          'What is the category-wise issue analysis?',
+          'Show the executive summary',
+        ],
+      };
     } catch (err) {
-      console.error('Gemini Chatbot API error:', err.message);
+      console.error('Error calculating highest issue ward:', err);
+      return {
+        text: 'An error occurred while analyzing ward issue data from the database. Please try again.',
+        suggestedActions: ['Show the executive summary'],
+      };
     }
   }
 
-  // High-accuracy heuristic knowledge engine matching exact user questions:
-  if (q.includes('highest') || (q.includes('ward') && (q.includes('most') || q.includes('high')))) {
-    return {
-      text: `📊 **Ward Analysis**: The ward with the highest recorded grievances is **${topWard}**. Immediate administrative focus and field inspection have been assigned to the designated ward officer.`,
-      suggestedActions: ['View Wards Directory', 'Filter Issues by Ward'],
-    };
+  // QUESTION 2: What is the total number of members?
+  if (
+    q.includes('total number of members') ||
+    (q.includes('member') && (q.includes('total') || q.includes('how many') || q.includes('count') || q.includes('active')))
+  ) {
+    try {
+      const totalMembers = await Member.count();
+      let activeMembers = totalMembers;
+      let inactiveMembers = 0;
+
+      // Count only members whose existing database status indicates Active
+      if (Member.rawAttributes && Member.rawAttributes.status) {
+        try {
+          activeMembers = await Member.count({
+            where: {
+              [Op.or]: [
+                { status: { [Op.notIn]: ['Inactive', 'inactive', 'Deleted', 'deleted'] } },
+                { status: null },
+              ],
+            },
+          });
+          inactiveMembers = Math.max(0, totalMembers - activeMembers);
+        } catch (e) {
+          activeMembers = totalMembers;
+          inactiveMembers = 0;
+        }
+      }
+
+      if (totalMembers === 0) {
+        return {
+          text: 'No matching records found. There are currently no registered TVK members in the database.',
+          suggestedActions: ['Show the executive summary'],
+        };
+      }
+
+      const responseText = `Total Registered Members: ${totalMembers}\n\nActive Members: ${activeMembers}\n\nInactive Members: ${inactiveMembers}`;
+
+      return {
+        text: responseText,
+        suggestedActions: [
+          'Which ward has the highest number of issues?',
+          'How many grievances are pending?',
+          'Show the executive summary',
+        ],
+      };
+    } catch (err) {
+      console.error('Error calculating member counts:', err);
+      return {
+        text: 'An error occurred while retrieving TVK member records from the database.',
+        suggestedActions: ['Show the executive summary'],
+      };
+    }
   }
 
-  if (q.includes('member') || q.includes('total member') || q.includes('party')) {
-    return {
-      text: `👥 **TVK Membership Status**: Across Coimbatore District, there are currently **${totalMembers} registered TVK members**.\n- 👨 Male Members: **${maleMembers}**\n- 👩 Female Members: **${femaleMembers}**\n- 🎖️ Designated Office Bearers: **${officeBearers}**`,
-      suggestedActions: ['View Members Directory', 'Add New Member'],
-    };
+  // QUESTION 3: How many grievances are pending?
+  if (
+    q.includes('grievances are pending') ||
+    q.includes('pending grievances') ||
+    q.includes('pending issues') ||
+    (q.includes('how many') && q.includes('pending'))
+  ) {
+    try {
+      const newCount = await Issue.count({ where: { status: 'New' } });
+      const pendingCount = await Issue.count({
+        where: { status: { [Op.in]: ['Pending', 'Assigned', 'Under Review'] } },
+      });
+      const inProgressCount = await Issue.count({ where: { status: 'In Progress' } });
+      const completedCount = await Issue.count({
+        where: { status: { [Op.in]: ['Completed', 'Resolved', 'Closed'] } },
+      });
+
+      // Total pending grievances (all non-completed grievances awaiting resolution)
+      const totalPendingGrievances = pendingCount + newCount + inProgressCount;
+
+      const responseText = `Total Pending Grievances: ${totalPendingGrievances}\n\nStatus Breakdown:\n- Pending: ${pendingCount + newCount}\n- In Progress: ${inProgressCount}\n- Completed: ${completedCount}`;
+
+      return {
+        text: responseText,
+        suggestedActions: [
+          'Which department has the most pending issues?',
+          'What is the category-wise issue analysis?',
+          'Show the executive summary',
+        ],
+      };
+    } catch (err) {
+      console.error('Error calculating pending grievances:', err);
+      return {
+        text: 'An error occurred while calculating pending grievances from the database.',
+        suggestedActions: ['Show the executive summary'],
+      };
+    }
   }
 
-  if (q.includes('pending') || q.includes('unresolved')) {
-    return {
-      text: `⏳ **Pending Grievances**: There are currently **${pendingIssues} pending issues** awaiting action (out of ${totalIssues} total complaints). Department with highest pending count: **${topDept}**.`,
-      suggestedActions: ['View Pending Issues', 'Notify Department Officers'],
-    };
+  // QUESTION 4: What is the category-wise issue analysis?
+  if (
+    q.includes('category-wise') ||
+    q.includes('category wise') ||
+    (q.includes('category') && q.includes('analysis'))
+  ) {
+    try {
+      const allIssues = await Issue.findAll({
+        attributes: ['id', 'category', 'status'],
+        raw: true,
+      });
+
+      if (!allIssues || allIssues.length === 0) {
+        return {
+          text: 'No matching records found. No category records are currently available in the database.',
+          suggestedActions: ['Show the executive summary'],
+        };
+      }
+
+      const catMap = {};
+      allIssues.forEach((issue) => {
+        const cat = issue.category || 'General Grievance';
+        if (!catMap[cat]) {
+          catMap[cat] = { total: 0, pending: 0, completed: 0 };
+        }
+        catMap[cat].total += 1;
+        const isCompleted = ['Completed', 'Resolved', 'Closed'].includes(issue.status);
+        if (isCompleted) {
+          catMap[cat].completed += 1;
+        } else {
+          catMap[cat].pending += 1;
+        }
+      });
+
+      const sortedCategories = Object.entries(catMap)
+        .map(([name, counts]) => ({ name, ...counts }))
+        .sort((a, b) => b.total - a.total);
+
+      const categoryLines = sortedCategories.map((c) => {
+        return `- ${c.name} – ${c.total} complaints (Pending: ${c.pending}, Completed: ${c.completed})`;
+      });
+
+      const responseText = `Category-wise Issue Analysis:\n\n${categoryLines.join('\n')}`;
+
+      return {
+        text: responseText,
+        suggestedActions: [
+          'Which ward has the highest number of issues?',
+          'Which department has the most pending issues?',
+          'Show the executive summary',
+        ],
+      };
+    } catch (err) {
+      console.error('Error analyzing category data:', err);
+      return {
+        text: 'An error occurred while calculating category-wise issue analysis from the database.',
+        suggestedActions: ['Show the executive summary'],
+      };
+    }
   }
 
-  if (q.includes('category') || q.includes('analysis') || q.includes('types')) {
-    return {
-      text: `📈 **Category-wise Issue Analysis**:\nTop complaint categories in Coimbatore:\n${topCategories}\n\nSanitation, road repairs, and drinking water supply represent over 60% of citizen petitions.`,
-      suggestedActions: ['View Analytics Dashboard', 'Download Category Report'],
-    };
+  // QUESTION 5: Show the executive summary
+  if (
+    q.includes('executive summary') ||
+    q.includes('summary') ||
+    q.includes('overview')
+  ) {
+    try {
+      const allIssues = await Issue.findAll({
+        attributes: ['id', 'status', 'category', 'assignedDepartment', 'wardId', 'wardNumber', 'wardName'],
+        raw: true,
+      });
+      const totalIssues = allIssues.length;
+      let newIssues = 0;
+      let pendingIssues = 0;
+      let inProgressIssues = 0;
+      let completedIssues = 0;
+
+      const catCounts = {};
+      const deptCounts = {};
+      const wardCounts = {};
+
+      allIssues.forEach((iss) => {
+        if (iss.status === 'New') newIssues += 1;
+        if (['Pending', 'Assigned', 'Under Review'].includes(iss.status)) pendingIssues += 1;
+        if (iss.status === 'In Progress') inProgressIssues += 1;
+        if (['Completed', 'Resolved', 'Closed'].includes(iss.status)) completedIssues += 1;
+
+        // Category count
+        const cat = iss.category || 'General';
+        catCounts[cat] = (catCounts[cat] || 0) + 1;
+
+        // Ward count
+        const wKey = iss.wardNumber || (iss.wardId ? `Ward ${iss.wardId}` : 'General');
+        wardCounts[wKey] = (wardCounts[wKey] || 0) + 1;
+
+        // Pending department count
+        if (!['Completed', 'Resolved', 'Closed'].includes(iss.status)) {
+          const dept = (iss.assignedDepartment || '').trim();
+          if (dept) {
+            deptCounts[dept] = (deptCounts[dept] || 0) + 1;
+          }
+        }
+      });
+
+      const totalMembers = await Member.count();
+      let activeMembers = totalMembers;
+      if (Member.rawAttributes && Member.rawAttributes.status) {
+        try {
+          activeMembers = await Member.count({
+            where: {
+              [Op.or]: [
+                { status: { [Op.notIn]: ['Inactive', 'inactive', 'Deleted', 'deleted'] } },
+                { status: null },
+              ],
+            },
+          });
+        } catch (e) {
+          activeMembers = totalMembers;
+        }
+      }
+
+      const totalWards = await Ward.count({ distinct: true, col: 'wardNumber' });
+
+      // Highest Issue Ward
+      let topWardText = 'None';
+      const sortedWards = Object.entries(wardCounts).sort((a, b) => b[1] - a[1]);
+      if (sortedWards.length > 0) {
+        const topW = sortedWards[0];
+        topWardText = `Ward ${topW[0]} (${topW[1]} complaints)`;
+      }
+
+      // Most reported category
+      let topCategoryText = 'None';
+      const sortedCats = Object.entries(catCounts).sort((a, b) => b[1] - a[1]);
+      if (sortedCats.length > 0) {
+        topCategoryText = `${sortedCats[0][0]} (${sortedCats[0][1]} complaints)`;
+      }
+
+      // Department with most pending
+      let topDeptText = 'None';
+      const sortedDepts = Object.entries(deptCounts).sort((a, b) => b[1] - a[1]);
+      if (sortedDepts.length > 0) {
+        topDeptText = `${sortedDepts[0][0]} (${sortedDepts[0][1]} pending)`;
+      }
+
+      const resolutionRate =
+        totalIssues > 0 ? Math.round((completedIssues / totalIssues) * 100) : 0;
+
+      const responseText = `EXECUTIVE SUMMARY
+
+Overall Complaint Statistics:
+- Total Grievances: ${totalIssues}
+- New Complaints: ${newIssues}
+- Pending: ${pendingIssues}
+- In Progress: ${inProgressIssues}
+- Completed: ${completedIssues}
+
+Member Statistics:
+- Total Members: ${totalMembers}
+- Active Members: ${activeMembers}
+
+Ward Statistics:
+- Total Wards: ${totalWards}
+- Highest Issue Ward: ${topWardText}
+
+Complaint Analysis:
+- Highest Complaint Category: ${topCategoryText}
+- Department with Most Pending Issues: ${topDeptText}
+
+Summary:
+The TVK Digital Governance CRM for Coimbatore District currently records ${totalIssues} total citizen grievances across ${totalWards} municipal wards. Active administrative resolution stands at ${completedIssues} completed complaints (${resolutionRate}% resolution efficiency), with ${newIssues} new complaints awaiting initial inspection and ${pendingIssues} pending resolution. The TVK cadre comprises ${activeMembers} active members actively engaged in community governance and grievance redressing.`;
+
+      return {
+        text: responseText,
+        suggestedActions: [
+          'Which ward has the highest number of issues?',
+          'What is the total number of members?',
+          'How many grievances are pending?',
+        ],
+      };
+    } catch (err) {
+      console.error('Error generating executive summary:', err);
+      return {
+        text: 'An error occurred while generating the executive summary from the database.',
+        suggestedActions: ['How many grievances are pending?'],
+      };
+    }
   }
 
-  if (q.includes('department') || q.includes('officer')) {
-    return {
-      text: `🏛️ **Department Performance**: The department with the most pending grievances is **${topDept}**. A total of **${totalOfficers} department officers** across TWAD, TANGEDCO, Highways, and Corporation are actively mapped in the system.`,
-      suggestedActions: ['View Department Officers', 'Assign Officer'],
-    };
+  // QUESTION 6: Which department has the most pending issues?
+  if (
+    q.includes('department') &&
+    (q.includes('most pending') || q.includes('pending issues') || q.includes('pending') || q.includes('most'))
+  ) {
+    try {
+      const pendingIssues = await Issue.findAll({
+        attributes: ['id', 'assignedDepartment', 'status'],
+        where: {
+          status: { [Op.notIn]: ['Completed', 'Resolved', 'Closed'] },
+        },
+        raw: true,
+      });
+
+      const deptCounts = {};
+      pendingIssues.forEach((iss) => {
+        const dept = (iss.assignedDepartment || '').trim();
+        if (dept) {
+          deptCounts[dept] = (deptCounts[dept] || 0) + 1;
+        }
+      });
+
+      const deptEntries = Object.entries(deptCounts);
+      if (deptEntries.length === 0) {
+        if (pendingIssues.length === 0) {
+          return {
+            text: 'No pending issues found across any department. All assigned departmental grievances are currently completed.',
+            suggestedActions: ['Show the executive summary'],
+          };
+        }
+        return {
+          text: 'The available grievance records do not contain sufficient department mapping.',
+          suggestedActions: [
+            'Which ward has the highest number of issues?',
+            'What is the category-wise issue analysis?',
+            'Show the executive summary',
+          ],
+        };
+      }
+
+      deptEntries.sort((a, b) => b[1] - a[1]);
+      const maxPending = deptEntries[0][1];
+
+      // Handle ties: Find all departments with highest pending count
+      const topDepts = deptEntries.filter((d) => d[1] === maxPending);
+      const topDeptNames = topDepts.map((d) => d[0]).join(' & ');
+
+      // Other departments in descending order
+      const otherDepts = deptEntries.slice(topDepts.length, topDepts.length + 5);
+      const otherDeptsSection =
+        otherDepts.length > 0
+          ? `\n\nOther Departments:\n${otherDepts.map((d) => `- ${d[0]} – ${d[1]}`).join('\n')}`
+          : '';
+
+      const responseText = `Department with Most Pending Issues:\n\nDepartment: ${topDeptNames}\n\nPending Issues: ${maxPending}${otherDeptsSection}`;
+
+      return {
+        text: responseText,
+        suggestedActions: [
+          'How many grievances are pending?',
+          'What is the category-wise issue analysis?',
+          'Show the executive summary',
+        ],
+      };
+    } catch (err) {
+      console.error('Error calculating department pending issues:', err);
+      return {
+        text: 'An error occurred while querying department pending issues from the database.',
+        suggestedActions: ['Show the executive summary'],
+      };
+    }
   }
 
-  if (q.includes('executive summary') || q.includes('summary') || q.includes('overview')) {
-    const rate = totalIssues > 0 ? Math.round((resolvedIssues / totalIssues) * 100) : 0;
+  // Fallback for general greetings or non-predefined questions:
+  try {
+    const totalIssues = await Issue.count();
+    const completedIssues = await Issue.count({
+      where: { status: { [Op.in]: ['Completed', 'Resolved', 'Closed'] } },
+    });
+    const pendingIssues = await Issue.count({
+      where: { status: { [Op.notIn]: ['Completed', 'Resolved', 'Closed'] } },
+    });
+    const totalMembers = await Member.count();
+    const totalWards = await Ward.count({ distinct: true, col: 'wardNumber' });
+
     return {
-      text: `📋 **Coimbatore District Executive Summary**:\n- **Total Grievances Registered**: ${totalIssues}\n- **Resolved**: ${resolvedIssues} (${rate}% Resolution Efficiency)\n- **Pending Action**: ${pendingIssues}\n- **Active TVK Cadre**: ${totalMembers} members across ${totalWards} wards\n- **Ongoing Community Projects**: ${totalProjects}\n- **Overall Status**: Grievance redressal operations are actively monitored in all 10 constituencies.`,
-      suggestedActions: ['View Executive Analytics', 'Generate Monthly Report'],
+      text: `Vanakkam! I am the **TVK AI Assistant** for Coimbatore District.\n\nCurrent Live Metrics:\n- Total Grievances: **${totalIssues}** (${completedIssues} completed, ${pendingIssues} pending)\n- TVK Cadre: **${totalMembers} members** across **${totalWards} municipal wards**\n\nPlease select one of the 6 official inquiries below for live database analysis.`,
+      suggestedActions: [
+        'Which ward has the highest number of issues?',
+        'What is the total number of members?',
+        'How many grievances are pending?',
+        'What is the category-wise issue analysis?',
+        'Show the executive summary',
+        'Which department has the most pending issues?',
+      ],
+    };
+  } catch (err) {
+    return {
+      text: 'Vanakkam! I am the **TVK AI Assistant** for Coimbatore District. Please select one of the 6 official inquiries below for live database analysis.',
+      suggestedActions: [
+        'Which ward has the highest number of issues?',
+        'What is the total number of members?',
+        'How many grievances are pending?',
+        'What is the category-wise issue analysis?',
+        'Show the executive summary',
+        'Which department has the most pending issues?',
+      ],
     };
   }
-
-  // General default answer
-  return {
-    text: `Greetings! I am the **TVK AI Assistant** for Coimbatore District. Current district metrics: **${totalIssues} total grievances** (${resolvedIssues} resolved, ${pendingIssues} pending) and **${totalMembers} members** across ${totalWards} wards. How can I assist you today?`,
-    suggestedActions: [
-      'Which ward has the highest number of issues?',
-      'How many grievances are pending?',
-      'Show the executive summary',
-      'What is the category-wise issue analysis?',
-    ],
-  };
 };

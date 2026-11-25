@@ -15,18 +15,36 @@ import User from '../models/User.js';
 export const getDashboardStats = async (req, res) => {
   try {
     const totalIssues = await Issue.count();
-    const newIssues = await Issue.count({ where: { status: { [Op.in]: ['New', 'Pending'] } } });
+    // Strictly count 'New' status to match Complaints Reported page exactly
+    const newIssues = await Issue.count({ where: { status: 'New' } });
     const resolvedIssues = await Issue.count({ where: { status: { [Op.in]: ['Resolved', 'Closed', 'Completed'] } } });
-    const pendingIssues = await Issue.count({ where: { status: { [Op.in]: ['Pending', 'New', 'Assigned', 'Under Review'] } } });
+    const pendingIssues = await Issue.count({ where: { status: { [Op.in]: ['Pending', 'Assigned', 'Under Review'] } } });
     const inProgressIssues = await Issue.count({ where: { status: 'In Progress' } });
     const rejectedIssues = await Issue.count({ where: { status: 'Rejected' } });
 
     const totalMembers = await Member.count();
+    // Active TVK Members: Count only members whose status is not Inactive or Deleted
+    let activeMembers = totalMembers;
+    if (Member.rawAttributes && Member.rawAttributes.status) {
+      try {
+        activeMembers = await Member.count({
+          where: {
+            [Op.or]: [
+              { status: { [Op.notIn]: ['Inactive', 'inactive', 'Deleted', 'deleted'] } },
+              { status: null },
+            ],
+          },
+        });
+      } catch (err) {
+        activeMembers = totalMembers;
+      }
+    }
     const maleMembers = await Member.count({ where: { gender: 'Male' } });
     const femaleMembers = await Member.count({ where: { gender: 'Female' } });
     const officeBearers = await Member.count({ where: { isOfficeBearer: true } });
 
-    const totalWards = await Ward.count();
+    // Distinct ward records to avoid duplicate ward counts
+    const totalWards = await Ward.count({ distinct: true, col: 'wardNumber' });
     const totalConstituencies = await Constituency.count();
     const totalProjects = await Project.count();
     const totalOfficers = await DepartmentOfficer.count();
@@ -239,6 +257,7 @@ export const getDashboardStats = async (req, res) => {
           rejectedIssues,
           resolutionRate,
           totalMembers,
+          activeMembers,
           maleMembers,
           femaleMembers,
           officeBearers,

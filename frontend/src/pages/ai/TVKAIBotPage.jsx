@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Bot,
-  Send,
   User,
   Sparkles,
   Trash2,
@@ -22,17 +21,16 @@ export const TVKAIBotPage = () => {
   const { error: notifyError } = useNotification();
 
   const [messages, setMessages] = useState([]);
-  const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef(null);
 
-  const suggestedQuestions = [
-    t('tvkBot.questions.q1', 'Which ward has the highest number of issues?'),
-    t('tvkBot.questions.q2', 'What is the total number of members?'),
-    t('tvkBot.questions.q3', 'How many grievances are pending?'),
-    t('tvkBot.questions.q4', 'What is the category-wise issue analysis?'),
-    t('tvkBot.questions.q5', 'Show the executive summary.'),
-    t('tvkBot.questions.q6', 'Which department has the most pending issues?'),
+  const PREDEFINED_QUESTIONS = [
+    'Which ward has the highest number of issues?',
+    'What is the total number of members?',
+    'How many grievances are pending?',
+    'What is the category-wise issue analysis?',
+    'Show the executive summary',
+    'Which department has the most pending issues?',
   ];
 
   const fetchHistory = async () => {
@@ -41,15 +39,12 @@ export const TVKAIBotPage = () => {
       if (res.data.success && res.data.data.length > 0) {
         setMessages(res.data.data);
       } else {
-        // Welcome message
+        // Welcome message with live analysis intro
         setMessages([
           {
             sender: 'bot',
-            text: t('tvkBot.welcomeText', {
-              name: user?.name || 'Officer',
-              defaultValue: `Vanakkam ${user?.name || 'Officer'}! I am **TVK AI BOT**, your live district intelligence assistant for Coimbatore.\n\nI have direct authorized access to real-time CRM database records across all 10 constituencies and 100 wards. Ask me any question below or type your custom query.`
-            }),
-            suggestedActions: suggestedQuestions.slice(0, 4),
+            text: `Vanakkam ${user?.name || 'Officer'}! I am **TVK AI BOT**, your live district intelligence assistant for Coimbatore.\n\nI have direct authorized access to real-time CRM database records across all 10 constituencies and municipal wards. Please select one of the 6 official inquiries below for live database analysis.`,
+            suggestedActions: PREDEFINED_QUESTIONS,
             timestamp: new Date(),
           },
         ]);
@@ -68,22 +63,21 @@ export const TVKAIBotPage = () => {
   }, [messages, loading]);
 
   const handleSendMessage = async (textToSend) => {
-    const query = textToSend || inputText;
-    if (!query.trim() || loading) return;
+    const query = String(textToSend || '').trim();
+    if (!query || loading) return;
 
     const userMsg = {
       sender: 'user',
-      text: query.trim(),
+      text: query,
       timestamp: new Date(),
     };
 
     setMessages((prev) => [...prev, userMsg]);
-    setInputText('');
     setLoading(true);
 
     try {
       const res = await api.post('/chatbot/message', {
-        message: query.trim(),
+        message: query,
       });
 
       if (res.data.success) {
@@ -215,40 +209,34 @@ export const TVKAIBotPage = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Quick Prompts Carousel Bar */}
-      <div className="px-4 py-2 bg-slate-100/70 border-t border-slate-200 flex items-center space-x-2 overflow-x-auto text-xs no-scrollbar">
-        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">
-          {t('tvkBot.suggestedQueriesTitle', 'Quick Prompts')}:
-        </span>
-        {suggestedQuestions.map((q, i) => (
-          <button
-            key={i}
-            onClick={() => handleSendMessage(q)}
-            className="whitespace-nowrap px-2.5 py-1 rounded-full bg-white hover:bg-red-50 text-slate-700 hover:text-red-700 border border-slate-200 text-[11px] font-medium transition"
-          >
-            {q}
-          </button>
-        ))}
+      {/* 6 Predefined Interactive Clickable Questions for Live Database Analysis */}
+      <div className="p-3 sm:p-4 bg-slate-50 border-t border-slate-200">
+        <div className="mb-2.5 flex items-center justify-between">
+          <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+            {t('tvkBot.selectInquiry', 'Select an Inquiry for Live Database Analysis:')}
+          </span>
+          <span className="text-[11px] text-slate-400 font-medium hidden sm:inline">
+            {t('tvkBot.clickHint', 'Click any question to query real-time CRM records')}
+          </span>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+          {PREDEFINED_QUESTIONS.map((question, idx) => (
+            <button
+              key={idx}
+              type="button"
+              disabled={loading}
+              onClick={() => handleSendMessage(question)}
+              className="w-full p-2.5 sm:p-3 rounded-2xl bg-white hover:bg-red-50 border border-slate-200 hover:border-red-300 text-left transition duration-150 cursor-pointer shadow-2xs group flex items-start justify-between gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <span className="text-xs font-bold text-slate-800 group-hover:text-red-900 leading-snug">
+                {question}
+              </span>
+              <ChevronRight className="w-4 h-4 text-amber-600 group-hover:text-red-700 group-hover:translate-x-0.5 transition-transform shrink-0 mt-0.5" />
+            </button>
+          ))}
+        </div>
       </div>
-
-      {/* Input Field Form */}
-      <form onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }} className="p-4 bg-white border-t border-slate-200 flex items-center gap-3">
-        <input
-          type="text"
-          value={inputText}
-          onChange={(e) => setInputText(e.target.value)}
-          placeholder={t('tvkBot.inputPlaceholder', 'Ask anything about Coimbatore wards, grievances, members, or department officers...')}
-          className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-700/20 focus:border-red-700"
-        />
-
-        <button
-          type="submit"
-          disabled={!inputText.trim() || loading}
-          className="p-3 bg-red-700 hover:bg-red-800 text-white rounded-2xl shadow-md transition disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
-        >
-          <Send className="w-5 h-5" />
-        </button>
-      </form>
     </div>
   );
 };
