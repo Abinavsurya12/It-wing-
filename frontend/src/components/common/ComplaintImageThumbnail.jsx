@@ -3,15 +3,23 @@ import { Camera, CheckCircle2, ImageOff, Eye } from 'lucide-react';
 
 export const ComplaintImageThumbnail = ({
   src,
+  imageUrl,
   alt = 'Inspection photo',
   type = 'before', // 'before' | 'after'
   onClick,
+  onZoomClick,
   className = '',
   size = 'md', // 'sm' | 'md' | 'lg'
   showLabel = true,
+  status,
+  title,
+  ticketId,
 }) => {
   const [loadError, setLoadError] = useState(false);
-  const isBefore = type === 'before';
+  const actualSrc = src || imageUrl;
+  const actualType = String(type || 'before').toLowerCase();
+  const isBefore = actualType === 'before';
+  const handleClick = onClick || onZoomClick;
 
   const sizeClasses = {
     sm: 'w-7 h-7 text-[9px]',
@@ -19,7 +27,7 @@ export const ComplaintImageThumbnail = ({
     lg: 'w-16 h-12 text-xs',
   }[size] || 'w-10 h-10 text-[10px]';
 
-  const hasValidImage = Boolean(src && !loadError);
+  const hasValidImage = Boolean(actualSrc && !loadError);
 
   if (!hasValidImage) {
     if (isBefore) {
@@ -49,7 +57,7 @@ export const ComplaintImageThumbnail = ({
       type="button"
       onClick={(e) => {
         e.stopPropagation();
-        if (onClick) onClick(src);
+        if (handleClick) handleClick(actualSrc, actualType, title, ticketId);
       }}
       className={`group relative inline-flex items-center space-x-1.5 p-1 rounded-xl border transition cursor-pointer shadow-2xs ${
         isBefore
@@ -60,7 +68,7 @@ export const ComplaintImageThumbnail = ({
     >
       <div className={`relative overflow-hidden rounded-lg flex-shrink-0 ${sizeClasses}`}>
         <img
-          src={src}
+          src={actualSrc}
           alt={alt}
           onError={() => setLoadError(true)}
           className="w-full h-full object-cover transition-transform group-hover:scale-110"

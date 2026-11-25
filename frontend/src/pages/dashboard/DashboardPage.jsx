@@ -132,7 +132,7 @@ export const DashboardPage = () => {
     try {
       const [res, issuesRes, secRes] = await Promise.all([
         api.get('/dashboard'),
-        api.get('/issues?limit=500').catch(() => ({ data: { success: false, data: [] } })),
+        api.get('/issues?limit=2000&sortBy=createdAt&sortOrder=desc').catch(() => ({ data: { success: false, data: [] } })),
         api.get('/issues/ward-secretaries').catch(() => ({ data: { success: false, data: [] } })),
       ]);
 
@@ -145,15 +145,18 @@ export const DashboardPage = () => {
         setWardSecretaries(secRes.data.data || []);
       }
 
-      if (issuesRes.data.success) {
-        const rawIssues = issuesRes.data.data || [];
+      const rawIssues = Array.isArray(issuesRes?.data?.data)
+        ? issuesRes.data.data
+        : Array.isArray(issuesRes?.data)
+        ? issuesRes.data
+        : Array.isArray(issuesRes?.data?.issues)
+        ? issuesRes.data.issues
+        : [];
+
+      if (rawIssues.length > 0 || issuesRes?.data?.success) {
         setAllComplaints(rawIssues);
-        const openOnly = rawIssues.filter(
-          (c) => !['Completed', 'Resolved', 'Closed'].includes(c.status)
-        );
-        const completedOnly = rawIssues.filter(
-          (c) => ['Completed', 'Resolved', 'Closed'].includes(c.status)
-        );
+        const openOnly = rawIssues.filter((c) => !isCompletedStatus(c.status));
+        const completedOnly = rawIssues.filter((c) => isCompletedStatus(c.status));
         setOpenComplaints(openOnly);
         setCompletedComplaints(completedOnly);
       }
@@ -166,33 +169,80 @@ export const DashboardPage = () => {
     }
   };
 
+  // Helper to determine if a complaint has reached final resolved/completed state
+  const isCompletedStatus = (status) => {
+    const s = String(status || '').trim().toLowerCase();
+    return s === 'completed' || s === 'resolved' || s === 'closed';
+  };
+
+  // Helper to extract the actual complaint registration timestamp across schema variants
+  const getComplaintCreatedAt = (c) => {
+    if (!c) return null;
+    return (
+      c.createdAt ||
+      c.created_at ||
+      c.registeredAt ||
+      c.date ||
+      c.timestamp ||
+      (Array.isArray(c.statusHistory) && c.statusHistory[0]?.timestamp) ||
+      null
+    );
+  };
+
   // Ageing Calculation Logic (mutually exclusive elapsed calendar days from original registration createdAt)
-  const calculateDaysPending = (createdAt) => {
-    if (!createdAt) return 0;
-    const createdDate = new Date(createdAt);
+  const calculateDaysPending = (cOrDate) => {
+    if (!cOrDate) return 0;
+    let dateVal = cOrDate;
+    if (typeof cOrDate === 'object' && !(cOrDate instanceof Date)) {
+      dateVal = getComplaintCreatedAt(cOrDate);
+    }
+    if (!dateVal) return 0;
+
+    let createdDate;
+    if (dateVal instanceof Date) {
+      createdDate = dateVal;
+    } else if (typeof dateVal === 'number') {
+      createdDate = new Date(dateVal);
+    } else if (typeof dateVal === 'string') {
+      const trimmed = dateVal.trim();
+      // Handle MySQL datetime "YYYY-MM-DD HH:MM:SS" -> "YYYY-MM-DDTHH:MM:SS" for cross-browser parsing
+      const normalized = trimmed.includes(' ') && !trimmed.includes('T')
+        ? trimmed.replace(' ', 'T')
+        : trimmed;
+      createdDate = new Date(normalized);
+    } else {
+      createdDate = new Date(dateVal);
+    }
+
+    if (!createdDate || isNaN(createdDate.getTime())) return 0;
+
     const today = new Date();
     const utcCreated = Date.UTC(createdDate.getFullYear(), createdDate.getMonth(), createdDate.getDate());
     const utcToday = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
-    return Math.max(0, Math.floor((utcToday - utcCreated) / (1000 * 60 * 60 * 24)));
+    const diffDays = Math.floor((utcToday - utcCreated) / (1000 * 60 * 60 * 24));
+    return Math.max(0, diffDays);
   };
 
-  // Active Complaints Ageing Categories (Strictly mutually exclusive based on createdAt)
+  // Active Complaints Ageing Categories (Strictly mutually exclusive based on registration date)
+  // 0–7 Days: Newly registered complaints and complaints that are 0 to 7 days old
   const complaints0To7 = openComplaints.filter((c) => {
-    const days = calculateDaysPending(c.createdAt);
+    const days = calculateDaysPending(c);
     return days >= 0 && days <= 7;
   });
 
+  // 8–14 Days: Complaints older than 7 days and up to 14 days old
   const complaints8To14 = openComplaints.filter((c) => {
-    const days = calculateDaysPending(c.createdAt);
+    const days = calculateDaysPending(c);
     return days >= 8 && days <= 14;
   });
 
+  // 15+ Days: Complaints older than 14 days
   const complaints15Plus = openComplaints.filter((c) => {
-    const days = calculateDaysPending(c.createdAt);
+    const days = calculateDaysPending(c);
     return days >= 15;
   });
 
-  // Automatic Priority Assignment based on complaint age (Update 2.B):
+  // Automatic Priority Assignment based on complaint age:
   // 0–7 Days  -> Low
   // 8–14 Days -> Medium
   // 15+ Days  -> High
@@ -235,7 +285,7 @@ export const DashboardPage = () => {
   );
 
   const filteredAgeingComplaints = displayedComplaints.filter((c) => {
-    const days = calculateDaysPending(c.createdAt);
+    const days = calculateDaysPending(c);
     const autoPriority = getAutoPriority(days);
     const q = ageingSearch.trim().toLowerCase();
     if (q) {
@@ -1187,8 +1237,9 @@ export const DashboardPage = () => {
                           : c.wardNumber
                           ? `Ward ${c.wardNumber}`
                           : 'Ward';
-                        const createdStr = c.createdAt
-                          ? new Date(c.createdAt).toLocaleDateString('en-IN', {
+                        const cDate = getComplaintCreatedAt(c);
+                        const createdStr = cDate && !isNaN(new Date(cDate).getTime())
+                          ? new Date(cDate).toLocaleDateString('en-IN', {
                               day: '2-digit',
                               month: 'short',
                               year: 'numeric',
@@ -1336,15 +1387,16 @@ export const DashboardPage = () => {
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {filteredAgeingComplaints.map((c) => {
-                        const days = calculateDaysPending(c.createdAt);
+                        const days = calculateDaysPending(c);
                         const autoPriority = getAutoPriority(days);
                         const wardText = c.ward?.wardName
                           ? `Ward ${c.ward.wardNumber} (${c.ward.wardName})`
                           : c.wardNumber
                           ? `Ward ${c.wardNumber}`
                           : 'Ward';
-                        const createdStr = c.createdAt
-                          ? new Date(c.createdAt).toLocaleDateString('en-IN', {
+                        const cDate = getComplaintCreatedAt(c);
+                        const createdStr = cDate && !isNaN(new Date(cDate).getTime())
+                          ? new Date(cDate).toLocaleDateString('en-IN', {
                               day: '2-digit',
                               month: 'short',
                               year: 'numeric',

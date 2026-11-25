@@ -400,7 +400,7 @@ export const ComplaintsReportedPage = () => {
         badge={t('complaintsReported.headerBadge', 'Citizen Grievance Redressal')}
         badgeIcon={AlertCircle}
         title={t('complaintsReported.title', 'Complaints Reported')}
-        tamilTitle="பதிவு செய்யப்பட்ட புகார்கள்"
+        tamilTitle="????? ??????????? ?????????"
         subtitle={t('complaintsReported.subtitle', 'View, Monitor and Track All Registered Citizen Complaints across Coimbatore District.')}
         actions={
           <div className="flex items-center space-x-2.5">
