@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import * as XLSX from 'xlsx';
@@ -346,6 +346,39 @@ export const DashboardPage = () => {
     }
     return true;
   });
+
+  // Dynamic live calculation for Category Grievance Load based on actual database records
+  const categoryGrievanceLoad = useMemo(() => {
+    if (!Array.isArray(allComplaints) || allComplaints.length === 0) return [];
+    const map = {};
+    allComplaints.forEach((c) => {
+      const rawCat = c.category || c.assignedDepartment || 'General Grievance';
+      const cat = String(rawCat).trim();
+      if (!cat) return;
+
+      if (!map[cat]) {
+        map[cat] = {
+          category: cat,
+          total: 0,
+          pending: 0,
+          inProgress: 0,
+          completed: 0,
+        };
+      }
+      map[cat].total += 1;
+
+      if (isCompletedComplaint(c)) {
+        map[cat].completed += 1;
+      } else if (String(c.status || '').trim().toLowerCase() === 'in progress') {
+        map[cat].inProgress += 1;
+      } else {
+        // Pending encompasses 'New', 'Pending', 'Assigned', 'Under Review' etc.
+        map[cat].pending += 1;
+      }
+    });
+
+    return Object.values(map).sort((a, b) => b.total - a.total);
+  }, [allComplaints]);
 
   const openComplaintDrawer = (c) => {
     setSelectedComplaint(c);
@@ -1056,50 +1089,61 @@ export const DashboardPage = () => {
           </div>
         </div>
 
-        {/* Ward Activity & Top Grievance Wards (1 Col) */}
+        {/* Ward Grievance Load - Live Category Grievance Load (1 Col) */}
         <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/80 shadow-sm flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="text-base font-bold text-slate-800">{t('dashboard.wardGrievanceLoad', 'Ward Grievance Load')}</h3>
-                <p className="text-xs text-slate-400">{t('dashboard.wardLoadSubtitle', 'Wards with highest complaint volume')}</p>
+                <p className="text-xs text-slate-400">{t('dashboard.categoryGrievanceSubtitle', 'Live grievance volume & status breakdown by category')}</p>
               </div>
               <button
-                onClick={() => navigate('/admin/district')}
+                onClick={() => navigate('/admin/complaints-reported')}
                 className="inline-flex items-center px-3 py-1.5 bg-slate-50 hover:bg-red-50 text-red-700 hover:text-red-800 font-bold text-xs rounded-xl border border-slate-200 hover:border-red-300 transition cursor-pointer shadow-2xs whitespace-nowrap"
               >
-                <span>{t('dashboard.allWards', 'All Wards')}</span>
+                <span>{t('dashboard.allComplaints', 'All Complaints')}</span>
               </button>
             </div>
 
-            <div className="space-y-3">
-              {wardStats.length === 0 ? (
-                <p className="py-6 text-center text-xs text-slate-400">{t('dashboard.noWardRecords', 'No ward records loaded.')}</p>
+            <div className="space-y-3 max-h-[380px] overflow-y-auto pr-1">
+              {categoryGrievanceLoad.length === 0 ? (
+                <p className="py-6 text-center text-xs text-slate-400">{t('dashboard.noCategoryRecords', 'No grievance records loaded.')}</p>
               ) : (
-                wardStats.map((item, idx) => (
+                categoryGrievanceLoad.map((item, idx) => (
                   <div
                     key={idx}
-                    onClick={() => navigate(`/admin/district/wards/${item._id}`)}
-                    className="p-2.5 rounded-xl bg-slate-50 hover:bg-red-50/60 border border-slate-100 transition cursor-pointer flex items-center justify-between"
+                    onClick={() => navigate(`/admin/complaints-reported?category=${encodeURIComponent(item.category)}`)}
+                    className="p-3 rounded-2xl bg-slate-50 hover:bg-red-50/60 border border-slate-100 hover:border-red-200 transition cursor-pointer"
+                    title={`View ${item.category} complaints in Complaints Reported`}
                   >
-                    <div>
-                      <p className="text-xs font-bold text-slate-800">
-                        {t('district.wardLabel', 'Ward')} {item.wardNumber} - {item.wardName}
-                      </p>
-                      <p className="text-[10px] text-slate-400">{item.zone}</p>
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <div className="flex items-center space-x-2 min-w-0">
+                        <div className="w-2 h-2 rounded-full bg-red-600 flex-shrink-0" />
+                        <p className="text-xs font-bold text-slate-800 truncate" title={item.category}>
+                          {item.category}
+                        </p>
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        <span className="text-xs font-bold text-red-700 bg-white px-2.5 py-0.5 rounded-full border border-red-200 shadow-2xs whitespace-nowrap">
+                          {item.total} {item.total === 1 ? t('dashboard.complaintOne', 'Complaint') : t('dashboard.complaintsCount', 'Complaints')}
+                        </span>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/admin/complaints-reported?ward=${item.wardNumber}`);
-                        }}
-                        className="text-xs font-bold text-red-700 bg-white hover:bg-red-50 px-2.5 py-1 rounded-full border border-red-200 transition cursor-pointer shadow-2xs whitespace-nowrap"
-                        title={`View Ward ${item.wardNumber} complaints in Complaints Reported`}
-                      >
-                        {item.count} {t('dashboard.issuesCount', 'issues')}
-                      </button>
+
+                    {/* Status Breakdown: Pending, In Progress, Completed */}
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="inline-flex items-center text-[10.5px] font-semibold px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200/80">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mr-1.5" />
+                        {t('status.Pending', 'Pending')}: <strong className="ml-1 font-bold">{item.pending}</strong>
+                      </span>
+                      <span className="inline-flex items-center text-[10.5px] font-semibold px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200/80">
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500 mr-1.5" />
+                        {t('status.InProgress', 'In Progress')}: <strong className="ml-1 font-bold">{item.inProgress}</strong>
+                      </span>
+                      <span className="inline-flex items-center text-[10.5px] font-semibold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200/80">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5" />
+                        {t('status.Completed', 'Completed')}: <strong className="ml-1 font-bold">{item.completed}</strong>
+                      </span>
                     </div>
                   </div>
                 ))
