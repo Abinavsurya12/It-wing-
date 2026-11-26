@@ -31,8 +31,8 @@ export const LoginPage = () => {
 
   // Role selections matching specifications
   const [selectedRole, setSelectedRole] = useState('admin');
-  const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('admin@123');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -108,14 +108,8 @@ export const LoginPage = () => {
     setSelectedRole(roleKey);
     setIsRoleDropdownOpen(false);
     setErrorMessage('');
-    setUsername(rolesConfig[roleKey].defaultUser);
-    setPassword(rolesConfig[roleKey].defaultPass);
-  };
-
-  const handleAutoFill = () => {
-    setUsername(currentRole.defaultUser);
-    setPassword(currentRole.defaultPass);
-    setErrorMessage('');
+    setUsername('');
+    setPassword('');
   };
 
   const handleSubmit = async (e) => {
@@ -297,7 +291,7 @@ export const LoginPage = () => {
                 </div>
               )}
 
-              <form onSubmit={handleSubmit} className="space-y-2">
+              <form onSubmit={handleSubmit} autoComplete="off" className="space-y-2">
                 
                 {/* 1. SELECT LOGIN ROLE DROPDOWN */}
                 <div className="relative">
@@ -358,6 +352,7 @@ export const LoginPage = () => {
                     <input
                       type="text"
                       required
+                      autoComplete="off"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
                       placeholder={currentRole.userPlaceholder}
@@ -376,6 +371,7 @@ export const LoginPage = () => {
                     <input
                       type={showPassword ? 'text' : 'password'}
                       required
+                      autoComplete="new-password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder={t('auth.enterPassword')}
@@ -439,34 +435,6 @@ export const LoginPage = () => {
                 >
                   {t('auth.signUpLink')}
                 </Link>
-              </div>
-
-              {/* 5. DEFAULT AUTO-FILL PILL */}
-              <div className="pt-0.5">
-                <div className="bg-[#FFF8E7] border border-[#FFE5A3] rounded-xl p-1.5 text-center flex items-center justify-center space-x-1.5 text-[11px] text-[#252525]">
-                  <ShieldCheck className="w-3.5 h-3.5 text-[#B00000] flex-shrink-0" />
-                  {currentRole.defaultUser ? (
-                    <>
-                      <span>
-                        {t('auth.defaultAutoFill')} {currentRole.badge}:{' '}
-                        <strong className="font-mono text-slate-800">{currentRole.defaultUser}</strong> /{' '}
-                        <strong className="font-mono text-slate-800">{currentRole.defaultPass}</strong>
-                      </span>
-                      <span className="text-[#747474]">|</span>
-                      <button
-                        type="button"
-                        onClick={handleAutoFill}
-                        className="font-bold text-[#A00000] hover:underline cursor-pointer"
-                      >
-                        {t('auth.autoFillBtn')}
-                      </button>
-                    </>
-                  ) : (
-                    <span className="font-medium text-slate-700">
-                      {t('auth.citizenNote')}
-                    </span>
-                  )}
-                </div>
               </div>
 
             </div>
