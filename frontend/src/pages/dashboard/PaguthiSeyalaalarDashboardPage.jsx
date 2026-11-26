@@ -52,6 +52,27 @@ export const PaguthiSeyalaalarDashboardPage = () => {
   const [complaintStatusFilter, setComplaintStatusFilter] = useState('all');
   const [wardSearchQuery, setWardSearchQuery] = useState('');
 
+  // Translation helpers
+  const formatLocation = (name) => {
+    if (!name) return '';
+    return t(`locations.${name}`, name);
+  };
+
+  const formatCategory = (cat) => {
+    if (!cat) return t('complaintCategories.General', 'General');
+    return t(`complaintCategories.${cat}`, cat);
+  };
+
+  const formatStatus = (st) => {
+    if (['Completed', 'Resolved', 'Closed'].includes(st)) {
+      return t('paguthiDashboard.statusResolved', 'Resolved');
+    }
+    if (st === 'In Progress') {
+      return t('paguthiDashboard.statusInProgress', 'In Progress');
+    }
+    return t('paguthiDashboard.statusPending', 'Pending');
+  };
+
   // Fetch live database dashboard data
   const fetchDashboardData = async (v = selectedVillage) => {
     try {
@@ -64,11 +85,11 @@ export const PaguthiSeyalaalarDashboardPage = () => {
       if (res.data.success) {
         setData(res.data.data);
       } else {
-        setError(res.data.message || 'Failed to load dashboard data');
+        setError(res.data.message || t('paguthiDashboard.errorDesc', 'Failed to load dashboard data'));
       }
     } catch (err) {
       console.error('Failed to load Paguthi dashboard:', err);
-      setError(err.response?.data?.message || err.message || 'Error loading live database information');
+      setError(err.response?.data?.message || err.message || t('paguthiDashboard.errorDesc', 'Error loading live database information'));
     } finally {
       setLoading(false);
     }
@@ -112,7 +133,7 @@ export const PaguthiSeyalaalarDashboardPage = () => {
   };
 
   if (loading) {
-    return <LoadingSpinner text="Loading Live Paguthi Seyalaalar Database Dashboard..." fullScreen />;
+    return <LoadingSpinner text={t('paguthiDashboard.loadingText', 'Loading Live Paguthi Seyalaalar Database Dashboard...')} fullScreen />;
   }
 
   if (error || !data) {
@@ -122,20 +143,20 @@ export const PaguthiSeyalaalarDashboardPage = () => {
           <div className="w-12 h-12 rounded-2xl bg-red-50 text-[#A00000] flex items-center justify-center mx-auto border border-red-200">
             <AlertCircle className="w-6 h-6" />
           </div>
-          <h2 className="text-base sm:text-lg font-bold text-slate-900">Access Restricted / Error</h2>
-          <p className="text-xs text-slate-600 leading-relaxed">{error || 'Unable to retrieve your Paguthi records.'}</p>
+          <h2 className="text-base sm:text-lg font-bold text-slate-900">{t('paguthiDashboard.errorTitle', 'Access Restricted / Error')}</h2>
+          <p className="text-xs text-slate-600 leading-relaxed">{error || t('paguthiDashboard.errorDesc', 'Unable to retrieve your Paguthi records.')}</p>
           <div className="flex gap-2 justify-center pt-2">
             <button
               onClick={fetchDashboardData}
               className="px-4 py-2 bg-[#850000] text-white text-xs font-bold rounded-xl hover:bg-[#A00000] transition cursor-pointer"
             >
-              Retry
+              {t('paguthiDashboard.retry', 'Retry')}
             </button>
             <button
               onClick={handleLogout}
               className="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-200 transition cursor-pointer"
             >
-              Logout
+              {t('paguthiDashboard.logout', 'Logout')}
             </button>
           </div>
         </div>
@@ -144,6 +165,40 @@ export const PaguthiSeyalaalarDashboardPage = () => {
   }
 
   const { paguthi, stats, wards = [], allComplaints = [], hasVillages = false, villages = [] } = data;
+
+  const getJurisdictionLabel = (isUpper = false) => {
+    if (hasVillages) {
+      return isUpper
+        ? t('paguthiDashboard.ondriyamJurisdictionUpper', 'ONDRIYAM JURISDICTION')
+        : t('paguthiDashboard.ondriyamJurisdiction', 'Ondriyam Jurisdiction');
+    }
+    if (paguthi.includes('Nagaram')) {
+      return isUpper
+        ? t('paguthiDashboard.nagaramJurisdictionUpper', 'NAGARAM JURISDICTION')
+        : t('paguthiDashboard.nagaramJurisdiction', 'Nagaram Jurisdiction');
+    }
+    return isUpper
+      ? t('paguthiDashboard.paguthiJurisdictionUpper', 'PAGUTHI JURISDICTION')
+      : t('paguthiDashboard.paguthiJurisdiction', 'Paguthi Jurisdiction');
+  };
+
+  const getDivisionNoun = () => {
+    if (hasVillages) return t('paguthiDashboard.ondriyam', 'Ondriyam');
+    if (paguthi.includes('Nagaram')) return t('paguthiDashboard.nagaram', 'Nagaram');
+    return t('paguthiDashboard.paguthi', 'Paguthi');
+  };
+
+  const getSeyalaalarTitle = () => {
+    if (hasVillages) return t('paguthiDashboard.ondriyamSeyalaalar', 'Ondriyam Seyalaalar');
+    if (paguthi.includes('Nagaram')) return t('paguthiDashboard.nagaramSeyalaalar', 'Nagaram Seyalaalar');
+    return t('paguthiDashboard.paguthiSeyalaalar', 'Paguthi Seyalaalar');
+  };
+
+  const getAdminTitle = () => {
+    if (hasVillages) return t('paguthiDashboard.ondriyamAdministration', 'Ondriyam Administration');
+    if (paguthi.includes('Nagaram')) return t('paguthiDashboard.nagaramAdministration', 'Nagaram Administration');
+    return t('paguthiDashboard.paguthiAdministration', 'Paguthi Administration');
+  };
 
   const isMunicipalCleanWard = ['Pothanur', 'Podanur', 'Kurichi', 'Sundarapuram'].includes(paguthi);
 
@@ -194,6 +249,7 @@ export const PaguthiSeyalaalarDashboardPage = () => {
     return (
       String(w.wardNumber).includes(q) ||
       (w.wardName || '').toLowerCase().includes(q) ||
+      (w.tamilName || '').toLowerCase().includes(q) ||
       (w.wardSecretary || '').toLowerCase().includes(q) ||
       (w.contactNumber || '').includes(q)
     );
@@ -230,11 +286,11 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                 {t('header.systemTitle', 'TVK Digital Governance CRM')}
               </span>
               <span className="hidden sm:inline-block px-2 py-0.5 rounded-full text-[9.5px] lg:text-[10px] font-extrabold bg-[#FFD32A] text-[#850000] uppercase tracking-wider flex-shrink-0">
-                Paguthi / Ondriyam / Nagaram
+                {t('paguthiDashboard.jurisdictionTypeBadge', 'Paguthi / Ondriyam / Nagaram')}
               </span>
             </div>
             <p className="text-[10px] sm:text-[11px] font-semibold text-[#FFD32A] truncate">
-              {paguthi} • Kinathukadavu Assembly Constituency
+              {formatLocation(paguthi)} • {t('paguthiDashboard.constituency', 'Kinathukadavu Assembly Constituency')}
             </p>
           </div>
         </div>
@@ -245,11 +301,11 @@ export const PaguthiSeyalaalarDashboardPage = () => {
             type="button"
             onClick={() => fetchDashboardData(selectedVillage)}
             disabled={loading}
-            title="Refresh live data from database"
+            title={t('paguthiDashboard.refreshTooltip', 'Refresh live data from database')}
             className="px-2.5 sm:px-3 py-1.5 bg-black/30 hover:bg-black/50 text-white border border-white/20 rounded-xl text-xs font-bold transition flex items-center space-x-1 cursor-pointer shadow-xs disabled:opacity-50"
           >
             <RefreshCw className={`w-3.5 h-3.5 text-[#FFD32A] ${loading ? 'animate-spin' : ''}`} />
-            <span className="hidden sm:inline">Refresh</span>
+            <span className="hidden sm:inline">{t('paguthiDashboard.refresh', 'Refresh')}</span>
           </button>
 
           <LanguageSwitcher />
@@ -257,28 +313,30 @@ export const PaguthiSeyalaalarDashboardPage = () => {
           <div className="hidden md:flex items-center space-x-2 bg-black/25 px-2.5 py-1 rounded-xl border border-white/10 text-white text-xs">
             <ShieldCheck className="w-3.5 h-3.5 text-[#FFD32A] flex-shrink-0" />
             <div className="text-left leading-tight">
-              <span className="font-bold block text-white text-[11px] truncate max-w-[120px]">{user?.name || `${paguthi} Seyalaalar`}</span>
+              <span className="font-bold block text-white text-[11px] truncate max-w-[120px]">
+                {user?.name || `${formatLocation(paguthi)} ${getSeyalaalarTitle()}`}
+              </span>
               <span className="text-[9px] text-red-200">@{user?.username}</span>
             </div>
           </div>
 
           <button
             onClick={handleLogout}
-            title="Sign Out"
+            title={t('paguthiDashboard.logout', 'Logout')}
             className="px-2.5 sm:px-3 py-1.5 bg-black/30 hover:bg-black/50 text-white border border-white/20 rounded-xl text-xs font-bold transition flex items-center space-x-1 cursor-pointer shadow-xs"
           >
             <LogOut className="w-3.5 h-3.5 text-[#FFD32A]" />
-            <span className="hidden sm:inline">Logout</span>
+            <span className="hidden sm:inline">{t('paguthiDashboard.logout', 'Logout')}</span>
           </button>
         </div>
       </header>
 
       {/* ================= 2. MAIN CONTAINER ================= */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-5 lg:p-8 space-y-5 sm:space-y-6">
-        {/* ================= VIEW MODE 1: SINGLE PAGUTHI CARD VIEW (TASK 2) ================= */}
+        {/* ================= VIEW MODE 1: SINGLE PAGUTHI CARD VIEW ================= */}
         {viewMode === 'card' && (
           <div className="space-y-5 sm:space-y-6">
-            {/* Page Header (Exact User Dashboard Header Design & Theme) */}
+            {/* Page Header */}
             <div
               className="w-full relative bg-[#850000] pt-6 sm:pt-8 md:pt-10 pb-0 px-3 sm:px-6 lg:px-8 text-white overflow-hidden shadow-md rounded-2xl sm:rounded-3xl border border-[#E9E2DC]"
               style={{
@@ -313,16 +371,17 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                     <div className="inline-flex items-center space-x-2 bg-black/40 backdrop-blur-md px-3.5 py-1 rounded-full border border-white/20 text-xs font-semibold shadow-xs">
                       <span className="w-2 h-2 rounded-full bg-[#FFD32A] animate-pulse"></span>
                       <span className="text-[#FFD32A] font-bold">
-                        {hasVillages ? 'Ondriyam Jurisdiction' : paguthi.includes('Nagaram') ? 'Nagaram Jurisdiction' : 'Paguthi Jurisdiction'}
+                        {getJurisdictionLabel(false)}
                       </span>
                     </div>
 
                     <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight drop-shadow-md text-white">
-                      Welcome, <span className="text-[#FFD32A]">{user?.name || `${paguthi} Seyalaalar`}</span>
+                      {t('paguthiDashboard.welcome', 'Welcome,')}{' '}
+                      <span className="text-[#FFD32A]">{user?.name || `${formatLocation(paguthi)} ${getSeyalaalarTitle()}`}</span>
                     </h1>
 
                     <p className="text-xs sm:text-sm text-white/95 max-w-xl mx-auto font-medium leading-relaxed drop-shadow-xs">
-                      You are authenticated to manage and monitor localized public grievances, cadre coordination, and municipal ward governance for <strong className="text-white font-bold">{paguthi}</strong>. Click your designated card below to inspect live database counts, ward directories, and registered complaints.
+                      {t('paguthiDashboard.heroDescription', 'You are authenticated to manage and monitor localized public grievances, cadre coordination, and municipal ward governance for {{paguthi}}. Click your designated card below to inspect live database counts, ward directories, and registered complaints.', { paguthi: formatLocation(paguthi) })}
                     </p>
                   </div>
 
@@ -361,16 +420,17 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                     <div className="inline-flex items-center space-x-2 bg-black/40 backdrop-blur-md px-3.5 py-1 rounded-full border border-white/20 text-xs font-semibold shadow-xs">
                       <span className="w-2 h-2 rounded-full bg-[#FFD32A] animate-pulse"></span>
                       <span className="text-[#FFD32A] font-bold">
-                        {hasVillages ? 'Ondriyam Jurisdiction' : paguthi.includes('Nagaram') ? 'Nagaram Jurisdiction' : 'Paguthi Jurisdiction'}
+                        {getJurisdictionLabel(false)}
                       </span>
                     </div>
 
                     <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-extrabold tracking-tight drop-shadow-md text-white">
-                      Welcome, <span className="text-[#FFD32A]">{user?.name || `${paguthi} Seyalaalar`}</span>
+                      {t('paguthiDashboard.welcome', 'Welcome,')}{' '}
+                      <span className="text-[#FFD32A]">{user?.name || `${formatLocation(paguthi)} ${getSeyalaalarTitle()}`}</span>
                     </h1>
 
                     <p className="text-xs sm:text-sm lg:text-base text-white/95 max-w-2xl mx-auto font-medium leading-relaxed drop-shadow-xs">
-                      You are authenticated to manage and monitor localized public grievances, cadre coordination, and municipal ward governance for <strong className="text-white font-bold">{paguthi}</strong>. Click your designated card below to inspect live database counts, ward directories, and registered complaints.
+                      {t('paguthiDashboard.heroDescription', 'You are authenticated to manage and monitor localized public grievances, cadre coordination, and municipal ward governance for {{paguthi}}. Click your designated card below to inspect live database counts, ward directories, and registered complaints.', { paguthi: formatLocation(paguthi) })}
                     </p>
                   </div>
 
@@ -386,27 +446,27 @@ export const PaguthiSeyalaalarDashboardPage = () => {
               </div>
             </div>
 
-            {/* SECTION: ONLY ONE PAGUTHI CARD DISPLAYED (TASK 2) */}
+            {/* SECTION: ONLY ONE PAGUTHI CARD DISPLAYED */}
             <div className="space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
                 <div>
                   <h2 className="text-base sm:text-lg font-extrabold text-slate-900 flex items-center space-x-2">
                     <FolderTree className="w-4 h-4 sm:w-5 sm:h-5 text-[#850000]" />
-                    <span>Your Assigned Jurisdiction Administration</span>
+                    <span>{t('paguthiDashboard.assignedAdminTitle', 'Your Assigned Jurisdiction Administration')}</span>
                   </h2>
                   <p className="text-xs text-slate-500">
-                    Live dynamic database card scoped strictly to your account
+                    {t('paguthiDashboard.assignedAdminSub', 'Live dynamic database card scoped strictly to your account')}
                   </p>
                 </div>
                 <span className="text-[11px] sm:text-xs font-bold text-[#850000] bg-red-50 border border-red-200 px-2.5 py-0.5 rounded-full self-start sm:self-auto">
-                  1 Assigned Jurisdiction
+                  {t('paguthiDashboard.oneAssignedJurisdiction', '1 Assigned Jurisdiction')}
                 </span>
               </div>
 
               {/* The Single Card - Scoped Strictly to Authenticated User */}
               <div className="max-w-md w-full">
                 <div className="bg-white rounded-2xl border border-[#E9E2DC] shadow-xs hover:shadow-xl hover:-translate-y-1 hover:border-[#850000] transition-all duration-200 flex flex-col justify-between overflow-hidden relative group">
-                  {/* Top Red-Gold Tricolor Accent Bar */}
+                  {/* Top Red-Gold Accent Bar */}
                   <div className="h-1.5 bg-gradient-to-r from-[#A00000] via-[#FFD32A] to-[#850000]" />
 
                   <div className="p-4 sm:p-6">
@@ -416,13 +476,13 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                         <MapPin className="w-5 h-5 text-[#850000]" />
                       </div>
                       <span className="text-[9.5px] sm:text-[10px] font-extrabold uppercase px-2 sm:px-2.5 py-0.5 rounded-full bg-red-50 text-[#850000] border border-red-200">
-                        {hasVillages ? 'ONDRIYAM JURISDICTION' : paguthi.includes('Nagaram') ? 'NAGARAM JURISDICTION' : 'PAGUTHI JURISDICTION'}
+                        {getJurisdictionLabel(true)}
                       </span>
                     </div>
 
                     {/* Paguthi / Ondriyam / Nagaram Title */}
                     <h3 className="text-xl sm:text-2xl font-black text-slate-900 mt-3 sm:mt-4 group-hover:text-[#850000] transition tracking-tight">
-                      {paguthi}
+                      {formatLocation(paguthi)}
                     </h3>
 
                     {/* Live Database Statistics Counts */}
@@ -431,7 +491,7 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                         <>
                           <div className="bg-[#FFF8F0] p-2.5 sm:p-3 rounded-xl border border-[#FFE5A3]/50">
                             <span className="text-[10px] sm:text-[10.5px] text-slate-500 font-semibold block uppercase tracking-wider">
-                              Total Villages
+                              {t('paguthiDashboard.totalVillages', 'Total Villages')}
                             </span>
                             <strong className="text-slate-900 font-black text-base sm:text-lg text-[#850000]">
                               {stats?.totalVillages ?? villages.length ?? 0}
@@ -439,7 +499,7 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                           </div>
                           <div className="bg-emerald-50 p-2.5 sm:p-3 rounded-xl border border-emerald-200/60">
                             <span className="text-[10px] sm:text-[10.5px] text-emerald-700 font-semibold block uppercase tracking-wider">
-                              Total Wards
+                              {t('paguthiDashboard.totalWards', 'Total Wards')}
                             </span>
                             <strong className="text-emerald-900 font-black text-base sm:text-lg">
                               {totalWardsCount}
@@ -450,7 +510,7 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                         <>
                           <div className="bg-[#FFF8F0] p-2.5 sm:p-3 rounded-xl border border-[#FFE5A3]/50">
                             <span className="text-[10px] sm:text-[10.5px] text-slate-500 font-semibold block uppercase tracking-wider">
-                              Total Wards
+                              {t('paguthiDashboard.totalWards', 'Total Wards')}
                             </span>
                             <strong className="text-slate-900 font-black text-base sm:text-lg text-[#850000]">
                               {totalWardsCount}
@@ -458,7 +518,7 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                           </div>
                           <div className="bg-emerald-50 p-2.5 sm:p-3 rounded-xl border border-emerald-200/60">
                             <span className="text-[10px] sm:text-[10.5px] text-emerald-700 font-semibold block uppercase tracking-wider">
-                              Registered Secs
+                              {t('paguthiDashboard.registeredSecs', 'Registered Secs')}
                             </span>
                             <strong className="text-emerald-900 font-black text-base sm:text-lg">
                               {stats?.registeredSecretaries ?? stats?.totalWardSecretaries ?? 0}
@@ -471,26 +531,26 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                       <div className="col-span-2 bg-slate-50 p-2.5 sm:p-3 rounded-xl border border-slate-200 space-y-1.5 text-[11px]">
                         <div className="flex items-center justify-between">
                           <span className="text-slate-600 font-bold uppercase text-[10px] tracking-wider">
-                            Total Complaints:
+                            {t('paguthiDashboard.totalComplaintsColon', 'Total Complaints:')}
                           </span>
                           <span className="font-extrabold text-[#850000] text-sm">{stats?.totalComplaints ?? stats?.totalIssues ?? 0}</span>
                         </div>
                         <div className="grid grid-cols-3 gap-1 text-[10px] sm:text-[10.5px] text-slate-500 pt-1.5 border-t border-slate-200">
                           <div className="truncate">
-                            Pending: <strong className="text-amber-700 font-bold">{stats?.pendingComplaints ?? stats?.pendingIssues ?? 0}</strong>
+                            {t('paguthiDashboard.pendingColon', 'Pending:')} <strong className="text-amber-700 font-bold">{stats?.pendingComplaints ?? stats?.pendingIssues ?? 0}</strong>
                           </div>
                           <div className="text-center truncate">
-                            In Prog: <strong className="text-sky-700 font-bold">{stats?.inProgressComplaints ?? stats?.inProgressIssues ?? 0}</strong>
+                            {t('paguthiDashboard.inProgColon', 'In Prog:')} <strong className="text-sky-700 font-bold">{stats?.inProgressComplaints ?? stats?.inProgressIssues ?? 0}</strong>
                           </div>
                           <div className="text-right truncate">
-                            Done: <strong className="text-emerald-700 font-bold">{stats?.resolvedComplaints ?? stats?.resolvedIssues ?? 0}</strong>
+                            {t('paguthiDashboard.doneColon', 'Done:')} <strong className="text-emerald-700 font-bold">{stats?.resolvedComplaints ?? stats?.resolvedIssues ?? 0}</strong>
                           </div>
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* Open Paguthi Action Button (Task 2 & 3) */}
+                  {/* Open Paguthi Action Button */}
                   <div className="p-4 sm:p-5 pt-0">
                     <button
                       type="button"
@@ -498,7 +558,7 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                       className="w-full py-2.5 px-3 sm:px-4 bg-[#850000] hover:bg-[#A00000] text-white text-xs sm:text-sm font-bold rounded-xl transition shadow-xs flex items-center justify-center space-x-1.5 sm:space-x-2 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#850000]/40"
                     >
                       <span className="truncate">
-                        {hasVillages ? 'Open Ondriyam Details & Villages' : paguthi.includes('Nagaram') ? 'Open Nagaram Details & Ward Directory' : 'Open Paguthi Details & Ward Directory'}
+                        {hasVillages ? t('paguthiDashboard.openOndriyamBtn', 'Open Ondriyam Details & Villages') : paguthi.includes('Nagaram') ? t('paguthiDashboard.openNagaramBtn', 'Open Nagaram Details & Ward Directory') : t('paguthiDashboard.openPaguthiBtn', 'Open Paguthi Details & Ward Directory')}
                       </span>
                       <ChevronRight className="w-4 h-4 flex-shrink-0" />
                     </button>
@@ -509,7 +569,7 @@ export const PaguthiSeyalaalarDashboardPage = () => {
           </div>
         )}
 
-        {/* ================= VIEW MODE 2: PAGUTHI DETAILS & WARD DIRECTORY (TASKS 3, 4, 5) ================= */}
+        {/* ================= VIEW MODE 2: PAGUTHI DETAILS & WARD DIRECTORY ================= */}
         {viewMode === 'detail' && (
           <div className="space-y-5 sm:space-y-6">
             {/* Breadcrumb Navigation & Back Button */}
@@ -519,7 +579,7 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                   onClick={handleBackToCard}
                   className="hover:text-[#850000] transition cursor-pointer"
                 >
-                  Dashboard
+                  {t('paguthiDashboard.dashboardBreadcrumb', 'Dashboard')}
                 </button>
                 <span>&gt;</span>
                 {selectedVillage ? (
@@ -528,14 +588,14 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                       onClick={handleBackToVillages}
                       className="hover:text-[#850000] transition cursor-pointer"
                     >
-                      {paguthi}
+                      {formatLocation(paguthi)}
                     </button>
                     <span>&gt;</span>
-                    <span className="text-[#850000] font-bold">{selectedVillage} Village</span>
+                    <span className="text-[#850000] font-bold">{formatLocation(selectedVillage)} {t('paguthiDashboard.village', 'Village')}</span>
                   </>
                 ) : (
                   <span className="text-[#850000] font-bold">
-                    {paguthi} {hasVillages ? 'Ondriyam' : paguthi.includes('Nagaram') ? 'Nagaram' : 'Paguthi'}
+                    {formatLocation(paguthi)} {getDivisionNoun()}
                   </span>
                 )}
               </div>
@@ -547,7 +607,7 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                   className="inline-flex items-center text-xs font-bold text-slate-700 hover:text-[#850000] transition space-x-1.5 cursor-pointer bg-white px-2.5 sm:px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs"
                 >
                   <ArrowLeft className="w-3.5 h-3.5" />
-                  <span>Back to Villages</span>
+                  <span>{t('paguthiDashboard.backToVillages', 'Back to Villages')}</span>
                 </button>
               ) : (
                 <button
@@ -556,119 +616,147 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                   className="inline-flex items-center text-xs font-bold text-slate-700 hover:text-[#850000] transition space-x-1.5 cursor-pointer bg-white px-2.5 sm:px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs"
                 >
                   <ArrowLeft className="w-3.5 h-3.5" />
-                  <span>Back to Single Card View</span>
+                  <span>{t('paguthiDashboard.backToCard', 'Back to Single Card View')}</span>
                 </button>
               )}
             </div>
 
-            {/* Hero Header Banner (Deep Red & Golden Yellow Theme) */}
+            {/* Hero Header Banner */}
             <div className="bg-gradient-to-r from-[#850000] via-[#A00000] to-[#850000] text-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-3xl shadow-md relative overflow-hidden border-b-4 border-[#FFD32A]">
               <div className="relative z-10">
                 <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-[#FFD32A] text-[10.5px] sm:text-xs font-bold uppercase tracking-wider mb-2">
                   <span className="font-mono bg-black/40 px-2 py-0.5 rounded border border-[#FFD32A]/30">
-                    KKD • SOUTH ZONE
+                    {t('paguthiDashboard.southZone', 'KKD • SOUTH ZONE')}
                   </span>
                   <span>•</span>
-                  <span>Kinathukadavu Constituency</span>
+                  <span>{t('paguthiDashboard.constituency', 'Kinathukadavu Assembly Constituency')}</span>
                 </div>
 
                 <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight">
                   {selectedVillage ? (
                     <>
-                      {selectedVillage} <span className="text-[#FFD32A]">Village Administration</span>
+                      {formatLocation(selectedVillage)} <span className="text-[#FFD32A]">{t('paguthiDashboard.villageAdministration', 'Village Administration')}</span>
                     </>
                   ) : (
                     <>
-                      {paguthi}{' '}
+                      {formatLocation(paguthi)}{' '}
                       <span className="text-[#FFD32A]">
-                        {hasVillages ? 'Ondriyam Administration' : paguthi.includes('Nagaram') ? 'Nagaram Administration' : 'Paguthi Administration'}
+                        {getAdminTitle()}
                       </span>
                     </>
                   )}
                 </h1>
                 <p className="text-xs sm:text-sm text-red-100 max-w-2xl mt-1.5 leading-relaxed font-medium">
                   {selectedVillage
-                    ? `Live administrative hierarchy under ${paguthi} covering ${totalWardsCount} municipal wards, verified Ward Secretaries, localized citizen petitions, and ground-level resolution status.`
+                    ? t('paguthiDashboard.villageBannerDesc', 'Live administrative hierarchy under {{paguthi}} covering {{count}} municipal wards, verified Ward Secretaries, localized citizen petitions, and ground-level resolution status.', { paguthi: formatLocation(paguthi), count: totalWardsCount })
                     : hasVillages
-                    ? `Live administrative hierarchy covers all ${villages.length} constituent villages, ${totalWardsCount} municipal wards, active cadres, and ground-level resolution status.`
-                    : `Live administrative hierarchy covers all ${totalWardsCount} municipal wards, verified Ward Secretaries, localized citizen petitions, and ground-level resolution status.`}
+                    ? t('paguthiDashboard.ondriyamBannerDesc', 'Live administrative hierarchy covers all {{villageCount}} constituent villages, {{wardCount}} municipal wards, active cadres, and ground-level resolution status.', { villageCount: villages.length, wardCount: totalWardsCount })
+                    : t('paguthiDashboard.paguthiBannerDesc', 'Live administrative hierarchy covers all {{count}} municipal wards, verified Ward Secretaries, localized citizen petitions, and ground-level resolution status.', { count: totalWardsCount })}
                 </p>
               </div>
 
               <div className="absolute right-0 bottom-0 w-80 h-80 bg-[#FFD32A]/10 rounded-full blur-3xl pointer-events-none"></div>
             </div>
 
-            {/* ================= TASK 3: DYNAMIC SUMMARY METRICS CARDS ================= */}
+            {/* ================= DYNAMIC SUMMARY METRICS CARDS ================= */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-3">
               {/* Card 1: Total Villages or Total Wards */}
               {hasVillages && !selectedVillage ? (
                 <div className="bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-[#E9E2DC] shadow-2xs">
                   <div className="flex items-center justify-between text-slate-500 mb-1">
-                    <span className="text-[9.5px] sm:text-[10px] font-bold uppercase tracking-wider truncate">Villages</span>
+                    <span className="text-[9.5px] sm:text-[10px] font-bold uppercase tracking-wider truncate">
+                      {t('paguthiDashboard.metricVillages', 'Villages')}
+                    </span>
                     <FolderTree className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#850000] flex-shrink-0" />
                   </div>
                   <strong className="text-xl sm:text-2xl font-black text-slate-900 block">{stats?.totalVillages ?? villages.length ?? 0}</strong>
-                  <span className="text-[9.5px] sm:text-[10px] text-slate-500 font-medium">Constituent Villages</span>
+                  <span className="text-[9.5px] sm:text-[10px] text-slate-500 font-medium">
+                    {t('paguthiDashboard.metricConstituentVillages', 'Constituent Villages')}
+                  </span>
                 </div>
               ) : (
                 <div className="bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-[#E9E2DC] shadow-2xs">
                   <div className="flex items-center justify-between text-slate-500 mb-1">
-                    <span className="text-[9.5px] sm:text-[10px] font-bold uppercase tracking-wider truncate">Total Wards</span>
+                    <span className="text-[9.5px] sm:text-[10px] font-bold uppercase tracking-wider truncate">
+                      {t('paguthiDashboard.metricTotalWards', 'Total Wards')}
+                    </span>
                     <Building className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#850000] flex-shrink-0" />
                   </div>
                   <strong className="text-xl sm:text-2xl font-black text-slate-900 block">{totalWardsCount}</strong>
-                  <span className="text-[9.5px] sm:text-[10px] text-slate-500 font-medium">Database Wards</span>
+                  <span className="text-[9.5px] sm:text-[10px] text-slate-500 font-medium">
+                    {t('paguthiDashboard.metricDatabaseWards', 'Database Wards')}
+                  </span>
                 </div>
               )}
 
               {/* Card 2: Total Ward Secretaries */}
               <div className="bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-[#E9E2DC] shadow-2xs">
                 <div className="flex items-center justify-between text-slate-500 mb-1">
-                  <span className="text-[9.5px] sm:text-[10px] font-bold uppercase tracking-wider truncate">Ward Secs</span>
+                  <span className="text-[9.5px] sm:text-[10px] font-bold uppercase tracking-wider truncate">
+                    {t('paguthiDashboard.metricWardSecs', 'Ward Secs')}
+                  </span>
                   <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600 flex-shrink-0" />
                 </div>
                 <strong className="text-xl sm:text-2xl font-black text-emerald-700 block">{stats?.registeredSecretaries ?? stats?.totalWardSecretaries ?? 0}</strong>
-                <span className="text-[9.5px] sm:text-[10px] text-slate-500 font-medium">Active Cadres</span>
+                <span className="text-[9.5px] sm:text-[10px] text-slate-500 font-medium">
+                  {t('paguthiDashboard.metricActiveCadres', 'Active Cadres')}
+                </span>
               </div>
 
               {/* Card 3: Total Complaints */}
               <div className="bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-[#E9E2DC] shadow-2xs">
                 <div className="flex items-center justify-between text-slate-500 mb-1">
-                  <span className="text-[9.5px] sm:text-[10px] font-bold uppercase tracking-wider truncate">Total Issues</span>
+                  <span className="text-[9.5px] sm:text-[10px] font-bold uppercase tracking-wider truncate">
+                    {t('paguthiDashboard.metricTotalIssues', 'Total Issues')}
+                  </span>
                   <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#850000] flex-shrink-0" />
                 </div>
                 <strong className="text-xl sm:text-2xl font-black text-[#850000] block">{stats?.totalComplaints ?? stats?.totalIssues ?? 0}</strong>
-                <span className="text-[9.5px] sm:text-[10px] text-slate-500 font-medium">Registered</span>
+                <span className="text-[9.5px] sm:text-[10px] text-slate-500 font-medium">
+                  {t('paguthiDashboard.metricRegistered', 'Registered')}
+                </span>
               </div>
 
               {/* Card 4: Pending Complaints */}
               <div className="bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-[#E9E2DC] shadow-2xs">
                 <div className="flex items-center justify-between text-slate-500 mb-1">
-                  <span className="text-[9.5px] sm:text-[10px] font-bold uppercase tracking-wider truncate">Pending</span>
+                  <span className="text-[9.5px] sm:text-[10px] font-bold uppercase tracking-wider truncate">
+                    {t('paguthiDashboard.metricPending', 'Pending')}
+                  </span>
                   <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-600 flex-shrink-0" />
                 </div>
                 <strong className="text-xl sm:text-2xl font-black text-amber-700 block">{stats?.pendingComplaints ?? stats?.pendingIssues ?? 0}</strong>
-                <span className="text-[9.5px] sm:text-[10px] text-slate-500 font-medium">Needs Action</span>
+                <span className="text-[9.5px] sm:text-[10px] text-slate-500 font-medium">
+                  {t('paguthiDashboard.metricNeedsAction', 'Needs Action')}
+                </span>
               </div>
 
               {/* Card 5: In Progress */}
               <div className="bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-[#E9E2DC] shadow-2xs">
                 <div className="flex items-center justify-between text-slate-500 mb-1">
-                  <span className="text-[9.5px] sm:text-[10px] font-bold uppercase tracking-wider truncate">In Progress</span>
+                  <span className="text-[9.5px] sm:text-[10px] font-bold uppercase tracking-wider truncate">
+                    {t('paguthiDashboard.metricInProgress', 'In Progress')}
+                  </span>
                   <Activity className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-sky-600 flex-shrink-0" />
                 </div>
                 <strong className="text-xl sm:text-2xl font-black text-sky-700 block">{stats?.inProgressComplaints ?? stats?.inProgressIssues ?? 0}</strong>
-                <span className="text-[9.5px] sm:text-[10px] text-slate-500 font-medium">Work Ongoing</span>
+                <span className="text-[9.5px] sm:text-[10px] text-slate-500 font-medium">
+                  {t('paguthiDashboard.metricWorkOngoing', 'Work Ongoing')}
+                </span>
               </div>
 
               {/* Card 6: Resolved */}
               <div className="bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-[#E9E2DC] shadow-2xs">
                 <div className="flex items-center justify-between text-slate-500 mb-1">
-                  <span className="text-[9.5px] sm:text-[10px] font-bold uppercase tracking-wider truncate">Resolved</span>
+                  <span className="text-[9.5px] sm:text-[10px] font-bold uppercase tracking-wider truncate">
+                    {t('paguthiDashboard.metricResolved', 'Resolved')}
+                  </span>
                   <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600 flex-shrink-0" />
                 </div>
                 <strong className="text-xl sm:text-2xl font-black text-emerald-700 block">{stats?.resolvedComplaints ?? stats?.resolvedIssues ?? 0}</strong>
-                <span className="text-[9.5px] sm:text-[10px] text-slate-500 font-medium">Completed</span>
+                <span className="text-[9.5px] sm:text-[10px] text-slate-500 font-medium">
+                  {t('paguthiDashboard.metricCompleted', 'Completed')}
+                </span>
               </div>
             </div>
 
@@ -679,10 +767,10 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                   <div>
                     <h2 className="text-base sm:text-lg font-extrabold text-slate-900 flex items-center space-x-2">
                       <FolderTree className="w-4 h-4 sm:w-5 sm:h-5 text-[#850000]" />
-                      <span>Constituent Village Directory ({villages.length} Villages)</span>
+                      <span>{t('paguthiDashboard.villageDirectoryTitle', 'Constituent Village Directory ({{count}} Villages)', { count: villages.length })}</span>
                     </h2>
                     <p className="text-xs text-slate-500">
-                      Select any village to inspect municipal ward governance, assigned secretaries, and citizen grievance reports
+                      {t('paguthiDashboard.villageDirectorySub', 'Select any village to inspect municipal ward governance, assigned secretaries, and citizen grievance reports')}
                     </p>
                   </div>
                 </div>
@@ -698,42 +786,44 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                       <div className="p-3.5 sm:p-4 space-y-3">
                         <div className="flex items-start justify-between">
                           <span className="px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-black bg-red-50 text-[#850000] border border-red-200">
-                            Village
+                            {t('paguthiDashboard.villageBadge', 'Village')}
                           </span>
                           <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                            {v.totalWards} {v.totalWards === 1 ? 'Ward' : 'Wards'}
+                            {v.totalWards === 1
+                              ? t('paguthiDashboard.wardCountSingle', '1 Ward')
+                              : t('paguthiDashboard.wardsCount', '{{count}} Wards', { count: v.totalWards })}
                           </span>
                         </div>
 
                         <div>
                           <h3 className="text-sm sm:text-base font-extrabold text-slate-900 leading-snug">
-                            {v.name}
+                            {formatLocation(v.name)}
                           </h3>
                           <p className="text-[11px] text-slate-500 font-medium mt-0.5">
-                            Part of {paguthi}
+                            {t('paguthiDashboard.partOf', 'Part of {{paguthi}}', { paguthi: formatLocation(paguthi) })}
                           </p>
                         </div>
 
                         <div className="bg-slate-50 rounded-xl p-2.5 border border-slate-200 space-y-1.5 text-xs">
                           <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-1 text-[11px]">
-                            <span className="text-slate-500 font-medium">Secretary:</span>
+                            <span className="text-slate-500 font-medium">{t('paguthiDashboard.secretaryLabel', 'Secretary:')}</span>
                             {v.wardSecretary && v.wardSecretary !== 'Not Assigned' ? (
                               <span className="font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 text-[10.5px] truncate max-w-[160px]">
                                 {v.wardSecretary}
                               </span>
                             ) : (
                               <span className="font-bold text-slate-500 bg-slate-200 px-2 py-0.5 rounded-full text-[10.5px]">
-                                Not Assigned
+                                {t('paguthiDashboard.notAssigned', 'Not Assigned')}
                               </span>
                             )}
                           </div>
 
                           <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-1 text-[11px]">
                             <span className="text-slate-500 font-medium flex items-center gap-1">
-                              <Phone className="w-3 h-3 text-slate-400 flex-shrink-0" /> Contact:
+                              <Phone className="w-3 h-3 text-slate-400 flex-shrink-0" /> {t('paguthiDashboard.contactLabel', 'Contact:')}
                             </span>
                             <span className="font-semibold text-slate-700 font-mono text-[10.5px]">
-                              {v.contactNumber || 'Not Available'}
+                              {v.contactNumber || t('paguthiDashboard.notAvailable', 'Not Available')}
                             </span>
                           </div>
                         </div>
@@ -741,19 +831,19 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                         {/* Village Grievance stats */}
                         <div className="grid grid-cols-3 gap-1.5 text-center text-[10px] pt-1">
                           <div className="bg-amber-50 p-1.5 rounded-lg border border-amber-200/60">
-                            <span className="text-amber-800 block font-semibold truncate">Pending</span>
+                            <span className="text-amber-800 block font-semibold truncate">{t('paguthiDashboard.pendingShort', 'Pending')}</span>
                             <strong className="text-amber-900 font-black text-xs">
                               {v.pendingComplaints}
                             </strong>
                           </div>
                           <div className="bg-sky-50 p-1.5 rounded-lg border border-sky-200/60">
-                            <span className="text-sky-800 block font-semibold truncate">In Prog</span>
+                            <span className="text-sky-800 block font-semibold truncate">{t('paguthiDashboard.inProgShort', 'In Prog')}</span>
                             <strong className="text-sky-900 font-black text-xs">
                               {v.inProgressComplaints}
                             </strong>
                           </div>
                           <div className="bg-emerald-50 p-1.5 rounded-lg border border-emerald-200/60">
-                            <span className="text-emerald-800 block font-semibold truncate">Done</span>
+                            <span className="text-emerald-800 block font-semibold truncate">{t('paguthiDashboard.doneShort', 'Done')}</span>
                             <strong className="text-emerald-900 font-black text-xs">
                               {v.completedComplaints}
                             </strong>
@@ -767,7 +857,7 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                           onClick={() => handleSelectVillage(v.name)}
                           className="w-full py-2 px-3 bg-[#850000] hover:bg-[#A00000] text-white text-xs font-bold rounded-xl transition flex items-center justify-center space-x-1.5 cursor-pointer shadow-xs"
                         >
-                          <span>Open Village Wards ({v.totalWards})</span>
+                          <span>{t('paguthiDashboard.openVillageWardsBtn', 'Open Village Wards ({{count}})', { count: v.totalWards })}</span>
                           <ChevronRight className="w-3.5 h-3.5 flex-shrink-0" />
                         </button>
                       </div>
@@ -782,10 +872,14 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                   <div>
                     <h2 className="text-base sm:text-lg font-extrabold text-slate-900 flex items-center space-x-2">
                       <Building className="w-4 h-4 sm:w-5 sm:h-5 text-[#850000]" />
-                      <span>{selectedVillage ? `${selectedVillage} Village Ward Directory` : 'Municipal Ward Directory & Governance'}</span>
+                      <span>
+                        {selectedVillage
+                          ? t('paguthiDashboard.selectedVillageWardDirTitle', '{{village}} Village Ward Directory', { village: formatLocation(selectedVillage) })
+                          : t('paguthiDashboard.wardDirectoryTitle', 'Municipal Ward Directory & Governance')}
+                      </span>
                     </h2>
                     <p className="text-xs text-slate-500">
-                      Live directory of all {displayWards.length} wards belonging to {selectedVillage || paguthi} with assigned secretaries and complaint status
+                      {t('paguthiDashboard.wardDirectorySub', 'Live directory of all {{count}} wards belonging to {{area}} with assigned secretaries and complaint status', { count: displayWards.length, area: formatLocation(selectedVillage || paguthi) })}
                     </p>
                   </div>
 
@@ -796,7 +890,7 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                       type="text"
                       value={wardSearchQuery}
                       onChange={(e) => setWardSearchQuery(e.target.value)}
-                      placeholder="Search ward number, name, secretary..."
+                      placeholder={t('paguthiDashboard.searchPlaceholder', 'Search ward number, name, secretary...')}
                       className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-3 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#850000]/20 focus:border-[#850000] transition"
                     />
                   </div>
@@ -805,7 +899,7 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                 {/* Grid of Wards */}
                 {filteredWards.length === 0 ? (
                   <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 text-center text-slate-500 text-xs">
-                    No wards found matching "{wardSearchQuery}".
+                    {t('paguthiDashboard.noWardsFound', 'No wards found matching "{{query}}".', { query: wardSearchQuery })}
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5 sm:gap-4">
@@ -821,10 +915,10 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                           {/* Ward Number & Zone Badge */}
                           <div className="flex items-start justify-between">
                             <span className="px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-black bg-red-50 text-[#850000] border border-red-200">
-                              Ward {w.wardNumber}
+                              {t('paguthiDashboard.wardNumber', 'Ward {{number}}', { number: w.wardNumber })}
                             </span>
                             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                              {w.zone || 'South Zone'}
+                              {w.zone ? (isTa ? (w.zone.includes('South') ? t('paguthiDashboard.southZoneLabel', 'தெற்கு மண்டலம்') : w.zone) : w.zone) : t('paguthiDashboard.southZoneLabel', 'South Zone')}
                             </span>
                           </div>
 
@@ -832,15 +926,15 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                           {isMunicipalCleanWard ? (
                             <div className="pb-1">
                               <h3 className="text-sm sm:text-base font-extrabold text-slate-900 leading-snug">
-                                Ward {w.wardNumber}
+                                {t('paguthiDashboard.wardNumber', 'Ward {{number}}', { number: w.wardNumber })}
                               </h3>
                             </div>
                           ) : (
                             <div>
                               <h3 className="text-sm sm:text-base font-extrabold text-slate-900 leading-snug break-words">
-                                {w.wardName}
+                                {isTa ? (w.tamilName || w.wardName) : (w.wardName || w.tamilName)}
                               </h3>
-                              {w.tamilName && (
+                              {!isTa && w.tamilName && (
                                 <p className="text-[11px] text-slate-500 font-semibold mt-0.5 break-words">
                                   {w.tamilName}
                                 </p>
@@ -848,27 +942,27 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                             </div>
                           )}
 
-                          {/* Assigned Ward Secretary Info (Task 4) */}
+                          {/* Assigned Ward Secretary Info */}
                           <div className="bg-slate-50 rounded-xl p-2.5 border border-slate-200 space-y-1.5 text-xs">
                             <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-1 text-[11px]">
-                              <span className="text-slate-500 font-medium">Secretary:</span>
+                              <span className="text-slate-500 font-medium">{t('paguthiDashboard.secretaryLabel', 'Secretary:')}</span>
                               {w.hasAssignedSecretary && w.wardSecretary && w.wardSecretary !== 'Not Assigned' ? (
                                 <span className="font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 text-[10.5px] truncate max-w-[160px]">
                                   {w.wardSecretary}
                                 </span>
                               ) : (
                                 <span className="font-bold text-slate-500 bg-slate-200 px-2 py-0.5 rounded-full text-[10.5px]">
-                                  Not Assigned
+                                  {t('paguthiDashboard.notAssigned', 'Not Assigned')}
                                 </span>
                               )}
                             </div>
 
                             <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-1 text-[11px]">
                               <span className="text-slate-500 font-medium flex items-center gap-1">
-                                <Phone className="w-3 h-3 text-slate-400 flex-shrink-0" /> Contact:
+                                <Phone className="w-3 h-3 text-slate-400 flex-shrink-0" /> {t('paguthiDashboard.contactLabel', 'Contact:')}
                               </span>
                               <span className="font-semibold text-slate-700 font-mono text-[10.5px]">
-                                {w.contactNumber || 'Not Available'}
+                                {w.contactNumber || t('paguthiDashboard.notAvailable', 'Not Available')}
                               </span>
                             </div>
                           </div>
@@ -876,19 +970,19 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                           {/* Ward Complaint Statistics */}
                           <div className="grid grid-cols-3 gap-1.5 text-center text-[10px] pt-1">
                             <div className="bg-amber-50 p-1.5 rounded-lg border border-amber-200/60">
-                              <span className="text-amber-800 block font-semibold truncate">Pending</span>
+                              <span className="text-amber-800 block font-semibold truncate">{t('paguthiDashboard.pendingShort', 'Pending')}</span>
                               <strong className="text-amber-900 font-black text-xs">
                                 {w.stats.pendingComplaints}
                               </strong>
                             </div>
                             <div className="bg-sky-50 p-1.5 rounded-lg border border-sky-200/60">
-                              <span className="text-sky-800 block font-semibold truncate">In Prog</span>
+                              <span className="text-sky-800 block font-semibold truncate">{t('paguthiDashboard.inProgShort', 'In Prog')}</span>
                               <strong className="text-sky-900 font-black text-xs">
                                 {w.stats.inProgressComplaints}
                               </strong>
                             </div>
                             <div className="bg-emerald-50 p-1.5 rounded-lg border border-emerald-200/60">
-                              <span className="text-emerald-800 block font-semibold truncate">Done</span>
+                              <span className="text-emerald-800 block font-semibold truncate">{t('paguthiDashboard.doneShort', 'Done')}</span>
                               <strong className="text-emerald-900 font-black text-xs">
                                 {w.stats.resolvedComplaints}
                               </strong>
@@ -896,7 +990,7 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                           </div>
                         </div>
 
-                        {/* Card Action Button: Click opens Ward Complaints (Task 4 & 5) */}
+                        {/* Card Action Button: Click opens Ward Complaints */}
                         <div className="p-3.5 sm:p-4 pt-0">
                           <button
                             type="button"
@@ -906,7 +1000,7 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                             }}
                             className="w-full py-2 px-3 bg-[#FFF8F0] hover:bg-[#850000] hover:text-white text-[#850000] border border-[#FFE5A3] hover:border-[#850000] text-xs font-bold rounded-xl transition flex items-center justify-center space-x-1.5 cursor-pointer"
                           >
-                            <span>View Complaints ({w.stats.totalComplaints})</span>
+                            <span>{t('paguthiDashboard.viewComplaintsBtn', 'View Complaints ({{count}})', { count: w.stats.totalComplaints })}</span>
                             <ChevronRight className="w-3.5 h-3.5 flex-shrink-0" />
                           </button>
                         </div>
@@ -917,16 +1011,26 @@ export const PaguthiSeyalaalarDashboardPage = () => {
               </div>
             )}
 
-            {/* ================= TASK 5: ALL COMPLAINTS SECTION ================= */}
+            {/* ================= ALL COMPLAINTS SECTION ================= */}
             <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 border border-[#E9E2DC] shadow-xs space-y-4 sm:space-y-5">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                   <h2 className="text-base sm:text-lg font-extrabold text-slate-900 flex items-center space-x-2">
                     <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-[#850000]" />
-                    <span>Complete Grievance Tracking Repository ({selectedVillage ? `${selectedVillage} Village` : `${paguthi} ${hasVillages ? 'Ondriyam' : paguthi.includes('Nagaram') ? 'Nagaram' : 'Paguthi'}`})</span>
+                    <span>
+                      {t('paguthiDashboard.repoTitle', 'Complete Grievance Tracking Repository ({{area}})', {
+                        area: selectedVillage
+                          ? `${formatLocation(selectedVillage)} ${t('paguthiDashboard.village', 'Village')}`
+                          : `${formatLocation(paguthi)} ${getDivisionNoun()}`,
+                      })}
+                    </span>
                   </h2>
                   <p className="text-xs text-slate-500">
-                    Live grievance records received across {selectedVillage ? `${selectedVillage} Village wards` : `all ${paguthi} wards`} from citizen portal
+                    {t('paguthiDashboard.repoSub', 'Live grievance records received across {{area}} from citizen portal', {
+                      area: selectedVillage
+                        ? `${formatLocation(selectedVillage)} ${t('paguthiDashboard.villageWards', 'Village wards')}`
+                        : t('paguthiDashboard.allWardsOf', 'all {{paguthi}} wards', { paguthi: formatLocation(paguthi) }),
+                    })}
                   </p>
                 </div>
 
@@ -939,7 +1043,7 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                         : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
-                    All ({allComplaints.length})
+                    {t('paguthiDashboard.filterAll', 'All ({{count}})', { count: allComplaints.length })}
                   </button>
                   <button
                     onClick={() => setComplaintStatusFilter('pending')}
@@ -949,7 +1053,7 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                         : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
-                    Pending ({stats.pendingComplaints})
+                    {t('paguthiDashboard.filterPending', 'Pending ({{count}})', { count: stats.pendingComplaints })}
                   </button>
                   <button
                     onClick={() => setComplaintStatusFilter('in_progress')}
@@ -959,7 +1063,7 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                         : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
-                    In Progress ({stats.inProgressComplaints})
+                    {t('paguthiDashboard.filterInProgress', 'In Progress ({{count}})', { count: stats.inProgressComplaints })}
                   </button>
                   <button
                     onClick={() => setComplaintStatusFilter('resolved')}
@@ -969,7 +1073,7 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                         : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
-                    Resolved ({stats.resolvedComplaints})
+                    {t('paguthiDashboard.filterResolved', 'Resolved ({{count}})', { count: stats.resolvedComplaints })}
                   </button>
                 </div>
               </div>
@@ -977,7 +1081,7 @@ export const PaguthiSeyalaalarDashboardPage = () => {
               {/* Complaints List - Responsive Card View on Mobile, Full Table on Desktop */}
               {getFilteredWardComplaints(allComplaints).length === 0 ? (
                 <div className="text-center py-10 text-slate-500 text-xs">
-                  No grievances found matching this status filter.
+                  {t('paguthiDashboard.noGrievancesMatch', 'No grievances found matching this status filter.')}
                 </div>
               ) : (
                 <>
@@ -998,15 +1102,15 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                             </span>
                             {isResolved ? (
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                <CheckCircle2 className="w-3 h-3" /> Resolved
+                                <CheckCircle2 className="w-3 h-3" /> {t('paguthiDashboard.statusResolved', 'Resolved')}
                               </span>
                             ) : isInProgress ? (
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-sky-50 text-sky-700 border border-sky-200">
-                                <Activity className="w-3 h-3" /> In Progress
+                                <Activity className="w-3 h-3" /> {t('paguthiDashboard.statusInProgress', 'In Progress')}
                               </span>
                             ) : (
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-50 text-amber-700 border border-amber-200">
-                                <Clock className="w-3 h-3" /> {c.status || 'Pending'}
+                                <Clock className="w-3 h-3" /> {formatStatus(c.status)}
                               </span>
                             )}
                           </div>
@@ -1018,13 +1122,13 @@ export const PaguthiSeyalaalarDashboardPage = () => {
 
                           <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-1.5 text-[10.5px] text-slate-500">
                             <div>
-                              Ward <strong className="text-slate-800">{c.wardNumber}</strong> •{' '}
+                              {t('paguthiDashboard.wardNumber', 'Ward {{number}}', { number: c.wardNumber })} •{' '}
                               <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 font-semibold text-[9.5px]">
-                                {c.category || 'General'}
+                                {formatCategory(c.category)}
                               </span>
                             </div>
                             <div>
-                              {c.citizenName} • {c.createdAt ? new Date(c.createdAt).toLocaleDateString('en-GB') : ''}
+                              {c.citizenName} • {c.createdAt ? new Date(c.createdAt).toLocaleDateString(isTa ? 'ta-IN' : 'en-GB') : ''}
                             </div>
                           </div>
                         </div>
@@ -1037,13 +1141,13 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                     <table className="w-full text-left text-xs">
                       <thead>
                         <tr className="border-b border-slate-200 text-slate-500 text-[10.5px] uppercase font-bold tracking-wider">
-                          <th className="py-2.5 px-3">Grievance ID</th>
-                          <th className="py-2.5 px-3">Ward</th>
-                          <th className="py-2.5 px-3">Subject & Details</th>
-                          <th className="py-2.5 px-3">Category</th>
-                          <th className="py-2.5 px-3">Citizen Info</th>
-                          <th className="py-2.5 px-3">Date</th>
-                          <th className="py-2.5 px-3 text-right">Status</th>
+                          <th className="py-2.5 px-3">{t('paguthiDashboard.colGrievanceId', 'Grievance ID')}</th>
+                          <th className="py-2.5 px-3">{t('paguthiDashboard.colWard', 'Ward')}</th>
+                          <th className="py-2.5 px-3">{t('paguthiDashboard.colSubject', 'Subject & Details')}</th>
+                          <th className="py-2.5 px-3">{t('paguthiDashboard.colCategory', 'Category')}</th>
+                          <th className="py-2.5 px-3">{t('paguthiDashboard.colCitizenInfo', 'Citizen Info')}</th>
+                          <th className="py-2.5 px-3">{t('paguthiDashboard.colDate', 'Date')}</th>
+                          <th className="py-2.5 px-3 text-right">{t('paguthiDashboard.colStatus', 'Status')}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
@@ -1057,7 +1161,7 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                                 {c.issueCode || `GRI-${c.id}`}
                               </td>
                               <td className="py-3 px-3 font-semibold text-slate-800">
-                                Ward {c.wardNumber}
+                                {t('paguthiDashboard.wardNumber', 'Ward {{number}}', { number: c.wardNumber })}
                               </td>
                               <td className="py-3 px-3 max-w-xs">
                                 <span className="font-bold text-slate-900 block truncate">{c.title}</span>
@@ -1065,7 +1169,7 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                               </td>
                               <td className="py-3 px-3">
                                 <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
-                                  {c.category || 'General'}
+                                  {formatCategory(c.category)}
                                 </span>
                               </td>
                               <td className="py-3 px-3 text-[11px]">
@@ -1073,20 +1177,20 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                                 <span className="text-slate-500 font-mono text-[10px]">{c.citizenMobile}</span>
                               </td>
                               <td className="py-3 px-3 text-[11px] text-slate-600 whitespace-nowrap">
-                                {c.createdAt ? new Date(c.createdAt).toLocaleDateString('en-GB') : '—'}
+                                {c.createdAt ? new Date(c.createdAt).toLocaleDateString(isTa ? 'ta-IN' : 'en-GB') : '—'}
                               </td>
                               <td className="py-3 px-3 text-right">
                                 {isResolved ? (
                                   <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                    <CheckCircle2 className="w-3 h-3" /> Resolved
+                                    <CheckCircle2 className="w-3 h-3" /> {t('paguthiDashboard.statusResolved', 'Resolved')}
                                   </span>
                                 ) : isInProgress ? (
                                   <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-sky-50 text-sky-700 border border-sky-200">
-                                    <Activity className="w-3 h-3" /> In Progress
+                                    <Activity className="w-3 h-3" /> {t('paguthiDashboard.statusInProgress', 'In Progress')}
                                   </span>
                                 ) : (
                                   <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-50 text-amber-700 border border-amber-200">
-                                    <Clock className="w-3 h-3" /> {c.status || 'Pending'}
+                                    <Clock className="w-3 h-3" /> {formatStatus(c.status)}
                                   </span>
                                 )}
                               </td>
@@ -1102,7 +1206,7 @@ export const PaguthiSeyalaalarDashboardPage = () => {
           </div>
         )}
 
-        {/* ================= WARD COMPLAINTS DEEP-DIVE MODAL (TASKS 4 & 5) ================= */}
+        {/* ================= WARD COMPLAINTS DEEP-DIVE MODAL ================= */}
         {selectedWardForComplaints && (
           <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-2.5 sm:p-4">
             <div className="bg-white rounded-2xl sm:rounded-3xl max-w-4xl w-full max-h-[92vh] sm:max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden">
@@ -1111,26 +1215,30 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                 <div className="min-w-0 pr-2">
                   <div className="flex flex-wrap items-center gap-1.5 text-xs">
                     <span className="font-mono bg-black/40 px-2 py-0.5 rounded border border-[#FFD32A]/30 text-[#FFD32A]">
-                      {selectedVillage ? `${selectedVillage} • ` : ''}{paguthi}
+                      {selectedVillage ? `${formatLocation(selectedVillage)} • ` : ''}{formatLocation(paguthi)}
                     </span>
                     <span className="text-white/80">•</span>
-                    <span className="text-white/90 font-semibold">{selectedWardForComplaints.zone}</span>
+                    <span className="text-white/90 font-semibold">
+                      {selectedWardForComplaints.zone ? (isTa ? (selectedWardForComplaints.zone.includes('South') ? t('paguthiDashboard.southZoneLabel', 'தெற்கு மண்டலம்') : selectedWardForComplaints.zone) : selectedWardForComplaints.zone) : t('paguthiDashboard.southZoneLabel', 'South Zone')}
+                    </span>
                   </div>
                   <h3 className="text-base sm:text-xl lg:text-2xl font-black mt-1 break-words">
-                    Ward {selectedWardForComplaints.wardNumber}
-                    {!isMunicipalCleanWard && selectedWardForComplaints.wardName ? ` - ${selectedWardForComplaints.wardName}` : ''}
+                    {t('paguthiDashboard.wardNumber', 'Ward {{number}}', { number: selectedWardForComplaints.wardNumber })}
+                    {!isMunicipalCleanWard && selectedWardForComplaints.wardName ? ` - ${isTa ? (selectedWardForComplaints.tamilName || selectedWardForComplaints.wardName) : selectedWardForComplaints.wardName}` : ''}
                   </h3>
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5 text-xs text-red-100">
                     <div>
-                      Secretary:{' '}
+                      {t('paguthiDashboard.secretaryLabel', 'Secretary:')}{' '}
                       <strong className="text-white">
-                        {selectedWardForComplaints.wardSecretary || 'Not Assigned'}
+                        {selectedWardForComplaints.wardSecretary && selectedWardForComplaints.wardSecretary !== 'Not Assigned'
+                          ? selectedWardForComplaints.wardSecretary
+                          : t('paguthiDashboard.notAssigned', 'Not Assigned')}
                       </strong>
                     </div>
                     <div>
-                      Contact:{' '}
+                      {t('paguthiDashboard.contactLabel', 'Contact:')}{' '}
                       <strong className="text-[#FFD32A] font-mono">
-                        {selectedWardForComplaints.contactNumber || 'Not Available'}
+                        {selectedWardForComplaints.contactNumber || t('paguthiDashboard.notAvailable', 'Not Available')}
                       </strong>
                     </div>
                   </div>
@@ -1148,7 +1256,7 @@ export const PaguthiSeyalaalarDashboardPage = () => {
               {/* Status Tabs inside Modal */}
               <div className="p-3 sm:p-4 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2">
                 <span className="text-xs font-bold text-slate-700 whitespace-nowrap">
-                  Grievances ({selectedWardForComplaints.complaints.length})
+                  {t('paguthiDashboard.modalGrievancesCount', 'Grievances ({{count}})', { count: selectedWardForComplaints.complaints.length })}
                 </span>
 
                 <div className="flex flex-wrap gap-1 text-xs">
@@ -1163,7 +1271,13 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                           : 'bg-white text-slate-600 hover:bg-slate-200 border border-slate-200'
                       }`}
                     >
-                      {st.replace('_', ' ')}
+                      {st === 'all'
+                        ? t('paguthiDashboard.tabAll', 'All')
+                        : st === 'pending'
+                        ? t('paguthiDashboard.tabPending', 'Pending')
+                        : st === 'in_progress'
+                        ? t('paguthiDashboard.tabInProgress', 'In Progress')
+                        : t('paguthiDashboard.tabResolved', 'Resolved')}
                     </button>
                   ))}
                 </div>
@@ -1176,9 +1290,9 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                     <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-3">
                       <CheckCircle2 className="w-6 h-6" />
                     </div>
-                    <h4 className="text-base font-bold text-slate-800">No Complaints Found</h4>
+                    <h4 className="text-base font-bold text-slate-800">{t('paguthiDashboard.noComplaintsFound', 'No Complaints Found')}</h4>
                     <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1">
-                      No citizen complaints found for Ward {selectedWardForComplaints.wardNumber} in {paguthi} Paguthi.
+                      {t('paguthiDashboard.noComplaintsDesc', 'No citizen complaints found for Ward {{wardNumber}} in {{paguthi}}.', { wardNumber: selectedWardForComplaints.wardNumber, paguthi: formatLocation(paguthi) })}
                     </p>
                   </div>
                 ) : (
@@ -1191,9 +1305,11 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                     const category = c.category || 'General';
                     const description = c.description || c.title || '-';
                     const regDate = c.createdAt
-                      ? new Date(c.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+                      ? new Date(c.createdAt).toLocaleDateString(isTa ? 'ta-IN' : 'en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
                       : '-';
-                    const assignedSec = selectedWardForComplaints.wardSecretary || 'Not Assigned';
+                    const assignedSec = selectedWardForComplaints.wardSecretary && selectedWardForComplaints.wardSecretary !== 'Not Assigned'
+                      ? selectedWardForComplaints.wardSecretary
+                      : t('paguthiDashboard.notAssigned', 'Not Assigned');
 
                     return (
                       <div
@@ -1206,7 +1322,7 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                               {complaintId}
                             </span>
                             <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
-                              {category}
+                              {formatCategory(category)}
                             </span>
                             <span className="text-[10px] sm:text-[10.5px] text-slate-500 font-medium">
                               {regDate}
@@ -1215,15 +1331,15 @@ export const PaguthiSeyalaalarDashboardPage = () => {
 
                           {isResolved ? (
                             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200">
-                              <CheckCircle2 className="w-3 h-3" /> Resolved
+                              <CheckCircle2 className="w-3 h-3" /> {t('paguthiDashboard.statusResolved', 'Resolved')}
                             </span>
                           ) : isInProgress ? (
                             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-sky-50 text-sky-700 border border-sky-200">
-                              <Activity className="w-3 h-3" /> In Progress
+                              <Activity className="w-3 h-3" /> {t('paguthiDashboard.statusInProgress', 'In Progress')}
                             </span>
                           ) : (
                             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-50 text-amber-700 border border-amber-200">
-                              <Clock className="w-3 h-3" /> {c.status || 'Pending'}
+                              <Clock className="w-3 h-3" /> {formatStatus(c.status)}
                             </span>
                           )}
                         </div>
@@ -1233,18 +1349,18 @@ export const PaguthiSeyalaalarDashboardPage = () => {
 
                         <div className="pt-2 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 text-[10.5px] sm:text-[11px] text-slate-600 bg-slate-50/70 p-2 rounded-lg">
                           <div>
-                            <span className="text-slate-400 block text-[10px] uppercase font-bold">Citizen & Mobile</span>
+                            <span className="text-slate-400 block text-[10px] uppercase font-bold">{t('paguthiDashboard.citizenAndMobile', 'Citizen & Mobile')}</span>
                             <strong className="text-slate-800">{citizenName}</strong> •{' '}
                             <span className="font-mono font-semibold text-slate-700">{citizenMobile}</span>
                           </div>
                           <div>
-                            <span className="text-slate-400 block text-[10px] uppercase font-bold">Paguthi & Ward</span>
-                            <strong className="text-[#850000]">{selectedVillage || paguthi}</strong> •{' '}
-                            <span className="text-slate-700">Ward {selectedWardForComplaints.wardNumber}</span>
+                            <span className="text-slate-400 block text-[10px] uppercase font-bold">{t('paguthiDashboard.jurisdictionAndWard', 'Jurisdiction & Ward')}</span>
+                            <strong className="text-[#850000]">{formatLocation(selectedVillage || paguthi)}</strong> •{' '}
+                            <span className="text-slate-700">{t('paguthiDashboard.wardNumber', 'Ward {{number}}', { number: selectedWardForComplaints.wardNumber })}</span>
                           </div>
                           <div>
-                            <span className="text-slate-400 block text-[10px] uppercase font-bold">Assigned Secretary</span>
-                            <span className={`font-bold ${assignedSec !== 'Not Assigned' ? 'text-emerald-800' : 'text-slate-500'}`}>
+                            <span className="text-slate-400 block text-[10px] uppercase font-bold">{t('paguthiDashboard.assignedSecretary', 'Assigned Secretary')}</span>
+                            <span className={`font-bold ${assignedSec !== t('paguthiDashboard.notAssigned', 'Not Assigned') ? 'text-emerald-800' : 'text-slate-500'}`}>
                               {assignedSec}
                             </span>
                           </div>
@@ -1262,7 +1378,7 @@ export const PaguthiSeyalaalarDashboardPage = () => {
                   onClick={() => setSelectedWardForComplaints(null)}
                   className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-xl transition cursor-pointer"
                 >
-                  Close
+                  {t('paguthiDashboard.closeBtn', 'Close')}
                 </button>
               </div>
             </div>

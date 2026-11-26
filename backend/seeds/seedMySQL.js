@@ -42,16 +42,16 @@ export const seedMySQLDatabase = async () => {
         name: 'Coimbatore District Administrator',
         username: 'admin',
         email: 'admin@tvkcbe.org',
-        password: 'admin@123',
+        password: 'Vigneshadmin@2026',
         role: 'superadmin',
         phone: '9443012345',
         assignedDistrict: 'Coimbatore',
         assignedWard: 'All Wards',
         isActive: true,
       });
-      console.log('👤 Created default superadmin: admin / admin@123');
+      console.log('👤 Created default superadmin: admin');
     } else {
-      adminUser.password = 'admin@123';
+      adminUser.password = 'Vigneshadmin@2026';
       await adminUser.save();
     }
 
@@ -62,7 +62,7 @@ export const seedMySQLDatabase = async () => {
         name: 'Coimbatore South Sub-Administrator',
         username: 'subadmin',
         email: 'subadmin@tvkcbe.org',
-        password: 'subadmin123',
+        password: 'Subadmin@2024',
         role: 'subadmin',
         phone: '9443012346',
         assignedDistrict: 'Coimbatore',
@@ -70,9 +70,9 @@ export const seedMySQLDatabase = async () => {
         assignedWard: 'Wards 71-85',
         isActive: true,
       });
-      console.log('👤 Created subadmin: subadmin / subadmin123');
+      console.log('👤 Created subadmin: subadmin');
     } else {
-      subAdmin.password = 'subadmin123';
+      subAdmin.password = 'Subadmin@2024';
       await subAdmin.save();
     }
 
