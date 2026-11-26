@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import api from '../../services/api';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
-import { getVillagesForPaguthi } from '../../utils/paguthiWardData';
+import { getVillagesForPaguthi, PAGUTHI_OPTIONS } from '../../utils/paguthiWardData';
 
 export const ConstituencyDetailPage = () => {
   const { id } = useParams();
@@ -46,22 +46,13 @@ export const ConstituencyDetailPage = () => {
 
   const { constituency, paguthis = [], wards = [], issues = [], members = [] } = data;
 
-  const KINATHUKADAVU_PAGUTHIS_ORDER = [
-    'Thondamuthur Therkku Ondriyam',
-    'Thondamuthur Merkku Ondriyam',
-    'Madukkarai Therkku Ondriyam',
-    'Madukkarai Merkku Ondriyam',
-    'Madukkarai Nagaram',
-    'Vellalur Nagaram',
-    'Kinathukadavu Ondriyam',
-    'Malumachampatti',
-    'Pothanur',
-    'Kurichi',
-    'Sundarapuram',
-  ];
+  const KINATHUKADAVU_PAGUTHIS_ORDER = PAGUTHI_OPTIONS;
 
   const rawPaguthisList = Array.isArray(paguthis) ? paguthis : [];
-  const isKinathukadavu = constituency?.name?.toLowerCase().includes('kinathu') || constituency?.code === 'KKD';
+  const isKinathukadavu =
+    constituency?.name?.toLowerCase().includes('kinathu') ||
+    constituency?.code === 'KKD' ||
+    constituency?.code === 'KIN';
 
   const displayPaguthis = isKinathukadavu
     ? KINATHUKADAVU_PAGUTHIS_ORDER.map((pName) => {

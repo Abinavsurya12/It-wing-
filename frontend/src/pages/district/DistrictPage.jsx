@@ -8,6 +8,7 @@ import {
 import api from '../../services/api';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import AdminPageHeader from '../../components/common/AdminPageHeader';
+import { PAGUTHI_OPTIONS, normalizePaguthiName } from '../../utils/paguthiWardData';
 
 export const DistrictPage = () => {
   const navigate = useNavigate();
@@ -55,7 +56,7 @@ export const DistrictPage = () => {
     category: 'Assembly Constituency',
     tamilName: 'கிணத்துக்கடவு',
     code: 'KKD',
-    totalPaguthi: 11,
+    totalPaguthi: PAGUTHI_OPTIONS.length,
     wardCount: 6,
     memberCount: 0,
   };
@@ -71,6 +72,7 @@ export const DistrictPage = () => {
     const kinathuPaguthiNames = [
       'Pothanur', 'Podanur', 'Kurichi', 'Sundarapuram',
       'Malumichampatti', 'Malumachampatti', 'Kinathukadavu Ondriyam',
+      'Kinathukadavu Nagaram',
       'Madukkarai Nagaram', 'Vellalur Nagaram',
       'Thondamuthur Therkku Ondriyam', 'Thondamuthur Merkku Ondriyam',
       'Madukkarai Therkku Ondriyam', 'Madukkarai Merkku Ondriyam'
@@ -86,21 +88,35 @@ export const DistrictPage = () => {
   );
   const totalLiveWards = uniqueKinathuWardNumbers.size > 0 ? uniqueKinathuWardNumbers.size : kinathuWards.length;
 
-  // 3. Compute actual Total Paguthi count from live MySQL data (combining local bodies and municipal paguthis)
+  // 3. Compute actual Total Paguthi count dynamically from configured Paguthis and live MySQL data
   const kinathuPaguthisSet = new Set();
+
+  // A. Add all configured Paguthis (the exact 12 cards available inside Thoguthi)
+  PAGUTHI_OPTIONS.forEach((p) => {
+    const clean = normalizePaguthiName(p) || p;
+    kinathuPaguthisSet.add(clean);
+  });
+
+  // B. Include any Paguthis returned dynamically by the API
   if (Array.isArray(kinathukadavu?.paguthis)) {
     kinathukadavu.paguthis.forEach((p) => {
-      const name = typeof p === 'string' ? p : p?.name;
-      if (name) kinathuPaguthisSet.add(name === 'Podanur' ? 'Pothanur' : (name === 'Malumichampatti' ? 'Malumachampatti' : name));
+      const rawName = typeof p === 'string' ? p : p?.name;
+      if (rawName) {
+        const clean = normalizePaguthiName(rawName) || (rawName === 'Podanur' ? 'Pothanur' : (rawName === 'Malumichampatti' ? 'Malumachampatti' : rawName));
+        kinathuPaguthisSet.add(clean);
+      }
     });
   }
+
+  // C. Include any live ward-assigned Paguthis from MySQL avoiding duplicates
   kinathuWards.forEach((w) => {
     if (w.paguthi) {
-      const name = w.paguthi === 'Podanur' ? 'Pothanur' : (w.paguthi === 'Malumichampatti' ? 'Malumachampatti' : w.paguthi);
-      kinathuPaguthisSet.add(name);
+      const clean = normalizePaguthiName(w.paguthi) || (w.paguthi === 'Podanur' ? 'Pothanur' : (w.paguthi === 'Malumichampatti' ? 'Malumachampatti' : w.paguthi));
+      kinathuPaguthisSet.add(clean);
     }
   });
-  const totalLivePaguthis = kinathuPaguthisSet.size > 0 ? kinathuPaguthisSet.size : (kinathukadavu.totalPaguthi || 11);
+
+  const totalLivePaguthis = kinathuPaguthisSet.size;
 
   return (
     <div className="space-y-6">

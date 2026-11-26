@@ -35,7 +35,7 @@ export const seedMySQLDatabase = async () => {
   try {
     console.log('🌱 Checking and seeding initial Coimbatore District data into MySQL...');
 
-    // 1. Admin Users
+    // 1. Admin Users - Safe existence check (do not overwrite existing credentials)
     let adminUser = await User.findOne({ where: { username: 'admin' } });
     if (!adminUser) {
       adminUser = await User.create({
@@ -50,12 +50,9 @@ export const seedMySQLDatabase = async () => {
         isActive: true,
       });
       console.log('👤 Created default superadmin: admin');
-    } else {
-      adminUser.password = 'Vigneshadmin@2026';
-      await adminUser.save();
     }
 
-    // Role 2: Subadmin
+    // Role 2: Subadmin - Safe existence check (do not overwrite existing credentials)
     let subAdmin = await User.findOne({ where: { username: 'subadmin' } });
     if (!subAdmin) {
       subAdmin = await User.create({
@@ -71,9 +68,6 @@ export const seedMySQLDatabase = async () => {
         isActive: true,
       });
       console.log('👤 Created subadmin: subadmin');
-    } else {
-      subAdmin.password = 'Subadmin@2024';
-      await subAdmin.save();
     }
 
     // Role 3: Citizen / User

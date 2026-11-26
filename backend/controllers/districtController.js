@@ -21,6 +21,7 @@ export const KINATHUKADAVU_LOCAL_BODIES = [
   'Madukkarai Nagaram',
   'Vellalur Nagaram',
   'Kinathukadavu Ondriyam',
+  'Kinathukadavu Nagaram',
   'Malumachampatti',
 ];
 
@@ -28,6 +29,11 @@ export const MUNICIPAL_PAGUTHIS = [
   'Pothanur',
   'Kurichi',
   'Sundarapuram',
+];
+
+export const KINATHUKADAVU_ALL_PAGUTHIS = [
+  ...KINATHUKADAVU_LOCAL_BODIES,
+  ...MUNICIPAL_PAGUTHIS,
 ];
 
 export const getCanonicalTargetPaguthis = (pName) => {
@@ -49,9 +55,59 @@ export const getCanonicalTargetPaguthis = (pName) => {
     return ['Madukkarai Merkku Ondriyam', 'Madukarai Merku Ondriyam', 'Madukkarai Merku Ondriyam'];
   }
   if (norm === 'Kinathukadavu Ondriyam') return ['Kinathukadavu Ondriyam'];
+  if (norm === 'Kinathukadavu Nagaram') return ['Kinathukadavu Nagaram'];
   if (norm === 'Madukkarai Nagaram') return ['Madukkarai Nagaram'];
   if (norm === 'Vellalur Nagaram') return ['Vellalur Nagaram'];
   return [pName];
+};
+
+// Helper to augment constituencies with live ward, member, issue, and paguthi counts
+export const augmentConstituencyList = async (constituencies) => {
+  return Promise.all(
+    constituencies.map(async (c) => {
+      const cId = c.id;
+      const wardCount = await Ward.count({ where: { constituencyId: cId } });
+      const issueCount = await Issue.count({ where: { constituencyId: cId } });
+      const memberCount = await Member.count({ where: { constituencyId: cId } });
+
+      const isKinathukadavu =
+        (c.name && c.name.toLowerCase().includes('kinathu')) ||
+        c.code === 'KKD' ||
+        c.code === 'KIN';
+
+      let paguthiList = c.paguthis || [];
+      if (isKinathukadavu) {
+        paguthiList = KINATHUKADAVU_ALL_PAGUTHIS;
+      } else if (c.paguthis && c.paguthis.length > 0) {
+        paguthiList = typeof c.paguthis === 'string' ? JSON.parse(c.paguthis) : [...c.paguthis];
+      }
+
+      // Dynamically include any other paguthis with wards for non-fixed constituencies
+      if (!isKinathukadavu) {
+        const dbWardPaguthis = await Ward.findAll({
+          where: { constituencyId: cId },
+          attributes: ['paguthi'],
+          group: ['paguthi'],
+        });
+        dbWardPaguthis.forEach((wp) => {
+          if (wp.paguthi && !paguthiList.includes(wp.paguthi)) {
+            paguthiList.push(wp.paguthi);
+          }
+        });
+      }
+
+      const paguthiCount = paguthiList.length;
+
+      return {
+        ...c.toObject(),
+        wardCount,
+        issueCount,
+        memberCount,
+        totalPaguthi: paguthiCount,
+        paguthis: paguthiList,
+      };
+    })
+  );
 };
 
 // @desc    Get District Overview
@@ -71,7 +127,8 @@ export const getDistrictOverview = async (req, res) => {
       });
     }
 
-    const constituencies = await Constituency.findAll({ order: [['name', 'ASC']] });
+    const rawConstituencies = await Constituency.findAll({ order: [['name', 'ASC']] });
+    const constituencies = await augmentConstituencyList(rawConstituencies);
     const totalIssues = await Issue.count();
     const totalMembers = await Member.count();
     const totalWards = await Ward.count();
@@ -100,48 +157,7 @@ export const getDistrictOverview = async (req, res) => {
 export const getConstituencies = async (req, res) => {
   try {
     const constituencies = await Constituency.findAll({ order: [['name', 'ASC']] });
-    // Augment with live ward, member, issue, and paguthi counts
-    const augmented = await Promise.all(
-      constituencies.map(async (c) => {
-        const cId = c.id;
-        const wardCount = await Ward.count({ where: { constituencyId: cId } });
-        const issueCount = await Issue.count({ where: { constituencyId: cId } });
-        const memberCount = await Member.count({ where: { constituencyId: cId } });
-
-        // Count distinct paguthis or default for Kinathukadavu
-        let paguthiList = c.paguthis || [];
-        if (c.name && c.name.toLowerCase().includes('kinathu')) {
-          paguthiList = KINATHUKADAVU_LOCAL_BODIES;
-        } else if (c.paguthis && c.paguthis.length > 0) {
-          paguthiList = typeof c.paguthis === 'string' ? JSON.parse(c.paguthis) : [...c.paguthis];
-        }
-
-        // Dynamically include any other paguthis with wards for non-fixed constituencies
-        if (!c.name || !c.name.toLowerCase().includes('kinathu')) {
-          const dbWardPaguthis = await Ward.findAll({
-            where: { constituencyId: cId },
-            attributes: ['paguthi'],
-            group: ['paguthi'],
-          });
-          dbWardPaguthis.forEach((wp) => {
-            if (wp.paguthi && !paguthiList.includes(wp.paguthi)) {
-              paguthiList.push(wp.paguthi);
-            }
-          });
-        }
-
-        const paguthiCount = paguthiList.length || (c.name && c.name.toLowerCase().includes('kinathu') ? 12 : 0);
-
-        return {
-          ...c.toObject(),
-          wardCount,
-          issueCount,
-          memberCount,
-          totalPaguthi: paguthiCount,
-          paguthis: paguthiList,
-        };
-      })
-    );
+    const augmented = await augmentConstituencyList(constituencies);
     res.json({ success: true, data: augmented });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -170,10 +186,13 @@ export const getConstituencyById = async (req, res) => {
       limit: 10,
     });
 
-    const isKinathukadavu = constituency.name && constituency.name.toLowerCase().includes('kinathu');
+    const isKinathukadavu =
+      (constituency.name && constituency.name.toLowerCase().includes('kinathu')) ||
+      constituency.code === 'KKD' ||
+      constituency.code === 'KIN';
     let paguthiNames = [];
     if (isKinathukadavu) {
-      paguthiNames = KINATHUKADAVU_LOCAL_BODIES;
+      paguthiNames = KINATHUKADAVU_ALL_PAGUTHIS;
     } else {
       if (constituency.paguthis && constituency.paguthis.length > 0) {
         paguthiNames = typeof constituency.paguthis === 'string'
