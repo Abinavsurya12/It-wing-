@@ -245,17 +245,31 @@ export const LoginPage = () => {
                 </div>
 
                 {/* TEXT CONTENT IMMEDIATELY TO THE RIGHT - REFINED BALANCED TYPOGRAPHY */}
-                <div className="pb-3 sm:pb-4 md:pb-5 text-left flex-1 min-w-0 pr-2 sm:pr-4 md:pr-5 pl-1 sm:pl-0">
-                  <h2 className="text-xs min-[360px]:text-[13px] sm:text-base md:text-sm lg:text-[17px] xl:text-lg font-bold sm:font-extrabold leading-snug text-white drop-shadow-md">
-                    {t('auth.dedicated')}
-                    <span className="block text-[#FFD32A] mt-0.5">{t('auth.delivering')}</span>
+                <div className="pb-5 sm:pb-7 md:pb-8 lg:pb-9 text-left flex-1 min-w-0 pr-2 sm:pr-3 md:pr-4 pl-1 sm:pl-0">
+                  <h2 className="text-[11px] min-[360px]:text-xs sm:text-base md:text-[13px] min-[900px]:text-sm lg:text-[16px] xl:text-[19px] 2xl:text-[18px] font-extrabold leading-snug tracking-tight text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)]">
+                    Tamil Nadu&apos;s First Grievance Portal
                   </h2>
 
-                  {/* Decorative Underline */}
-                  <div className="w-6 sm:w-8 h-0.5 sm:h-1 bg-[#FFD32A] rounded-full mt-1 mb-1 shadow-xs"></div>
+                  {/* Accent Underline */}
+                  <div className="w-8 sm:w-10 h-0.5 sm:h-1 bg-[#FFD32A] rounded-full mt-1.5 sm:mt-2 mb-2 sm:mb-2.5 shadow-xs"></div>
 
-                  <p className="text-white/90 text-[9.5px] min-[360px]:text-[10px] sm:text-xs md:text-[11px] lg:text-xs leading-relaxed drop-shadow-sm font-normal sm:font-medium line-clamp-3 sm:line-clamp-none">
-                    {t('auth.leftDesc')}
+                  <div
+                    className="space-y-1 sm:space-y-1.5 text-[9px] min-[360px]:text-[10px] min-[430px]:text-[11px] sm:text-[13px] md:text-[10.5px] min-[900px]:text-[11.5px] lg:text-[12.5px] xl:text-[14px] 2xl:text-[13.5px] leading-snug drop-shadow-[0_2px_4px_rgba(0,0,0,0.75)]"
+                    style={{ fontFamily: "'Noto Sans Tamil', sans-serif" }}
+                  >
+                    <p className="font-semibold text-white/95 whitespace-nowrap">
+                      முதன்மைத் தொகுதி
+                    </p>
+                    <p className="font-semibold text-white/95 whitespace-nowrap">
+                      முன்னேற்றத்திற்கான தொகுதி
+                    </p>
+                  </div>
+
+                  <p
+                    className="mt-3 sm:mt-4 text-[9px] min-[360px]:text-[10px] min-[430px]:text-[11px] sm:text-[13px] md:text-[10.5px] min-[900px]:text-[11.5px] lg:text-[12.5px] xl:text-[14px] 2xl:text-[13.5px] font-bold text-[#FFD32A] leading-snug whitespace-nowrap drop-shadow-[0_2px_5px_rgba(0,0,0,0.85)]"
+                    style={{ fontFamily: "'Noto Sans Tamil', sans-serif" }}
+                  >
+                    நமது கிணத்துக்கடவு தொகுதி
                   </p>
                 </div>
 

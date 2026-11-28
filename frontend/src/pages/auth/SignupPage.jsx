@@ -290,17 +290,31 @@ export const SignupPage = () => {
                 </div>
 
                 {/* TEXT CONTENT IMMEDIATELY TO THE RIGHT */}
-                <div className="pb-3 sm:pb-5 md:pb-6 text-left flex-1 min-w-0">
-                  <h2 className="text-base sm:text-lg md:text-xl font-extrabold leading-snug text-white drop-shadow-md">
-                    {t('auth.dedicated')}
-                    <span className="block text-[#FFD32A] mt-0.5">{t('auth.delivering')}</span>
+                <div className="pb-5 sm:pb-7 md:pb-8 lg:pb-9 text-left flex-1 min-w-0 w-full sm:w-auto">
+                  <h2 className="text-base sm:text-base md:text-xs lg:text-[15px] xl:text-[19px] font-extrabold leading-snug tracking-tight text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)]">
+                    Tamil Nadu&apos;s First Grievance Portal
                   </h2>
 
-                  {/* Decorative Underline */}
-                  <div className="w-10 h-1 bg-[#FFD32A] rounded-full mt-2 mb-2 shadow-xs"></div>
+                  {/* Accent Underline */}
+                  <div className="w-8 sm:w-10 h-0.5 sm:h-1 bg-[#FFD32A] rounded-full mt-1.5 sm:mt-2 mb-2 sm:mb-2.5 shadow-xs"></div>
 
-                  <p className="text-white/95 text-xs sm:text-[12.5px] leading-relaxed drop-shadow-sm font-medium">
-                    {t('auth.leftDesc')}
+                  <div
+                    className="space-y-1 sm:space-y-1.5 text-xs sm:text-[13px] md:text-[10px] min-[900px]:text-[11px] lg:text-[11.5px] xl:text-[14px] leading-snug drop-shadow-[0_2px_4px_rgba(0,0,0,0.75)]"
+                    style={{ fontFamily: "'Noto Sans Tamil', sans-serif" }}
+                  >
+                    <p className="font-semibold text-white/95 whitespace-nowrap">
+                      முதன்மைத் தொகுதி
+                    </p>
+                    <p className="font-semibold text-white/95 whitespace-nowrap">
+                      முன்னேற்றத்திற்கான தொகுதி
+                    </p>
+                  </div>
+
+                  <p
+                    className="mt-3 sm:mt-4 text-xs sm:text-[13px] md:text-[10px] min-[900px]:text-[11px] lg:text-[11.5px] xl:text-[14px] font-bold text-[#FFD32A] leading-snug whitespace-nowrap drop-shadow-[0_2px_5px_rgba(0,0,0,0.85)]"
+                    style={{ fontFamily: "'Noto Sans Tamil', sans-serif" }}
+                  >
+                    நமது கிணத்துக்கடவு தொகுதி
                   </p>
                 </div>
 

@@ -90,6 +90,15 @@ const ACCOUNTS = [
     constituency: 'Kinathukadavu',
     role: 'paguthi_seyalaalar',
   },
+    {
+    username: 'KinathukadavuNagaram',
+    password: 'Kinathukadavunagaram@@2026',
+    paguthi: 'Kinathukadavu',
+    name: 'Kinathukadavu Seyalaalar',
+    phone: '9842100110',
+    constituency: 'Kinathukadavu',
+    role: 'paguthi_seyalaalar',
+  },
   // Preserve existing 3 municipal paguthi accounts
   {
     username: 'pothanur',
